@@ -22,7 +22,7 @@ while i < CommandLine.arguments.count {
         printUsage()
         exit(0)
     case "--version", "-v":
-        printToStdout("mud \(MudCore.version)")
+        printToStdout("mud \(appVersion())")
         exit(0)
     case "--html-up", "-u":
         mode = .up
@@ -193,6 +193,25 @@ func openInBrowser(_ urls: [URL]) {
     process.arguments = urls.map(\.path)
     try? process.run()
     process.waitUntilExit()
+}
+
+// MARK: - Version
+
+// Read CFBundleShortVersionString from the enclosing app bundle's Info.plist.
+// The mud CLI lives at Contents/Helpers/mud, so Contents/Info.plist is two
+// directories up. Falls back to MudCore.version if the plist isn't found.
+func appVersion() -> String {
+    let execURL = URL(fileURLWithPath: CommandLine.arguments[0])
+        .resolvingSymlinksInPath()
+    let infoPlistURL = execURL
+        .deletingLastPathComponent()  // Contents/Helpers/
+        .deletingLastPathComponent()  // Contents/
+        .appendingPathComponent("Info.plist")
+    if let dict = NSDictionary(contentsOf: infoPlistURL),
+       let version = dict["CFBundleShortVersionString"] as? String {
+        return version
+    }
+    return MudCore.version
 }
 
 // MARK: - Output helpers

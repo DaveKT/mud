@@ -4,7 +4,7 @@ import Foundation
 
 /// Entry point for MudCore functionality.
 public enum MudCore {
-    public static let version = "0.1.0"
+    public static let version = "1.0.0"
 
     private static let downVisitor = DownHTMLVisitor()
 
