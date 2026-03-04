@@ -31,6 +31,7 @@ struct CommandLineSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.top, -18) // XXX-03-2026-JP -- hack to align top-of-pane with top-of-sidebar
     }
 
     // MARK: - Automatic install (non-sandboxed)
@@ -94,6 +95,7 @@ struct CommandLineSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.top, -18) // XXX-03-2026-JP -- hack to align top-of-pane with top-of-sidebar
         .onAppear {
             loadCurrentStatus()
         }

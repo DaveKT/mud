@@ -24,6 +24,7 @@
 		7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C442A672F34BB7E0046E0CD /* DocumentWindowController.swift */; };
 		7C442A692F34BB7E0046E0CD /* DocumentContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C442A662F34BB7E0046E0CD /* DocumentContentView.swift */; };
 		7C4D0E592F47EF22008A472A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7C4D0E582F47EF22008A472A /* PrivacyInfo.xcprivacy */; };
+		7C56C3F32F55166800F922B5 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C56C3F22F55166800F922B5 /* SettingsWindowController.swift */; };
 		7C5A00022F4800010046E0CD /* CommandLineInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C5A00012F4800010046E0CD /* CommandLineInterface.swift */; };
 		7C5A00042F4800020046E0CD /* CommandLineInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C5A00032F4800020046E0CD /* CommandLineInstaller.swift */; };
 		7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C6B316D2F3A228000F6A4E8 /* DeferMutation.swift */; };
@@ -57,6 +58,7 @@
 		7C442A662F34BB7E0046E0CD /* DocumentContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentContentView.swift; sourceTree = "<group>"; };
 		7C442A672F34BB7E0046E0CD /* DocumentWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentWindowController.swift; sourceTree = "<group>"; };
 		7C4D0E582F47EF22008A472A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7C56C3F22F55166800F922B5 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		7C5A00012F4800010046E0CD /* CommandLineInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInterface.swift; sourceTree = "<group>"; };
 		7C5A00032F4800020046E0CD /* CommandLineInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInstaller.swift; sourceTree = "<group>"; };
 		7C6B316D2F3A228000F6A4E8 /* DeferMutation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeferMutation.swift; sourceTree = "<group>"; };
@@ -89,6 +91,7 @@
 		7C282AD12F4F541400611919 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				7C56C3F22F55166800F922B5 /* SettingsWindowController.swift */,
 				7C282AD42F4F542E00611919 /* SettingsView.swift */,
 				7C282AD32F4F542E00611919 /* GeneralSettingsView.swift */,
 				7C282AD62F4F542E00611919 /* ThemeSettingsView.swift */,
@@ -268,6 +271,7 @@
 				7CC9753D2F340286001C3BB7 /* MudApp.swift in Sources */,
 				7C282ADF2F50063900611919 /* CommandLineSettingsView.swift in Sources */,
 				7C442A652F3457C20046E0CD /* DocumentController.swift in Sources */,
+				7C56C3F32F55166800F922B5 /* SettingsWindowController.swift in Sources */,
 				7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */,
 				7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */,
 				7C442A692F34BB7E0046E0CD /* DocumentContentView.swift in Sources */,

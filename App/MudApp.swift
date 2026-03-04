@@ -8,11 +8,21 @@ struct MudApp: App {
     @ObservedObject private var appState = AppState.shared
 
     var body: some Scene {
-        // No windows managed by SwiftUI — DocumentController handles them
+        // No windows managed by SwiftUI — DocumentController handles them.
+        // Settings lives in SettingsWindowController (AppKit) so we can
+        // use .unified toolbar style; the Settings scene here is only the
+        // required anchor for App.body.
         Settings {
-            SettingsView()
+            EmptyView()
         }
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings...") {
+                    SettingsWindowController.shared.openSettings()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandGroup(replacing: .newItem) {
                 Button("Open...") {
                     DocumentController.showOpenPanel()

@@ -131,7 +131,7 @@ struct ThemePreviewCard: View {
                     )
                 }
                 .padding(10)
-                .frame(width: 200, height: 120, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(colors.bodyBg)

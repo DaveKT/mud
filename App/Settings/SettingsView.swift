@@ -1,11 +1,11 @@
 import SwiftUI
 
-enum SettingsCategory: String, CaseIterable, Identifiable {
+enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case theme
-    case commandLine
     case upMode
     case downMode
+    case commandLine
 
     var id: String { rawValue }
 
@@ -13,9 +13,9 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "General"
         case .theme: return "Theme"
-        case .commandLine: return "Command Line"
         case .upMode: return "Up Mode"
         case .downMode: return "Down Mode"
+        case .commandLine: return "Command Line"
         }
     }
 
@@ -23,36 +23,29 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .theme: return "paintpalette"
-        case .commandLine: return "terminal"
         case .upMode: return "arrowshape.up.circle"
         case .downMode: return "arrowshape.down.circle"
+        case .commandLine: return "terminal"
         }
     }
-
-    /// Categories visible in the current environment.
-    static var visible: [SettingsCategory] { allCases }
 }
 
 struct SettingsView: View {
     @ObservedObject private var appState = AppState.shared
-    @State private var selectedCategory: SettingsCategory = .general
+    @State private var selectedPane: SettingsPane = .general
 
     var body: some View {
-        HStack(spacing: 0) {
-            List(SettingsCategory.visible, selection: $selectedCategory) { category in
-                Label(category.title, systemImage: category.icon)
-                    .tag(category)
+        NavigationSplitView(columnVisibility: .constant(.all)) {
+            List(SettingsPane.allCases, selection: $selectedPane) { pane in
+                Label(pane.title, systemImage: pane.icon)
+                    .tag(pane)
             }
-            .listStyle(.sidebar)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Color.clear.frame(height: 6)
-            }
-            .frame(width: 180)
-
-            Divider()
-
+            .toolbar(removing: .sidebarToggle)
+            .navigationSplitViewColumnWidth(180)
+        } detail: {
             detailView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .navigationTitle(selectedPane.title)
         }
         .frame(width: 700, height: 380)
         .preferredColorScheme(appState.lighting.isDark() ? .dark : .light)
@@ -60,17 +53,17 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var detailView: some View {
-        switch selectedCategory {
+        switch selectedPane {
         case .general:
             GeneralSettingsView()
         case .theme:
             ThemeSettingsView()
-        case .commandLine:
-            CommandLineSettingsView()
         case .upMode:
             UpModeSettingsView()
         case .downMode:
             DownModeSettingsView()
+        case .commandLine:
+            CommandLineSettingsView()
         }
     }
 }

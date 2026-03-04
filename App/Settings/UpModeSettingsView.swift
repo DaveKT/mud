@@ -18,5 +18,6 @@ struct UpModeSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .padding(.top, -18) // XXX-03-2026-JP -- hack to align top-of-pane with top-of-sidebar
     }
 }
