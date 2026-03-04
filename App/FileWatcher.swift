@@ -2,8 +2,9 @@ import Foundation
 
 /// Watches a file for changes using GCD dispatch sources.
 ///
-/// Handles atomic saves (write-to-temp-then-rename) by re-establishing
-/// the watch when the file is deleted or renamed.
+/// Handles atomic saves (write-to-temp-then-rename) by re-establishing the
+/// watch when the file is deleted or renamed. Genuine deletions (where the
+/// file does not reappear) are ignored — the document stays open.
 final class FileWatcher {
     private var source: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
@@ -20,11 +21,11 @@ final class FileWatcher {
         stopWatching()
     }
 
-    private func startWatching() {
+    @discardableResult
+    private func startWatching() -> Bool {
         fileDescriptor = open(url.path, O_EVTONLY)
         guard fileDescriptor >= 0 else {
-            print("FileWatcher: Failed to open file descriptor for \(url.path)")
-            return
+            return false
         }
 
         source = DispatchSource.makeFileSystemObjectSource(
@@ -42,8 +43,11 @@ final class FileWatcher {
                 self.stopWatching()
                 // Brief delay to let file system settle after rename
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    self?.startWatching()
-                    self?.onChange()
+                    guard let self else { return }
+                    // Only reload if the file came back (atomic save); ignore genuine deletions.
+                    if self.startWatching() {
+                        self.onChange()
+                    }
                 }
             } else {
                 self.onChange()
@@ -58,6 +62,7 @@ final class FileWatcher {
         }
 
         source?.resume()
+        return true
     }
 
     private func stopWatching() {
