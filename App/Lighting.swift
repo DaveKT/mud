@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum Lighting: String, CaseIterable {
-    case auto
     case bright
     case dark
+    case auto
 
     /// Toggle: auto ↔ opposite of system
     func toggled() -> Lighting {

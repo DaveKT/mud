@@ -42,6 +42,7 @@
 		7CC975862F340FD2001C3BB7 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975842F340FD2001C3BB7 /* FileWatcher.swift */; };
 		7CC975892F341A75001C3BB7 /* Lighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975872F341A75001C3BB7 /* Lighting.swift */; };
 		7CD093082F587185003E4037 /* ErrorPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD093072F587185003E4037 /* ErrorPage.swift */; };
+		7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -113,6 +114,7 @@
 		7CC975842F340FD2001C3BB7 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
 		7CC975872F341A75001C3BB7 /* Lighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lighting.swift; sourceTree = "<group>"; };
 		7CD093072F587185003E4037 /* ErrorPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorPage.swift; sourceTree = "<group>"; };
+		7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightingPreviewCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -159,6 +161,7 @@
 		7C282AD12F4F541400611919 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */,
 				7C56C3F22F55166800F922B5 /* SettingsWindowController.swift */,
 				7C282AD42F4F542E00611919 /* SettingsView.swift */,
 				7C282AD32F4F542E00611919 /* GeneralSettingsView.swift */,
@@ -431,6 +434,7 @@
 				7C442A652F3457C20046E0CD /* DocumentController.swift in Sources */,
 				7C56C3F32F55166800F922B5 /* SettingsWindowController.swift in Sources */,
 				7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */,
+				7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */,
 				7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */,
 				7C442A692F34BB7E0046E0CD /* DocumentContentView.swift in Sources */,
 				7C5A00042F4800020046E0CD /* CommandLineInstaller.swift in Sources */,

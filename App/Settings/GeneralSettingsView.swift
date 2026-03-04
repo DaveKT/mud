@@ -6,18 +6,21 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Lighting", selection: Binding(
-                    get: { appState.lighting },
-                    set: { newValue in
-                        appState.lighting = newValue
-                        appState.saveLighting(newValue)
+                LabeledContent("Lighting") {
+                    HStack(spacing: 12) {
+                        ForEach(Lighting.allCases, id: \.self) { lighting in
+                            LightingPreviewCard(
+                                lighting: lighting,
+                                isSelected: appState.lighting == lighting
+                            ) {
+                                appState.lighting = lighting
+                                appState.saveLighting(lighting)
+                            }
+                            .frame(width: 72)
+                        }
                     }
-                )) {
-                    Text("System").tag(Lighting.auto)
-                    Text("Bright").tag(Lighting.bright)
-                    Text("Dark").tag(Lighting.dark)
+                    .padding(.vertical, 4)
                 }
-                .pickerStyle(.segmented)
             }
 
             Section {
