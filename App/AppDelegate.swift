@@ -49,7 +49,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
-        // If no documents were opened, show the bundled README on first
+        // If no documents were opened, show the bundled HUMANS.md on first
         // launch, or the file picker on subsequent launches.
         DispatchQueue.main.async {
             if NSApp.windows.filter({ $0.isVisible }).isEmpty {
@@ -110,7 +110,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openBundledReadme() {
         hasOpenedDocument = true
-        DocumentController.openBundledDocument("README")
+        DocumentController.openBundledDocument("HUMANS", subdirectory: "Doc")
     }
 
     private func openOrQuit() {

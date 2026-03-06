@@ -176,8 +176,8 @@ struct MudApp: App {
             }
 
             CommandGroup(replacing: .help) {
-                Button("README.md") {
-                    DocumentController.openBundledDocument("README")
+                Button("HUMANS Guide to Mud") {
+                    DocumentController.openBundledDocument("HUMANS", subdirectory: "Doc")
                 }
             }
         }
