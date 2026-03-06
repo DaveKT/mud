@@ -1,4 +1,4 @@
-AGENTS guide to Mud
+AGENTS Guide to Mud
 ===============================================================================
 
 ## Project overview

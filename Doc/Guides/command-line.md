@@ -41,7 +41,7 @@ For full command-line rendering capability, see the direct release below.
 ## Direct release
 
 The direct release of Mud (downloaded from
-[https://apps.josephpearson.org/mud](https://apps.josephpearson.org/mud))
+[GitHub](https://github.com/joseph/mud/releases))
 includes a useful `mud` CLI tool.
 
 

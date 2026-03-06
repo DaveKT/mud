@@ -30,4 +30,5 @@ directories.
 If you are happy with these limitations, continue to use the App Store version!
 
 If these limitations are getting in your way, download the app directly from
-<https://apps.josephpearson.org/mud>. It's not sandboxed, but it is notarized.
+[GitHub](https://github.com/joseph/mud/releases). It's not sandboxed, but it
+is notarized.

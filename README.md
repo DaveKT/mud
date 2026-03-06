@@ -1,5 +1,9 @@
-Mud: Mark Up or Down
+Mud: A Perfect Markdown Viewer
 ===============================================================================
+
+> Status: Active development
+
+## Why?
 
 Markdown is suddenly everywhere.
 
@@ -15,7 +19,8 @@ That's what **Mud** is for. It renders Markdown beautifully, bright or dark. It
 automatically reloads the document when you save it — or when Claude Code
 writes to it, or Codex, or whatever you use.
 
-![The Mud app, showing Mark Up and Mark Down modes](https://apps.josephpearson.org/mud/mud-ss-01.png)
+![The Mud app, showing Mark Up mode](Site/mud-ss-01.png)
+![The Mud app, showing Mark Down mode](Site/mud-ss-02.png)
 
 Mud shows you both sides of every document:
 
@@ -63,10 +68,6 @@ mud -u --theme riot file.md    # Pick a theme
 Open `Mud.xcodeproj` in Xcode and build. Requires at least macOS Sonoma
 (14.0+).
 
-------------------------------------------------------------------------------
-
-![Mud.app icon](Mud.png)
-
 
 ## License
 
@@ -77,3 +78,8 @@ MIT with Commons Clause. See [Doc/LICENSE.md](Doc/LICENSE.md).
 
 - [Doc/AGENTS.md](Doc/AGENTS.md) — architecture guide for coding agents
 - [Doc/LICENSE.md](Doc/LICENSE.md) — open source license
+
+
+------------------------------------------------------------------------------
+
+![Mud.app icon](Doc/Mud.png)
