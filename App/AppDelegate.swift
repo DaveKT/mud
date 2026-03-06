@@ -14,8 +14,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // F6 as secondary shortcut for Toggle Lighting (Cmd-L is primary)
+        // F3 / F4 / F6 as secondary shortcuts for Sidebar / Find / Lighting
+        // (Cmd-Ctrl-S / Cmd-F / Cmd-L are primary)
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 99 {  // F3
+                NSApp.sendAction(
+                    #selector(NSSplitViewController.toggleSidebar(_:)),
+                    to: nil, from: nil
+                )
+                return nil
+            }
+            if event.keyCode == 118 {  // F4
+                NSApp.sendAction(
+                    #selector(DocumentWindowController.performFindAction(_:)),
+                    to: nil, from: nil
+                )
+                return nil
+            }
             if event.keyCode == 97 {  // F6
                 NSApp.sendAction(
                     #selector(DocumentWindowController.toggleLighting(_:)),
