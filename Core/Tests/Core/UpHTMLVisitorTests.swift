@@ -171,6 +171,13 @@ struct UpHTMLVisitorTests {
         #expect(html.contains("Inline content"))
     }
 
+    @Test func gfmAlertStatus() {
+        let html = MudCore.renderUpToHTML("> [!STATUS]\n> Content here\n")
+        #expect(html.contains("class=\"alert alert-status\""))
+        #expect(html.contains("class=\"alert-title\""))
+        #expect(html.contains("Content here"))
+    }
+
     @Test func plainBlockquoteUnchanged() {
         let html = MudCore.renderUpToHTML("> Just a quote\n")
         #expect(html.contains("<blockquote>"))
@@ -271,6 +278,20 @@ struct UpHTMLVisitorTests {
         let html = MudCore.renderUpToHTML("> Tip: A helpful hint\n")
         #expect(html.contains("class=\"alert alert-tip\""))
         #expect(html.contains("Tip: <strong>A helpful hint</strong>"))
+    }
+
+    @Test func doccAsideToDoMapsToStatus() {
+        // ToDo: must map to .status, not .note (was falling through to catch-all).
+        let html = MudCore.renderUpToHTML("> ToDo: Fix this later\n")
+        #expect(html.contains("class=\"alert alert-status\""))
+        #expect(html.contains("To Do: <strong>Fix this later</strong>"))
+    }
+
+    @Test func doccAsideMutatingVariantMapsToNote() {
+        // MutatingVariant: maps to .note; displayName is "Mutating Variant".
+        let html = MudCore.renderUpToHTML("> MutatingVariant: Use sort() to sort in place\n")
+        #expect(html.contains("class=\"alert alert-note\""))
+        #expect(html.contains("Mutating Variant: <strong>"))
     }
 
     // MARK: - Tables
