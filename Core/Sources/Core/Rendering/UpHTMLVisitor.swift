@@ -38,15 +38,7 @@ struct UpHTMLVisitor: MarkupWalker {
             result += "</blockquote>\n"
         } else if let (category, title, content) = Self.detectDocCAlert(blockQuote) {
             emitAlertOpen(category)
-            emitAlertTitle(category, title)
-            for block in content {
-                visit(block)
-            }
-            result += "</blockquote>\n"
-        } else if let statusValue = Self.detectStatusAside(blockQuote) {
-            emitAlertOpen(.status)
-            emitStatusTitle(statusValue)
-            emitStatusContent(blockQuote)
+            emitDocCAlertTitleAndContent(category, title, content)
             result += "</blockquote>\n"
         } else {
             result += "<blockquote>\n"
@@ -302,9 +294,12 @@ struct UpHTMLVisitor: MarkupWalker {
             .note: [.note, .remark],
             .tip: [.tip, .experiment],
             .important: [.important, .attention],
-            .warning: [.warning, .precondition, .postcondition,
-                       .requires, .invariant],
-            .caution: [.bug, .throws, Aside.Kind(rawValue: "Error")!],
+            .warning: [.warning, .precondition, .postcondition, .requires, .invariant],
+            .caution: [.bug, .throws,
+                Aside.Kind(rawValue: "Error")!,
+                Aside.Kind(rawValue: "Caution")!
+            ],
+            .status: [Aside.Kind(rawValue: "Status")!],
         ]
         var map: [String: AlertCategory] = [:]
         for (category, kinds) in explicit {
@@ -417,76 +412,75 @@ struct UpHTMLVisitor: MarkupWalker {
         result += "</p>\n"
     }
 
-    // MARK: - Status aside
-
-    /// Detects a `> Status:` prefix in the first paragraph of a blockquote.
-    /// Returns the status value (text after "Status: ") if found, nil
-    /// otherwise. Requires a non-empty status value.
-    private static func detectStatusAside(
-        _ blockQuote: BlockQuote
-    ) -> String? {
-        let children = Array(blockQuote.children)
-        guard let paragraph = children.first as? Paragraph else {
-            return nil
-        }
-        let inlines = Array(paragraph.children)
-        guard let firstText = inlines.first as? Text else {
-            return nil
-        }
-        guard firstText.string.hasPrefix("Status:") else {
-            return nil
-        }
-        let afterPrefix = String(
-            firstText.string.dropFirst("Status:".count)
-                .drop(while: { $0 == " " })
-        )
-        guard !afterPrefix.isEmpty else { return nil }
-        return afterPrefix
+    /// Concatenated plain text of an array of inline markup nodes,
+    /// used for the length check before inlining same-line content.
+    private static func plainTextOf(_ nodes: [any Markup]) -> String {
+        nodes.map { node -> String in
+            if let t = node as? Text { return t.string }
+            if let c = node as? InlineCode { return c.code }
+            return plainTextOf(Array(node.children))
+        }.joined()
     }
 
-    /// Emits the Status aside title: icon, "Status: ", and bold value.
-    private mutating func emitStatusTitle(_ statusValue: String) {
-        result += "<p class=\"alert-title\">"
-        result += AlertCategory.status.icon
-        result += "Status: <strong>"
-        result += HTMLEscaping.escape(statusValue)
-        result += "</strong></p>\n"
+    /// Returns true if same-line content qualifies to be bolded in an aside
+    /// title: non-empty and under 60 characters.
+    private static func shouldInlineSameLine(_ plainText: String) -> Bool {
+        return !plainText.isEmpty && plainText.count < 60
     }
 
-    /// Emits the body content of a Status aside. Strips the first Text
-    /// node (which contains "Status: Value"), skips a following SoftBreak,
-    /// then visits remaining inlines and subsequent block children.
-    private mutating func emitStatusContent(
-        _ blockQuote: BlockQuote
+    /// Emits the title and body content for a DocC aside. When the
+    /// same-line content (before the first SoftBreak) is under 60
+    /// characters, it is bolded on the title line; otherwise all
+    /// content blocks are rendered roman in separate paragraphs.
+    private mutating func emitDocCAlertTitleAndContent(
+        _ category: AlertCategory,
+        _ title: String,
+        _ content: [BlockMarkup]
     ) {
-        let children = Array(blockQuote.children)
-        guard let firstPara = children.first as? Paragraph else {
-            return
-        }
+        var sameLine: [any Markup] = []
+        var restInlines: [any Markup] = []
 
-        let inlines = Array(firstPara.children)
-        var index = 0
-        var opened = false
-
-        // Skip the first Text node (contains "Status: Value").
-        if inlines.first is Text {
-            index = 1
-            // Skip SoftBreak separating the status line from content.
-            if index < inlines.count && inlines[index] is SoftBreak {
-                index += 1
+        if let firstPara = content.first as? Paragraph {
+            let inlines = Array(firstPara.children)
+            if let sbIdx = inlines.firstIndex(where: { $0 is SoftBreak }) {
+                sameLine = Array(inlines[..<sbIdx])
+                restInlines = Array(inlines[(sbIdx + 1)...])
+            } else {
+                sameLine = inlines
             }
         }
 
-        // Visit remaining inlines from the first paragraph.
-        if index < inlines.count {
-            result += "<p>"
-            opened = true
-            for i in index..<inlines.count { visit(inlines[i]) }
-        }
-        if opened { result += "</p>\n" }
+        let shouldInline = Self.shouldInlineSameLine(Self.plainTextOf(sameLine))
 
-        // Visit remaining block children after the first paragraph.
-        for child in children.dropFirst() { visit(child) }
+        result += "<p class=\"alert-title\">"
+        result += category.icon
+        result += HTMLEscaping.escape(title)
+        if shouldInline {
+            result += ": <strong>"
+            for node in sameLine { visit(node) }
+            result += "</strong>"
+        }
+        result += "</p>\n"
+
+        if shouldInline {
+            emitAlertBody(restInlines: restInlines, remainingBlocks: Array(content.dropFirst()))
+        } else {
+            for block in content { visit(block) }
+        }
+    }
+
+    /// Emits the roman body of an aside: restInlines (if any) in a `<p>`,
+    /// then each remaining block visited normally.
+    private mutating func emitAlertBody(
+        restInlines: [any Markup],
+        remainingBlocks: [any Markup]
+    ) {
+        if !restInlines.isEmpty {
+            result += "<p>"
+            for node in restInlines { visit(node) }
+            result += "</p>\n"
+        }
+        for block in remainingBlocks { visit(block) }
     }
 
     /// A list is loose if any blank lines appear between consecutive

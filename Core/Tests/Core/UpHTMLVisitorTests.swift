@@ -198,10 +198,79 @@ struct UpHTMLVisitorTests {
         #expect(html.contains("<p>Everything is done.</p>"))
     }
 
-    @Test func statusWithoutValueIsPlainBlockquote() {
-        let html = MudCore.renderUpToHTML("> Status:\n")
-        #expect(html.contains("<blockquote>"))
-        #expect(!html.contains("class=\"alert"))
+    @Test func statusAsideNoSameLineValue() {
+        // Value on the next line: still a Status aside, but title carries no bold.
+        let html = MudCore.renderUpToHTML("> Status:\n> Complete\n")
+        #expect(html.contains("class=\"alert alert-status\""))
+        #expect(!html.contains(": <strong>"))
+        #expect(html.contains("Complete"))
+    }
+
+    @Test func statusAsideLongValueNotInlined() {
+        // Value ≥60 characters: plain "Status" title, value falls to body.
+        let value = String(repeating: "x", count: 60)
+        let html = MudCore.renderUpToHTML("> Status: \(value)\n")
+        #expect(html.contains("class=\"alert alert-status\""))
+        #expect(!html.contains("<strong>\(value)</strong>"))
+        #expect(html.contains(value))
+    }
+
+    // MARK: - DocC asides
+
+    @Test func doccAsideNoSameLineContent() {
+        // No content on the tag line: title carries no bold inline.
+        let html = MudCore.renderUpToHTML("> Note:\n> Body text here\n")
+        #expect(html.contains("class=\"alert alert-note\""))
+        #expect(html.contains("class=\"alert-title\""))
+        #expect(!html.contains(": <strong>"))
+        #expect(html.contains("Body text here"))
+    }
+
+    @Test func doccAsideShortSameLineInlined() {
+        let html = MudCore.renderUpToHTML("> Note: Short label\n")
+        #expect(html.contains("class=\"alert alert-note\""))
+        #expect(html.contains("Note: <strong>Short label</strong>"))
+    }
+
+    @Test func doccAsideLongSameLineNotInlined() {
+        // ≥60 characters on the tag line: falls to body, title has no bold.
+        let label = String(repeating: "x", count: 60)
+        let html = MudCore.renderUpToHTML("> Note: \(label)\n")
+        #expect(html.contains("class=\"alert alert-note\""))
+        #expect(!html.contains("<strong>"))
+        #expect(html.contains(label))
+    }
+
+    @Test func doccAsideSameLineWithPeriodInlined() {
+        // Terminal punctuation does not disqualify short same-line content.
+        let html = MudCore.renderUpToHTML("> Note: A complete sentence.\n")
+        #expect(html.contains("Note: <strong>A complete sentence.</strong>"))
+    }
+
+    @Test func doccAsideSameLineWithContinuation() {
+        // Short same-line label bolded; continuation line becomes roman paragraph.
+        let html = MudCore.renderUpToHTML("> Note: Short label\n> Explanatory prose below.\n")
+        #expect(html.contains("Note: <strong>Short label</strong>"))
+        #expect(html.contains("<p>Explanatory prose below.</p>"))
+    }
+
+    @Test func doccAsideSameLineWithSecondParagraph() {
+        // Short same-line label bolded; blank-line-separated paragraph rendered below.
+        let html = MudCore.renderUpToHTML("> Note: Summary\n>\n> Second paragraph.\n")
+        #expect(html.contains("Note: <strong>Summary</strong>"))
+        #expect(html.contains("<p>Second paragraph.</p>"))
+    }
+
+    @Test func doccAsideWarningCategory() {
+        let html = MudCore.renderUpToHTML("> Warning: Be careful\n")
+        #expect(html.contains("class=\"alert alert-warning\""))
+        #expect(html.contains("Warning: <strong>Be careful</strong>"))
+    }
+
+    @Test func doccAsideTipCategory() {
+        let html = MudCore.renderUpToHTML("> Tip: A helpful hint\n")
+        #expect(html.contains("class=\"alert alert-tip\""))
+        #expect(html.contains("Tip: <strong>A helpful hint</strong>"))
     }
 
     // MARK: - Tables

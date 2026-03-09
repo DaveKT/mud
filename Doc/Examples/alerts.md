@@ -48,24 +48,30 @@ blockquotes.
 
 ## DocC asides
 
-> Note: This is a DocC-style note aside.
+> Note: Inline bolded message of up to 60 characters.
+>
+> Longer lines, or subsequent lines, are presented as a paragraph below
+> the bolded blockquote title.
 
-> Tip: DocC tip with **formatted** content.
+> Tip: DocC tip with _formatted_ content.
 
 > Important: This is important information.
 
 > Warning: Careful with this operation. It may have side effects that are
 > difficult to reverse.
 
+> Caution: Contents hot!
+
+
+### Extended DocC terms
+
+By default, Mud will also recognize these blockquote prefixes as asides.
+
 > Remark: An observation worth calling out.
 
 > Experiment: Try changing the value to see what happens.
 
 > Attention: Pay close attention to this detail.
-
-> Bug: This method crashes when passed an empty array.
-
-> Throws: `InvalidArgumentError` if the input is nil.
 
 > Precondition: The array must be sorted in ascending order.
 
@@ -74,6 +80,10 @@ blockquotes.
 > Requires: Swift 5.9 or later.
 
 > Invariant: The count property is always equal to the number of elements.
+
+> Bug: This method crashes when passed an empty array.
+
+> Throws: `InvalidArgumentError` if the input is nil.
 
 > Complexity: O(n log n) in the worst case.
 
@@ -105,6 +115,8 @@ blockquotes.
 > Status: Complete
 >
 > All features shipped. No outstanding issues.
+
+> Status: Complete. All features shipped.
 
 
 ## Plain blockquotes (should NOT render as alerts)
