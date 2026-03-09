@@ -3,7 +3,7 @@ Plan: Standardize Alerts
 
 > Status: Underway
 >
-> Phase 1 complete. Phase 2 next.
+> Phases 1 and 2 complete. Phase 3 next.
 
 
 ## Context
@@ -124,7 +124,7 @@ Update `visitBlockQuote` to call `alertDetector.detectGFMAlert` and
 `alertDetector.detectDocCAlert`.
 
 
-## Phase 2: Settings and app wiring (steps 5–8)
+## Phase 2: Settings and app wiring (steps 5–8) ✓
 
 ### 5. MudCore API: showExtendedAlerts parameter
 

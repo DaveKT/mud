@@ -25,7 +25,6 @@ struct CommandLineSettingsView: View {
                 Text(" of Mud.")
                     .foregroundStyle(.secondary)
             }
-            .font(.callout)
         }
     }
 

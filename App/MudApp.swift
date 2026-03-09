@@ -227,6 +227,7 @@ class AppState: ObservableObject {
     @Published var sidebarVisible: Bool
     @Published var quitOnClose: Bool
     @Published var allowRemoteContent: Bool
+    @Published var showExtendedAlerts: Bool
     var openSettingsAction: (() -> Void)?
 
     private static let lightingKey = "Mud-Lighting"
@@ -236,6 +237,7 @@ class AppState: ObservableObject {
     private static let sidebarVisibleKey = "Mud-SidebarVisible"
     private static let quitOnCloseKey = "Mud-QuitOnClose"
     private static let allowRemoteContentKey = "Mud-AllowRemoteContent"
+    private static let showExtendedAlertsKey = "Mud-ShowExtendedAlerts"
 
     private init() {
         let raw = UserDefaults.standard.string(forKey: Self.lightingKey) ?? ""
@@ -249,6 +251,7 @@ class AppState: ObservableObject {
         self.sidebarVisible = defaults.bool(forKey: Self.sidebarVisibleKey)
         self.quitOnClose = defaults.object(forKey: Self.quitOnCloseKey) as? Bool ?? true
         self.allowRemoteContent = defaults.object(forKey: Self.allowRemoteContentKey) as? Bool ?? true
+        self.showExtendedAlerts = defaults.object(forKey: Self.showExtendedAlertsKey) as? Bool ?? true
     }
 
     func saveLighting(_ lighting: Lighting) {
@@ -274,6 +277,10 @@ class AppState: ObservableObject {
 
     func saveAllowRemoteContent() {
         UserDefaults.standard.set(allowRemoteContent, forKey: Self.allowRemoteContentKey)
+    }
+
+    func saveShowExtendedAlerts() {
+        UserDefaults.standard.set(showExtendedAlerts, forKey: Self.showExtendedAlertsKey)
     }
 
     func toggle(_ option: ViewToggle) {

@@ -34,7 +34,7 @@ struct DocumentContentView: View {
 
     private var displayContentID: String {
         switch content {
-        case .text(let text): return "\(text)\(appState.allowRemoteContent)"
+        case .text(let text): return "\(text)\(appState.allowRemoteContent)\(appState.showExtendedAlerts)"
         case .error:          return "load-error"
         }
     }
@@ -45,13 +45,15 @@ struct DocumentContentView: View {
         if state.mode == .down {
             return MudCore.renderDownModeDocument(text,
                 title: fileURL.lastPathComponent,
-                theme: themeName)
+                theme: themeName,
+                showExtendedAlerts: appState.showExtendedAlerts)
         }
         return MudCore.renderUpModeDocument(text,
             baseURL: fileURL,
             theme: themeName,
             blockRemoteContent: !appState.allowRemoteContent,
-            resolveImageSource: Self.mudAssetResolver)
+            resolveImageSource: Self.mudAssetResolver,
+            showExtendedAlerts: appState.showExtendedAlerts)
     }
 
     /// Rewrites local image paths to `mud-asset:` URLs for WKWebView.
@@ -178,7 +180,8 @@ struct DocumentContentView: View {
         if state.mode == .down {
             exportDocument = MudCore.renderDownModeDocument(text,
                 title: fileURL.lastPathComponent,
-                theme: themeName)
+                theme: themeName,
+                showExtendedAlerts: appState.showExtendedAlerts)
         } else {
             exportDocument = MudCore.renderUpModeDocument(text,
                 baseURL: fileURL,
@@ -186,7 +189,8 @@ struct DocumentContentView: View {
                 includeBaseTag: false,
                 resolveImageSource: { source, baseURL in
                     ImageDataURI.encode(source: source, baseURL: baseURL)
-                })
+                },
+                showExtendedAlerts: appState.showExtendedAlerts)
         }
         let exportHTML = WebView.injectState(
             into: exportDocument,
