@@ -33,6 +33,7 @@ final class LocalFileSchemeHandler: NSObject, WKURLSchemeHandler {
             headerFields: [
                 "Content-Type": mime,
                 "Content-Length": "\(data.count)",
+                "Cache-Control": "no-store",
             ]
         )!
 
