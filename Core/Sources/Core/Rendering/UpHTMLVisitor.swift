@@ -28,15 +28,17 @@ struct UpHTMLVisitor: MarkupWalker {
     private var currentCellColumn = 0
     private var inTableHead = false
 
+    var alertDetector = AlertDetector()
+
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
-        if let (category, title) = Self.detectGFMAlert(blockQuote) {
+        if let (category, title) = alertDetector.detectGFMAlert(blockQuote) {
             emitAlertOpen(category)
             emitAlertTitle(category, title)
             emitGFMAlertContent(blockQuote, category: category)
             result += "</blockquote>\n"
-        } else if let (category, title, content) = Self.detectDocCAlert(blockQuote) {
+        } else if let (category, title, content) = alertDetector.detectDocCAlert(blockQuote) {
             emitAlertOpen(category)
             emitDocCAlertTitleAndContent(category, title, content)
             result += "</blockquote>\n"
@@ -260,82 +262,6 @@ struct UpHTMLVisitor: MarkupWalker {
 
     // MARK: - Alerts
 
-    /// Visual category for GFM alerts and DocC asides.
-    private enum AlertCategory: String, CaseIterable {
-        case note, tip, important, warning, caution, status
-
-        var cssClass: String { "alert-\(rawValue)" }
-
-        var title: String { rawValue.capitalized }
-
-        /// Inline SVG icon (GitHub Octicons, MIT licensed).
-        var icon: String { Self.icons[self]! }
-
-        private static let icons: [AlertCategory: String] = {
-            var map: [AlertCategory: String] = [:]
-            for category in allCases {
-                let name = "alert-\(category.rawValue)"
-                guard let url = Bundle.module.url(
-                    forResource: name, withExtension: "svg"
-                ), let svg = try? String(
-                    contentsOf: url, encoding: .utf8
-                ) else { continue }
-                map[category] = svg
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            return map
-        }()
-    }
-
-    /// Maps a DocC `Aside.Kind` raw value to a visual alert category.
-    /// Predefined kinds not listed explicitly default to `.note`.
-    private static let doccCategoryMap: [String: AlertCategory] = {
-        let explicit: [AlertCategory: [Aside.Kind]] = [
-            .note: [.note, .remark],
-            .tip: [.tip, .experiment],
-            .important: [.important, .attention],
-            .warning: [.warning, .precondition, .postcondition, .requires, .invariant],
-            .caution: [.bug, .throws,
-                Aside.Kind(rawValue: "Error")!,
-                Aside.Kind(rawValue: "Caution")!
-            ],
-            .status: [Aside.Kind(rawValue: "Status")!],
-        ]
-        var map: [String: AlertCategory] = [:]
-        for (category, kinds) in explicit {
-            for kind in kinds { map[kind.rawValue] = category }
-        }
-        for kind in Aside.Kind.allCases where map[kind.rawValue] == nil {
-            map[kind.rawValue] = .note
-        }
-        return map
-    }()
-
-    // GFM tag strings and their categories.
-    private static let gfmAlertTags: [(String, AlertCategory)] = [
-        ("[!NOTE]", .note), ("[!TIP]", .tip),
-        ("[!IMPORTANT]", .important),
-        ("[!WARNING]", .warning), ("[!CAUTION]", .caution),
-    ]
-
-    /// Detects a GFM alert tag in the first paragraph of a blockquote.
-    private static func detectGFMAlert(
-        _ blockQuote: BlockQuote
-    ) -> (AlertCategory, String)? {
-        // MarkupChildren.first resolves to first(where:), not the
-        // Sequence property, so we materialise to Array for indexing.
-        let children = Array(blockQuote.children)
-        guard let paragraph = children.first as? Paragraph else {
-            return nil
-        }
-        let text = paragraph.plainText
-        guard text.hasPrefix("[!") else { return nil }
-        for (tag, category) in gfmAlertTags where text.hasPrefix(tag) {
-            return (category, category.title)
-        }
-        return nil
-    }
-
     /// Emits the content of a GFM alert, stripping the `[!TYPE]` tag
     /// from the first paragraph. Walks the first paragraph's inline
     /// children directly: skips the tag Text node (emitting any
@@ -381,20 +307,6 @@ struct UpHTMLVisitor: MarkupWalker {
 
         // Visit remaining block children after the first paragraph.
         for child in children.dropFirst() { visit(child) }
-    }
-
-    /// Detects a DocC aside tag in a blockquote. Returns the alert
-    /// category, display title, and tag-stripped content blocks.
-    private static func detectDocCAlert(
-        _ blockQuote: BlockQuote
-    ) -> (AlertCategory, String, [BlockMarkup])? {
-        guard let aside = Aside(
-            blockQuote, tagRequirement: .requireAnyLengthTag
-        ) else { return nil }
-        guard let category = doccCategoryMap[aside.kind.rawValue] else {
-            return nil
-        }
-        return (category, aside.kind.displayName, aside.content)
     }
 
     /// Emits the opening `<blockquote>` tag with alert CSS classes.

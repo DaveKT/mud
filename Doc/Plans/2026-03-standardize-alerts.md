@@ -1,7 +1,9 @@
 Plan: Standardize Alerts
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
+>
+> Phase 1 complete. Phase 2 next.
 
 
 ## Context
@@ -51,7 +53,7 @@ When extended alerts are disabled, extended aliases render as plain
 blockquotes. Core aliases always render as styled alerts.
 
 
-## Phase 1: Core rendering (steps 1–4)
+## Phase 1: Core rendering (steps 1–4) ✓
 
 ### 1. Shared alert detector
 
