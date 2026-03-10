@@ -121,6 +121,7 @@ MVP plan.
 
 **Core/ key files:**
 
+- `RenderExtension.swift` — Client-side rendering extension type and registry
 - `RenderOptions.swift` — Rendering configuration value type
 - `MudCore.swift` — Public API: renderUpToHTML, renderDownToHTML,
   renderUpModeDocument, renderDownModeDocument, extractHeadings

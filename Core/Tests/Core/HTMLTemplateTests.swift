@@ -110,34 +110,34 @@ struct HTMLTemplateTests {
         #expect(doc.contains("<html>"))
     }
 
-    // MARK: - Mermaid embedding
+    // MARK: - Extension embedding (mermaid)
 
-    @Test func embedMermaidAddsScripts() {
+    @Test func extensionMermaidAddsScripts() {
         var opts = RenderOptions()
-        opts.embedMermaid = true
+        opts.extensions.insert("mermaid")
         let body = "<pre><code class=\"language-mermaid\">graph TD</code></pre>"
         let doc = HTMLTemplate.wrapUp(body: body, options: opts)
         #expect(doc.contains("<script src=\""))
         #expect(doc.contains("cdn.jsdelivr.net"))
     }
 
-    @Test func embedMermaidUpdatesCSP() {
+    @Test func extensionMermaidUpdatesCSP() {
         var opts = RenderOptions()
-        opts.embedMermaid = true
+        opts.extensions.insert("mermaid")
         let body = "<pre><code class=\"language-mermaid\">graph TD</code></pre>"
         let doc = HTMLTemplate.wrapUp(body: body, options: opts)
         #expect(doc.contains("script-src https://cdn.jsdelivr.net"))
     }
 
-    @Test func embedMermaidNoopWithoutCodeBlocks() {
+    @Test func extensionMermaidNoopWithoutCodeBlocks() {
         var opts = RenderOptions()
-        opts.embedMermaid = true
+        opts.extensions.insert("mermaid")
         let doc = HTMLTemplate.wrapUp(body: "<p>no mermaid</p>", options: opts)
         #expect(doc.contains("script-src 'none'"))
         #expect(!doc.contains("<script"))
     }
 
-    @Test func noMermaidByDefault() {
+    @Test func noExtensionsByDefault() {
         let body = "<pre><code class=\"language-mermaid\">graph TD</code></pre>"
         let doc = HTMLTemplate.wrapUp(body: body, options: .init())
         #expect(doc.contains("script-src 'none'"))
@@ -158,11 +158,15 @@ struct HTMLTemplateTests {
         #expect(!HTMLTemplate.mudDownJS.isEmpty)
     }
 
-    @Test func mermaidJSNotEmpty() {
-        #expect(!HTMLTemplate.mermaidJS.isEmpty)
-    }
+    // MARK: - Render extensions
 
-    @Test func mermaidInitJSNotEmpty() {
-        #expect(!HTMLTemplate.mermaidInitJS.isEmpty)
+    @Test func mermaidExtensionRuntimeJSNotEmpty() {
+        guard let mermaid = RenderExtension.registry["mermaid"] else {
+            Issue.record("mermaid extension not in registry")
+            return
+        }
+        let scripts = mermaid.runtimeJS()
+        #expect(scripts.count == 2)
+        #expect(scripts.allSatisfy { !$0.isEmpty })
     }
 }

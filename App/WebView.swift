@@ -176,7 +176,8 @@ struct WebView: NSViewRepresentable {
         context.coordinator.lastContentID = contentID
         context.coordinator.lastMode = mode
         context.coordinator.lastReloadID = reloadID
-        context.coordinator.needsMermaid = html.contains("language-mermaid")
+        context.coordinator.activeExtensions = RenderExtension.registry.values
+            .filter { html.contains($0.marker) }
         webView.loadHTMLString(html, baseURL: baseURL)
     }
 
@@ -200,7 +201,7 @@ struct WebView: NSViewRepresentable {
         var lastScrollTargetID: UUID?
         var lastPrintID: UUID?
         var lastReloadID: UUID?
-        var needsMermaid = false
+        var activeExtensions: [RenderExtension] = []
         var onSearchResult: ((MatchInfo?) -> Void)?
         weak var webView: WKWebView?
         private var savedFraction: CGFloat?
@@ -249,17 +250,23 @@ struct WebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             lastSearchID = nil
             restoreScrollPosition(to: webView)
-            if needsMermaid {
-                injectMermaid(into: webView)
+            for ext in activeExtensions {
+                injectExtension(ext, into: webView)
             }
             if webView.alphaValue == 0 {
                 webView.alphaValue = 1
             }
         }
 
-        private func injectMermaid(into webView: WKWebView) {
-            webView.evaluateJavaScript(HTMLTemplate.mermaidJS) { _, _ in
-                webView.evaluateJavaScript(HTMLTemplate.mermaidInitJS)
+        private func injectExtension(_ ext: RenderExtension, into webView: WKWebView) {
+            let scripts = ext.runtimeJS()
+            injectSequentially(scripts, into: webView)
+        }
+
+        private func injectSequentially(_ scripts: [String], into webView: WKWebView) {
+            guard let first = scripts.first else { return }
+            webView.evaluateJavaScript(first) { _, _ in
+                self.injectSequentially(Array(scripts.dropFirst()), into: webView)
             }
         }
 

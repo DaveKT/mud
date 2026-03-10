@@ -11,7 +11,7 @@ public struct RenderOptions: Sendable, Equatable {
     public var theme: String = "earthy"
     public var includeBaseTag: Bool = true
     public var blockRemoteContent: Bool = false
-    public var embedMermaid: Bool = false
+    public var extensions: Set<String> = []
 
     // Markdown processing
     public var doccAlertMode: DocCAlertMode = .extended
@@ -27,6 +27,6 @@ public struct RenderOptions: Sendable, Equatable {
     /// Display-only fields (htmlClasses, zoomLevel) are excluded because
     /// those can be applied via JS without a full page reload.
     public var contentIdentity: String {
-        "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(embedMermaid)"
+        "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(extensions.sorted())"
     }
 }

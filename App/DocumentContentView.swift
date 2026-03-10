@@ -181,7 +181,7 @@ struct DocumentContentView: View {
             .appendingPathExtension("html")
         var exportOptions = renderOptions
         exportOptions.includeBaseTag = false
-        exportOptions.embedMermaid = true
+        exportOptions.extensions.insert("mermaid")
         let exportHTML: String
         if state.mode == .down {
             exportHTML = MudCore.renderDownModeDocument(text,
