@@ -90,6 +90,83 @@ struct DownHTMLVisitorTests {
         #expect(html.contains("&lt;div&gt;"))
     }
 
+    // MARK: - Alerts
+
+    @Test func gfmAlertNote() {
+        let html = visitor.highlightAsTable("> [!NOTE]\n> Content\n")
+        #expect(html.contains("md-blockquote md-alert-note"))
+    }
+
+    @Test func gfmAlertTip() {
+        let html = visitor.highlightAsTable("> [!TIP]\n> Content\n")
+        #expect(html.contains("md-blockquote md-alert-tip"))
+    }
+
+    @Test func gfmAlertImportant() {
+        let html = visitor.highlightAsTable("> [!IMPORTANT]\n> Content\n")
+        #expect(html.contains("md-blockquote md-alert-important"))
+    }
+
+    @Test func gfmAlertStatus() {
+        let html = visitor.highlightAsTable("> [!STATUS]\n> Content\n")
+        #expect(html.contains("md-blockquote md-alert-status"))
+    }
+
+    @Test func gfmAlertWarning() {
+        let html = visitor.highlightAsTable("> [!WARNING]\n> Content\n")
+        #expect(html.contains("md-blockquote md-alert-warning"))
+    }
+
+    @Test func gfmAlertCaution() {
+        let html = visitor.highlightAsTable("> [!CAUTION]\n> Content\n")
+        #expect(html.contains("md-blockquote md-alert-caution"))
+    }
+
+    @Test func doccAlertNote() {
+        let html = visitor.highlightAsTable("> Note: Content\n")
+        #expect(html.contains("md-blockquote md-alert-note"))
+    }
+
+    @Test func doccAlertWarning() {
+        let html = visitor.highlightAsTable("> Warning: Be careful\n")
+        #expect(html.contains("md-blockquote md-alert-warning"))
+    }
+
+    @Test func plainBlockquoteNoAlertClass() {
+        let html = visitor.highlightAsTable("> Just a quote\n")
+        #expect(html.contains("md-blockquote"))
+        #expect(!html.contains("md-alert-"))
+    }
+
+    @Test func gfmAlertTagSpan() {
+        // The [!NOTE] text is wrapped in md-alert-tag.
+        let html = visitor.highlightAsTable("> [!NOTE]\n> Content\n")
+        #expect(html.contains("md-alert-tag"))
+    }
+
+    @Test func doccAlertTagSpan() {
+        // The "Note:" text is wrapped in md-alert-tag.
+        let html = visitor.highlightAsTable("> Note: Content\n")
+        #expect(html.contains("md-alert-tag"))
+    }
+
+    @Test func extendedAliasRendersAlertWhenEnabled() {
+        let html = visitor.highlightAsTable("> Remark: An observation\n", showExtendedAlerts: true)
+        #expect(html.contains("md-alert-note"))
+    }
+
+    @Test func extendedAliasPlainWhenDisabled() {
+        let html = visitor.highlightAsTable("> Remark: An observation\n", showExtendedAlerts: false)
+        #expect(html.contains("md-blockquote"))
+        #expect(!html.contains("md-alert-"))
+    }
+
+    @Test func coreAliasRendersAlertWhenExtendedDisabled() {
+        // Core DocC kinds always render as alerts regardless of the toggle.
+        let html = visitor.highlightAsTable("> Note: Content\n", showExtendedAlerts: false)
+        #expect(html.contains("md-alert-note"))
+    }
+
     // MARK: - Table structure
 
     @Test func wrappedInTable() {
