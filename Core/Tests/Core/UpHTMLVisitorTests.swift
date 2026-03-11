@@ -80,7 +80,10 @@ struct UpHTMLVisitorTests {
         ```
         """
         let html = MudCore.renderUpToHTML(md)
+        #expect(html.contains("<pre class=\"mud-code\">"))
         #expect(html.contains("class=\"language-swift\""))
+        #expect(html.contains("<div class=\"code-header\">"))
+        #expect(html.contains("<span class=\"code-language\">swift</span>"))
     }
 
     @Test func fencedCodeBlockWithoutLanguage() {
@@ -90,7 +93,8 @@ struct UpHTMLVisitorTests {
         ```
         """
         let html = MudCore.renderUpToHTML(md)
-        #expect(html.contains("<pre><code>"))
+        #expect(html.contains("<pre class=\"mud-code\"><code>"))
+        #expect(!html.contains("code-header"))
     }
 
     @Test func codeBlockEscapesHTML() {
@@ -101,6 +105,17 @@ struct UpHTMLVisitorTests {
         """
         let html = MudCore.renderUpToHTML(md)
         #expect(html.contains("&lt;div&gt;") || html.contains("hljs"))
+    }
+
+    @Test func codeBlockHeaderBarLanguageIsEscaped() {
+        let md = """
+        ```c++
+        int x = 1;
+        ```
+        """
+        let html = MudCore.renderUpToHTML(md)
+        #expect(html.contains("<span class=\"code-language\">c++</span>"))
+        #expect(html.contains("class=\"language-c++\""))
     }
 
     // MARK: - Lists
@@ -422,7 +437,8 @@ struct UpHTMLVisitorTests {
         ```
         """
         let html = MudCore.renderUpToHTML(md)
-        #expect(html.contains("<pre><code class=\"language-mermaid\">"))
+        #expect(html.contains("<pre class=\"mud-code\">"))
+        #expect(html.contains("<code class=\"language-mermaid\">"))
         #expect(html.contains("graph TD"))
     }
 
