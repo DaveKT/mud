@@ -1,7 +1,7 @@
 Plan: Down Mode Layout
 ===============================================================================
 
-> Status: Underway
+> Status: Complete
 
 
 ## Context
@@ -35,20 +35,10 @@ and content) are grouped inside a `.dc-scroll` wrapper.
 
 ### HTML structure
 
-````html
-<div class="down-lines">
-  <!-- Regular lines -->
-  <div class="dl"><span class="ln">1</span><span class="lc">text</span></div>
-
-  <!-- Entire code block inside dc-scroll -->
-  <div class="dc-scroll">
-    <div class="dl dc-fence"><span class="ln">5</span><span class="lc"><span class="md-code-fence">```python</span></span></div>
-    <div class="dl dc-code"><span class="ln">6</span><span class="lc"><span class="md-code-block">import os</span></span></div>
-    <div class="dl dc-code"><span class="ln">7</span><span class="lc"><span class="md-code-block">print("hello")</span></span></div>
-    <div class="dl dc-fence"><span class="ln">9</span><span class="lc"><span class="md-code-fence">```</span></span></div>
-  </div>
-</div>
-````
+Each line is a `.dl` div with `.ln` and `.lc` spans. Code blocks (fences +
+content lines) are grouped inside a `.dc-scroll` wrapper. Lines carry role
+classes: `.dc-fence` for fence delimiters, `.dc-code` for code content. See
+`DownHTMLVisitor.swift` for the generated structure.
 
 
 ### How this solves each problem
@@ -93,20 +83,11 @@ height when `.lc` wraps to multiple visual lines.
 
 ### 1. `DownHTMLVisitor.swift` — three-phase pipeline
 
-Restructured from a monolithic `applyEventsAsTable` into:
-
-- **Phase 1: `EventCollector`** — walks AST, produces sorted `[SpanEvent]` and
-  `[CodeBlockInfo]`. Enriched `CodeBlockInfo` with `isFenced: Bool`; always
-  creates entries for all code blocks including empty fenced and indented.
-- **Phase 2: `renderLineContent()`** — applies span events to source text,
-  substitutes highlight.js for code blocks, manages span carry-over stack.
-  Returns `[String]` — one HTML content string per line. Knows nothing about
-  layout.
-- **Phase 3: `buildLayout()`** — classifies lines via `lineRoles()` into
-  `.regular` / `.fence` / `.code`, wraps rendered content in structural HTML
-  with line numbers and `.dc-scroll` groups. Knows nothing about span events.
-
-Public method renamed `highlightAsTable` → `highlight`.
+Restructured from a monolithic `applyEventsAsTable` into three phases:
+`EventCollector` (AST → span events + code block info), `renderLineContent()`
+(span events → per-line HTML strings), and `buildLayout()` (line roles →
+structural div/flex HTML with `.dc-scroll` groups). Public method renamed
+`highlightAsTable` → `highlight`.
 
 
 ### 2. `HTMLTemplate.swift`
@@ -121,25 +102,9 @@ Updated `renderDownToHTML` and `renderDownModeDocument` to use renamed methods.
 
 ### 4. `mud-down.css` — rewrite
 
-See the committed file for the full CSS. Key design decisions:
-
-- `.dl { display: flex; }` — each line is a flex row; default `stretch`
-  alignment keeps `.ln` full-height.
-- `.ln { position: sticky; left: 0; z-index: 2; }` — z-index works on flex
-  children (unlike table cells).
-- `.dc-scroll { display: grid; }` — single-column grid ensures all children
-  (fence and code lines) share the same track width.
-- `html:not(.has-word-wrap) .down-lines { min-width: max-content; }` — in
-  word-wrap-off mode, the entire container grows to fit the widest content.
-- `.has-word-wrap .dc-scroll { overflow-x: auto; }` — in word-wrap-on mode,
-  code blocks scroll independently.
-- `.has-word-wrap .dc-code { min-width: max-content; }` — code lines grow to
-  trigger the scroll.
-- Code-bg on `.dc-fence .lc` and `.dc-code .lc` (not on the row or `.ln`).
-- `.dc-fence .lc { opacity: 0.5; }` — dims fence content without affecting the
-  line number.
-- First/last line padding via `:first-child` / `:last-child` selectors that
-  reach into `.dc-scroll`.
+Replaced table styles with flex rows (`.dl`), sticky line numbers with
+`z-index`, grid-based `.dc-scroll` containers, and word-wrap–conditional
+overflow. See the committed file for details.
 
 
 ### 5. `mud.js`
@@ -150,10 +115,8 @@ See the committed file for the full CSS. Key design decisions:
 
 ### 6. Tests
 
-- `DownHTMLVisitorTests.swift` — updated all assertions for div-based
-  structure; added `fencedCodeBlockLayout`, `emptyFencedCodeBlockLayout`,
-  `indentedCodeBlockLayout`.
-- `HTMLTemplateTests.swift` — updated `wrapDown` calls for renamed parameter.
+Updated all assertions for div-based structure; added layout-specific cases for
+fenced, empty fenced, and indented code blocks.
 
 
 ## Files modified
