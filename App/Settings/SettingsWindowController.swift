@@ -3,6 +3,7 @@ import SwiftUI
 
 class SettingsWindowController: NSWindowController {
     static let shared = SettingsWindowController()
+    private var hasBeenShown = false
 
     private convenience init() {
         let window = NSWindow(
@@ -13,7 +14,6 @@ class SettingsWindowController: NSWindowController {
         )
         window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
-        window.center()
 
         // An empty toolbar is needed for NavigationSplitView to populate
         // its title and items into the unified titlebar.
@@ -30,6 +30,10 @@ class SettingsWindowController: NSWindowController {
 
     func openSettings() {
         showWindow(nil)
+        if !hasBeenShown {
+            window?.center()
+            hasBeenShown = true
+        }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
