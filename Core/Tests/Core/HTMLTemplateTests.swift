@@ -76,16 +76,16 @@ struct HTMLTemplateTests {
     // MARK: - wrapDown()
 
     @Test func downDocumentStructure() {
-        let doc = HTMLTemplate.wrapDown(tableHTML: "<table></table>", options: .init())
+        let doc = HTMLTemplate.wrapDown(bodyHTML: "<div>content</div>", options: .init())
         #expect(doc.contains("<!DOCTYPE html>"))
         #expect(doc.contains("<div class=\"down-mode-output\">"))
-        #expect(doc.contains("<table></table>"))
+        #expect(doc.contains("<div>content</div>"))
     }
 
     @Test func downTitleEscaped() {
         var opts = RenderOptions()
         opts.title = "<script>"
-        let doc = HTMLTemplate.wrapDown(tableHTML: "", options: opts)
+        let doc = HTMLTemplate.wrapDown(bodyHTML: "", options: opts)
         #expect(doc.contains("<title>&lt;script&gt;</title>"))
     }
 
