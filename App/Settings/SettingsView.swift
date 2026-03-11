@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
+    case markdown
     case theme
     case upMode
     case downMode
@@ -12,6 +13,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: return "General"
+        case .markdown: return "Markdown"
         case .theme: return "Theme"
         case .upMode: return "Up Mode"
         case .downMode: return "Down Mode"
@@ -22,6 +24,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "gearshape"
+        case .markdown: return "text.document"
         case .theme: return "paintpalette"
         case .upMode: return "arrowshape.up.circle"
         case .downMode: return "arrowshape.down.circle"
@@ -56,6 +59,8 @@ struct SettingsView: View {
         switch selectedPane {
         case .general:
             GeneralSettingsView()
+        case .markdown:
+            MarkdownSettingsView()
         case .theme:
             ThemeSettingsView()
         case .upMode:

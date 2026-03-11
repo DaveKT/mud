@@ -113,8 +113,10 @@ MVP plan.
 
 - `ThemePreviewCard.swift` — Theme color constants and preview card view
 
-- `UpModeSettingsView.swift` — Up Mode settings pane (Mermaid Diagrams,
-  Allow Remote Content, DocC Asides)
+- `MarkdownSettingsView.swift` — Markdown settings pane (DocC alert mode)
+
+- `UpModeSettingsView.swift` — Up Mode settings pane (Allow Remote Content,
+  Mermaid Diagrams)
 
 - `DownModeSettingsView.swift` — Down Mode settings pane
 

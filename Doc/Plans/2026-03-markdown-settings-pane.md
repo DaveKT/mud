@@ -1,7 +1,7 @@
 Plan: Markdown Settings Pane
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
 
 
 ## Context
