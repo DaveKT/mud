@@ -1,5 +1,8 @@
 /* Mud - Down Mode styles */
 
+
+/* Container */
+
 .down-mode-output {
     margin: 0 auto;
     box-sizing: content-box;
@@ -13,73 +16,124 @@
 }
 
 
-/* Table-based line display */
+/* Line container */
 
 .down-lines {
-    border-collapse: collapse;
-    table-layout: fixed;
-    width: 100%;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     font-size: 0.875em;
     line-height: 1.6;
 }
 
+
+/* Each line: flex row.  Default stretch alignment ensures .ln
+   background covers the full row height when .lc wraps. */
+
+.dl {
+    display: flex;
+}
+
+.down-lines > .dl:first-child > *,
+.down-lines > .dc-scroll:first-child > .dl:first-child > * {
+  padding-top: 2rem;
+}
+
+.down-lines > .dl:last-child > *,
+.down-lines > .dc-scroll:last-child > .dl:last-child > * {
+  padding-bottom: 2rem;
+}
+
+/* Line numbers */
+
 .ln {
     position: sticky;
     left: 0;
-    width: 4em;
+    z-index: 2;
+    flex: 0 0 4em;
     padding-right: 1em;
     text-align: right;
     font-size: 0.85em;
     font-weight: 300;
     user-select: none;
     -webkit-user-select: none;
-    vertical-align: top;
     white-space: nowrap;
     background: color-mix(in srgb, var(--code-bg), var(--bg-color));
     color: color-mix(in srgb, var(--blockquote-color), var(--bg-color));
     line-height: 1.7;
 }
 
-.lc {
-    width: 100%;
-    white-space: pre;
-    vertical-align: top;
-    padding: 0 1em;
+html:not(.has-line-numbers) .ln {
+    visibility: hidden;
+    flex-basis: 0;
+    width: 0;
+    padding: 0;
 }
 
-.has-word-wrap .lc {
+
+/* Line content */
+
+.lc {
+    flex: 1 1 auto;
+    white-space: pre;
+    padding: 0 1em;
+    min-width: 0;
+}
+
+.has-word-wrap .dl:not(.dc-code) .lc {
     white-space: pre-wrap;
     overflow-wrap: break-word;
 }
 
-tr:first-child > * {
-    padding-top: 2rem;
-}
 
-tr:last-child > * {
-    padding-bottom: 2rem;
-}
+/* Code blocks — faint background */
 
-td.lc:has(.md-code-fence) {
+.dc-fence .lc,
+.dc-code .lc {
     background: var(--code-bg);
+}
+
+/* Code fence lines — content dimmed, line number untouched */
+
+.dc-fence .lc {
     opacity: 0.5;
 }
 
-td.lc:has(.md-code-block) {
-    background: var(--code-bg);
+/* When word-wrap is off, grow the container to the widest content
+   so all lines share the same width and line numbers stick across
+   the full scroll range. */
+
+html:not(.has-word-wrap) .down-lines {
+    min-width: max-content;
 }
 
-/* tr:has(.md-code-block) + tr td.lc:not(:has(.md-code-block)), */
-/* tr:not(:has(.md-code-block)) + tr td.lc:has(.md-code-block) { */
-/*   border-top: 1px solid #0001; */
-/* } */
+/* Scrollable code block wrapper */
 
-html:not(.has-line-numbers) .ln {
-    visibility: hidden;
-    width: 0;
-    padding: 0;
+.dc-scroll {
+    display: grid;
 }
+
+/* When word-wrap is on, code blocks scroll independently. */
+
+.has-word-wrap .dc-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: none;
+}
+
+/* Code lines grow to fit content — triggers dc-scroll scrolling
+   when word-wrap is on. */
+
+.has-word-wrap .dc-code {
+    min-width: max-content;
+}
+
+
+/* Print: don't clip code blocks */
+
+@media print {
+    .dc-scroll {
+        overflow-x: visible;
+    }
+}
+
 
 /* AST-based syntax highlighting */
 

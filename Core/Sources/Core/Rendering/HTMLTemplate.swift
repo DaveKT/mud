@@ -21,13 +21,13 @@ public enum HTMLTemplate {
         return doc.render()
     }
 
-    /// Wraps a pre-built table in a Down-mode document.
-    static func wrapDown(tableHTML: String, options: RenderOptions) -> String {
+    /// Wraps pre-built body HTML in a Down-mode document.
+    static func wrapDown(bodyHTML: String, options: RenderOptions) -> String {
         var doc = HTMLDocument(options: options)
         doc.styles = [themeCSS(for: options.theme), sharedCSS, downCSS]
         doc.bodyContent = """
             <div class="down-mode-output">
-                \(tableHTML)
+                \(bodyHTML)
             </div>
         """
         return doc.render()

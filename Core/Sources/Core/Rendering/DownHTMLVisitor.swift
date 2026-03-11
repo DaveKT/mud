@@ -9,12 +9,15 @@ public struct DownHTMLVisitor: Sendable {
 
     public init() {}
 
-    /// Returns a complete `<table class="down-lines">` with one row
-    /// per source line, line-number cells, and syntax-highlight spans.
-    public func highlightAsTable(
+    /// Returns a `<div class="down-lines">` container with one
+    /// flex-row per source line, line numbers, syntax-highlight
+    /// spans, and scrollable code-block regions.
+    public func highlight(
         _ markdown: String,
         doccAlertMode: DocCAlertMode = .extended
     ) -> String {
+        // Phase 1: Collect span events and code block info from
+        // the AST.
         let doc = MarkdownParser.parse(markdown)
         let sourceLines = markdown.split(
             separator: "\n", omittingEmptySubsequences: false
@@ -27,9 +30,20 @@ public struct DownHTMLVisitor: Sendable {
         collector.visit(doc)
         var events = collector.events
         events.sort()
-        return applyEventsAsTable(
-            events, codeBlocks: collector.codeBlocks,
-            to: markdown)
+
+        // Phase 2: Render per-line HTML content strings.
+        let lines = markdown.split(
+            separator: "\n", omittingEmptySubsequences: false)
+        let lineCount = markdown.hasSuffix("\n") && !lines.isEmpty
+            ? lines.count - 1
+            : max(lines.count, 1)
+        let rendered = renderLineContent(
+            lines: lines, lineCount: lineCount,
+            events: events, codeBlocks: collector.codeBlocks)
+
+        // Phase 3: Wrap rendered content in structural layout.
+        return buildLayout(
+            rendered, codeBlocks: collector.codeBlocks)
     }
 
     // MARK: - SpanEvent
@@ -56,9 +70,12 @@ public struct DownHTMLVisitor: Sendable {
     }
 
     private struct CodeBlockInfo {
+        let isFenced: Bool
         let contentFirstLine: Int
         let contentLastLine: Int
         let highlightedLines: [String]
+
+        var hasContent: Bool { contentFirstLine <= contentLastLine }
     }
 
     // MARK: - Phase 1: Collect events from the AST
@@ -183,6 +200,7 @@ public struct DownHTMLVisitor: Sendable {
                 // Content lines (between the fences), if any.
                 let firstContent = range.lowerBound.line + 1
                 let lastContent = range.upperBound.line - 1
+                var highlighted: [String] = []
                 if firstContent <= lastContent {
                     let lastLen = lineLen(lastContent)
                     emitSpan("md-code-block", depth: depth,
@@ -194,12 +212,8 @@ public struct DownHTMLVisitor: Sendable {
                         codeBlock.code,
                         language: codeBlock.language)
                     {
-                        codeBlocks.append(CodeBlockInfo(
-                            contentFirstLine: firstContent,
-                            contentLastLine: lastContent,
-                            highlightedLines:
-                                HTMLLineSplitter
-                                    .splitByLine(html)))
+                        highlighted = HTMLLineSplitter
+                            .splitByLine(html)
                     }
                 }
 
@@ -219,6 +233,14 @@ public struct DownHTMLVisitor: Sendable {
                              to: (range.lowerBound.line,
                                   infoCol + lang.utf8.count))
                 }
+
+                // Always record for layout, even when empty.
+                codeBlocks.append(CodeBlockInfo(
+                    isFenced: true,
+                    contentFirstLine: firstContent,
+                    contentLastLine: lastContent,
+                    highlightedLines: highlighted))
+
             } else {
                 // -- Indented code block: content only --
                 let lineCount = codeBlock.code.lazy
@@ -230,6 +252,12 @@ public struct DownHTMLVisitor: Sendable {
                          from: (range.lowerBound.line,
                                 range.lowerBound.column),
                          to: (lastLine, lastLen + 1))
+
+                codeBlocks.append(CodeBlockInfo(
+                    isFenced: false,
+                    contentFirstLine: range.lowerBound.line,
+                    contentLastLine: lastLine,
+                    highlightedLines: []))
             }
         }
 
@@ -367,37 +395,33 @@ public struct DownHTMLVisitor: Sendable {
         }
     }
 
-    // MARK: - Phase 2: Apply events as table rows
+    // MARK: - Phase 2: Render per-line HTML content
 
-    private func applyEventsAsTable(
-        _ events: [SpanEvent],
-        codeBlocks: [CodeBlockInfo],
-        to markdown: String
-    ) -> String {
-        let lines = markdown.split(
-            separator: "\n", omittingEmptySubsequences: false)
-        let lineCount = markdown.hasSuffix("\n") && !lines.isEmpty
-            ? lines.count - 1
-            : max(lines.count, 1)
-
-        var result = "<table class=\"down-lines\"><tbody>"
+    /// Produces one HTML content string per source line by applying
+    /// span events (or substituting highlight.js output for code
+    /// blocks).  Knows nothing about layout or line numbers.
+    private func renderLineContent(
+        lines: [Substring],
+        lineCount: Int,
+        events: [SpanEvent],
+        codeBlocks: [CodeBlockInfo]
+    ) -> [String] {
+        var rendered: [String] = []
+        rendered.reserveCapacity(lineCount)
         var openSpans: [String] = []
         var ei = 0
 
         for lineIdx in 0..<lineCount {
             let lineNum = Int32(lineIdx + 1)
+            var content = ""
 
-            // Open row.
-            result += "<tr><td class=\"ln\">"
-            result += "\(lineIdx + 1)</td><td class=\"lc\">"
-
-            // Reopen spans carried from the previous row.
+            // Reopen spans carried from the previous line.
             for cls in openSpans {
-                result += "<span class=\"\(cls)\">"
+                content += "<span class=\"\(cls)\">"
             }
 
             // Emit line content — highlighted or escaped.
-            if let highlighted = self.highlightedLine(
+            if let highlighted = highlightedLine(
                 lineNum, codeBlocks: codeBlocks)
             {
                 // Process span events at line start (e.g.
@@ -406,33 +430,32 @@ public struct DownHTMLVisitor: Sendable {
                       events[ei].line == lineNum,
                       events[ei].column <= 1
                 {
-                    emitTag(events[ei], to: &result,
+                    emitTag(events[ei], to: &content,
                             openSpans: &openSpans)
                     ei += 1
                 }
-                result += highlighted
+                content += highlighted
             } else if lineIdx < lines.count {
                 emitLineContent(
                     lines[lineIdx], lineNum: lineNum,
                     events: events, ei: &ei,
-                    result: &result, openSpans: &openSpans)
+                    result: &content, openSpans: &openSpans)
             }
 
             // Flush events past end of visible content (close tags).
             while ei < events.count, events[ei].line == lineNum {
-                emitTag(events[ei], to: &result,
+                emitTag(events[ei], to: &content,
                         openSpans: &openSpans)
                 ei += 1
             }
 
-            // Close all open spans at the row boundary.
-            for _ in openSpans { result += "</span>" }
+            // Close all open spans at the line boundary.
+            for _ in openSpans { content += "</span>" }
 
-            result += "</td></tr>"
+            rendered.append(content)
         }
 
-        result += "</tbody></table>"
-        return result
+        return rendered
     }
 
     /// Emit one line's content, escaping text in segments between
@@ -497,15 +520,103 @@ public struct DownHTMLVisitor: Sendable {
     ) -> String? {
         let n = Int(lineNum)
         for cb in codeBlocks {
-            if n >= cb.contentFirstLine,
-               n <= cb.contentLastLine
-            {
-                let idx = n - cb.contentFirstLine
-                return idx < cb.highlightedLines.count
-                    ? cb.highlightedLines[idx] : nil
-            }
+            guard !cb.highlightedLines.isEmpty,
+                  n >= cb.contentFirstLine,
+                  n <= cb.contentLastLine
+            else { continue }
+            let idx = n - cb.contentFirstLine
+            return idx < cb.highlightedLines.count
+                ? cb.highlightedLines[idx] : nil
         }
         return nil
+    }
+
+    // MARK: - Phase 3: Build structural layout
+
+    /// Wraps rendered line content in the div-based layout with
+    /// line numbers, `.dc-fence` / `.dc-code` classes, and
+    /// `.dc-scroll` wrappers around code block regions.
+    private func buildLayout(
+        _ rendered: [String],
+        codeBlocks: [CodeBlockInfo]
+    ) -> String {
+        // Build a lookup of line roles from code block metadata.
+        let roles = lineRoles(
+            lineCount: rendered.count, codeBlocks: codeBlocks)
+
+        var html = "<div class=\"down-lines\">"
+        var inScroll = false
+
+        for (i, content) in rendered.enumerated() {
+            let lineNum = i + 1
+            let role = roles[i]
+
+            // Open dc-scroll wrapper before the first fence/code line.
+            if (role == .fence || role == .code) && !inScroll {
+                html += "<div class=\"dc-scroll\">"
+                inScroll = true
+            }
+
+            // Line div with role-specific class.
+            switch role {
+            case .regular:
+                html += "<div class=\"dl\">"
+            case .fence:
+                html += "<div class=\"dl dc-fence\">"
+            case .code:
+                html += "<div class=\"dl dc-code\">"
+            }
+
+            html += "<span class=\"ln\">\(lineNum)</span>"
+            html += "<span class=\"lc\">\(content)</span>"
+            html += "</div>"
+
+            // Close dc-scroll wrapper after the last fence/code line.
+            if inScroll {
+                let nextRole = i + 1 < roles.count
+                    ? roles[i + 1] : .regular
+                if nextRole != .fence && nextRole != .code {
+                    html += "</div>"
+                    inScroll = false
+                }
+            }
+        }
+
+        html += "</div>"
+        return html
+    }
+
+    private enum LineRole {
+        case regular, fence, code
+    }
+
+    /// Classifies each source line based on code block metadata.
+    private func lineRoles(
+        lineCount: Int,
+        codeBlocks: [CodeBlockInfo]
+    ) -> [LineRole] {
+        var roles = [LineRole](repeating: .regular, count: lineCount)
+        for cb in codeBlocks {
+            if cb.hasContent {
+                for line in cb.contentFirstLine...cb.contentLastLine {
+                    let idx = line - 1
+                    if idx >= 0, idx < lineCount {
+                        roles[idx] = .code
+                    }
+                }
+            }
+            if cb.isFenced {
+                let openFence = cb.contentFirstLine - 2
+                let closeFence = cb.contentLastLine
+                if openFence >= 0, openFence < lineCount {
+                    roles[openFence] = .fence
+                }
+                if closeFence >= 0, closeFence < lineCount {
+                    roles[closeFence] = .fence
+                }
+            }
+        }
+        return roles
     }
 
 }

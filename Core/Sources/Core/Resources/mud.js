@@ -203,10 +203,10 @@
   }
 
   function scrollToLine(lineNumber) {
-    var rows = document.querySelectorAll("table.down-lines tr");
+    var lines = document.querySelectorAll(".down-lines .dl");
     var idx = lineNumber - 1;
-    if (idx >= 0 && idx < rows.length) {
-      rows[idx].scrollIntoView({ behavior: "smooth", block: "start" });
+    if (idx >= 0 && idx < lines.length) {
+      lines[idx].scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
