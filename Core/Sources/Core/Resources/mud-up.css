@@ -111,11 +111,34 @@ pre {
     border-radius: 6px;
 }
 
+pre.mud-code {
+    padding-top: 0;
+}
+
 pre code {
     padding: 0;
     background-color: transparent;
     border-radius: 0;
     font-size: inherit;
+}
+
+/* Code block header bar */
+.code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4em 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.75em;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8em;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.code-language {
+    color: var(--blockquote-color);
+    text-transform: lowercase;
 }
 
 /* Blockquotes */

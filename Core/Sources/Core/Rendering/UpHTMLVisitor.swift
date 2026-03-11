@@ -111,12 +111,15 @@ struct UpHTMLVisitor: MarkupWalker {
 
     mutating func visitCodeBlock(_ codeBlock: CodeBlock) {
         let lang = codeBlock.language.flatMap { $0.isEmpty ? nil : $0 }
+        result += "<pre class=\"mud-code\">"
         if let lang {
-            result += "<pre><code class=\"language-"
-            result += HTMLEscaping.escape(lang)
-            result += "\">"
+            let escaped = HTMLEscaping.escape(lang)
+            result += "<div class=\"code-header\">"
+            result += "<span class=\"code-language\">\(escaped)</span>"
+            result += "</div>"
+            result += "<code class=\"language-\(escaped)\">"
         } else {
-            result += "<pre><code>"
+            result += "<code>"
         }
         if let highlighted = CodeHighlighter.highlight(
             codeBlock.code, language: lang
