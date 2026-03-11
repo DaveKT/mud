@@ -45,9 +45,9 @@ struct CommandLineSettingsView: View {
                     .font(.system(.callout, design: .monospaced))
                     .textSelection(.enabled)
 
-                Text("Add this to your ~/.zshrc or ~/.bashrc.")
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
+                // Text("Add this to your ~/.zshrc or ~/.bashrc.")
+                //     .foregroundStyle(.secondary)
+                //     .font(.callout)
             }
 
             learnMoreSection

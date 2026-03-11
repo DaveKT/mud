@@ -20,7 +20,7 @@ struct MarkdownSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 AlertReferenceTable(doccAlertMode: appState.doccAlertMode)
-                    .padding(.vertical, -10) // XXX-03-2026-JP -- hack to align table to horizontal dividers above and below
+                    .padding(.vertical, -11) // XXX-03-2026-JP -- hack to align table to horizontal dividers above and below
                 HStack(spacing: 0) {
                     Text("Learn more: ")
                         .foregroundStyle(.secondary)
@@ -142,6 +142,7 @@ private struct AlertReferenceTable: View {
             .frame(maxHeight: 144)
         }
         .background(Color(NSColor.textBackgroundColor))
+        .border(Color(NSColor.separatorColor))
         .animation(.easeInOut(duration: 0.15), value: doccAlertMode)
     }
 }

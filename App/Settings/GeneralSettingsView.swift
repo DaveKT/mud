@@ -28,10 +28,12 @@ struct GeneralSettingsView: View {
                     get: { appState.viewToggles.contains(.readableColumn) },
                     set: { _ in appState.toggle(.readableColumn) }
                 ))
+                Text("Constrain content to a comfortable reading width — no more than about 80 characters per line.")
+                    .foregroundStyle(.secondary)
             }
 
             Section {
-                Toggle("Quit when last window closes", isOn: Binding(
+                Toggle("Quit When Last Window Closes", isOn: Binding(
                     get: { appState.quitOnClose },
                     set: { newValue in
                         appState.quitOnClose = newValue

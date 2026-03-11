@@ -18,7 +18,7 @@ struct UpModeSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
-                Toggle("Mermaid Diagrams", isOn: Binding(
+                Toggle("Generate Diagrams", isOn: Binding(
                     get: { appState.enabledExtensions.contains("mermaid") },
                     set: { newValue in
                         if newValue {
@@ -29,8 +29,18 @@ struct UpModeSettingsView: View {
                         appState.saveEnabledExtensions()
                     }
                 ))
-                Text("Render mermaid code blocks as diagrams.")
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 0) {
+                    Text("Learn more: ")
+                        .foregroundStyle(.secondary)
+                    Button("mermaid-diagrams.md") {
+                        SettingsWindowController.shared.window?.close()
+                        DocumentController.openBundledDocument(
+                            "mermaid-diagrams", subdirectory: "Doc/Examples")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.link)
+                }
+
             }
         }
         .formStyle(.grouped)
