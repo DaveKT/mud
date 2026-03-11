@@ -143,10 +143,9 @@ Add to the registry.
 
 ## Open questions
 
-1. **Clipboard API availability** — `navigator.clipboard.writeText()` requires
-   a secure context. WKWebView loads content via `about:blank` or file URLs.
-   Need to verify this works. Fallback: `document.execCommand('copy')` with a
-   temporary textarea (deprecated but universally supported).
+1. ~~**Clipboard API availability**~~ — Resolved:
+   `navigator.clipboard.writeText()` works in WKWebView. The
+   `execCommand('copy')` fallback is still in the JS for resilience.
 
 2. **Header bar revert plan** — If the header bar feels clunky, the fallback is
    to remove it and position the copy button absolutely in the top-right corner

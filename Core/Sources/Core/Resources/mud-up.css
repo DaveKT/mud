@@ -141,6 +141,38 @@ pre code {
     text-transform: lowercase;
 }
 
+.code-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    margin-left: auto;
+    padding: 0.15em 0.4em;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--blockquote-color);
+    font-family: inherit;
+    font-size: inherit;
+    text-transform: uppercase;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+pre.mud-code:hover .code-copy-btn {
+    opacity: 1;
+}
+
+.code-copy-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.code-copy-btn.copied {
+    opacity: 1;
+    color: var(--alert-tip-title);
+}
+
 /* Blockquotes */
 blockquote {
     margin: 0 0 1em 0;

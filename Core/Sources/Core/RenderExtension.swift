@@ -38,9 +38,22 @@ public struct RenderExtension: Sendable {
         runtimeResources: ["mermaid.min", "mermaid-init"]
     )
 
+    private static var copyCodeInitJS: String {
+        HTMLTemplate.loadResource("copy-code", type: "js") ?? ""
+    }
+
+    static let copyCode = RenderExtension(
+        name: "copyCode",
+        marker: "mud-code",
+        cspSources: [],
+        embeddedScripts: [.inline(copyCodeInitJS)],
+        runtimeResources: ["copy-code"]
+    )
+
     // MARK: - Registry
 
     public static let registry: [String: RenderExtension] = [
         mermaid.name: mermaid,
+        copyCode.name: copyCode,
     ]
 }
