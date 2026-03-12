@@ -104,18 +104,6 @@ struct MudApp: App {
                     set: { _ in appState.toggle(.readableColumn) }
                 ))
 
-                Toggle("Line Numbers", isOn: Binding(
-                    get: { appState.viewToggles.contains(.lineNumbers) },
-                    set: { _ in appState.toggle(.lineNumbers) }
-                ))
-                .disabled(appState.modeInActiveTab == .up)
-
-                Toggle("Word Wrap", isOn: Binding(
-                    get: { appState.viewToggles.contains(.wordWrap) },
-                    set: { _ in appState.toggle(.wordWrap) }
-                ))
-                .disabled(appState.modeInActiveTab == .up)
-
                 Divider()
 
                 Button("Actual Size") {
