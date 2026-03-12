@@ -245,7 +245,7 @@ struct WebView: NSViewRepresentable {
             for toggle in ViewToggle.allCases {
                 let on = classes.contains(toggle.className)
                 webView.evaluateJavaScript(
-                    "Mud.setBodyClass('\(toggle.className)', \(on))"
+                    "Mud.setClass('\(toggle.className)', \(on))"
                 )
             }
         }

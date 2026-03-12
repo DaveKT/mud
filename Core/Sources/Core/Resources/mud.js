@@ -212,7 +212,7 @@
 
   // -- Body classes ---------------------------------------------------------
 
-  function setBodyClass(name, enabled) {
+  function setClass(name, enabled) {
     if (enabled) {
       document.documentElement.classList.add(name);
     } else {
@@ -245,7 +245,7 @@
     getScrollFraction: getScrollFraction,
     setScrollFraction: setScrollFraction,
     setTheme: setTheme,
-    setBodyClass: setBodyClass,
+    setClass: setClass,
     setZoom: setZoom,
     scrollToHeading: scrollToHeading,
     scrollToLine: scrollToLine
