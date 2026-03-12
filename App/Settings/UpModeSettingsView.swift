@@ -7,18 +7,19 @@ struct UpModeSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Allow Remote Content", isOn: Binding(
+                Toggle(isOn: Binding(
                     get: { appState.allowRemoteContent },
                     set: { newValue in
                         appState.allowRemoteContent = newValue
                         appState.saveAllowRemoteContent()
                     }
-                ))
-                Text("Load remote images and other external resources referenced in Markdown documents.")
-                    .foregroundStyle(.secondary)
+                )) {
+                    Text("Allow Remote Content")
+                    Text("Load remote images and other external resources referenced in Markdown documents.")
+                }
             }
             Section {
-                Toggle("Generate Diagrams", isOn: Binding(
+                Toggle(isOn: Binding(
                     get: { appState.enabledExtensions.contains("mermaid") },
                     set: { newValue in
                         if newValue {
@@ -28,28 +29,30 @@ struct UpModeSettingsView: View {
                         }
                         appState.saveEnabledExtensions()
                     }
-                ))
-                HStack(spacing: 0) {
-                    Text("Learn more: ")
-                        .foregroundStyle(.secondary)
-                    Button("mermaid-diagrams.md") {
-                        SettingsWindowController.shared.window?.close()
-                        DocumentController.openBundledDocument(
-                            "mermaid-diagrams", subdirectory: "Doc/Examples")
+                )) {
+                    Text("Generate Diagrams")
+                    HStack(spacing: 0) {
+                        Text("Learn more: ")
+                        Button("mermaid-diagrams.md") {
+                            SettingsWindowController.shared.window?.close()
+                            DocumentController.openBundledDocument(
+                                "mermaid-diagrams", subdirectory: "Doc/Examples")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.link)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.link)
                 }
 
             }
             Section("Code Blocks") {
-                Toggle("Code Block Headers", isOn: Binding(
+                Toggle(isOn: Binding(
                     get: { appState.viewToggles.contains(.codeHeader) },
                     set: { _ in appState.toggle(.codeHeader) }
-                ))
-                Text("Show a header bar with the language name on code blocks.")
-                    .foregroundStyle(.secondary)
-                Toggle("Copy Code", isOn: Binding(
+                )) {
+                    Text("Code Block Headers")
+                    Text("Show a header bar with the language name on code blocks.")
+                }
+                Toggle(isOn: Binding(
                     get: { appState.enabledExtensions.contains("copyCode") },
                     set: { newValue in
                         if newValue {
@@ -59,9 +62,10 @@ struct UpModeSettingsView: View {
                         }
                         appState.saveEnabledExtensions()
                     }
-                ))
-                Text("Show a Copy button on code blocks.")
-                    .foregroundStyle(.secondary)
+                )) {
+                    Text("Copy Code")
+                    Text("Show a Copy button on code blocks.")
+                }
             }
         }
         .formStyle(.grouped)

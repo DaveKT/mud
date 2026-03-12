@@ -24,12 +24,13 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle("Readable Column", isOn: Binding(
+                Toggle(isOn: Binding(
                     get: { appState.viewToggles.contains(.readableColumn) },
                     set: { _ in appState.toggle(.readableColumn) }
-                ))
-                Text("Constrain content to a comfortable reading width — no more than about 80 characters per line.")
-                    .foregroundStyle(.secondary)
+                )) {
+                    Text("Readable Column")
+                    Text("Constrain content to a comfortable reading width — no more than about 80 characters per line.")
+                }
             }
 
             Section {
