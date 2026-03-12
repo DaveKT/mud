@@ -1,7 +1,7 @@
 Plan: Code Block Copy Button
 ===============================================================================
 
-> Status: Underway
+> Status: Complete
 
 
 ## Goal
@@ -17,26 +17,12 @@ Both features are controlled by settings in the Up Mode settings pane.
 
 ### Header bar anatomy
 
-When both "Code Block Headers" and "Copy Code" are on:
-
-```
-┌──────────────────────────────────────────┐
-│  swift                          © Copy   │  ← header bar
-├──────────────────────────────────────────┤
-│  let x = 42                              │
-│  print(x)                                │
-└──────────────────────────────────────────┘
-```
+When both "Code Block Headers" and "Copy Code" are on, a header bar sits above
+the code content showing the language name on the left and a copy button on the
+right, separated from the code by a divider.
 
 When "Code Block Headers" is off and "Copy Code" is on, the copy button floats
-in the top-right corner of the code block:
-
-```
-┌──────────────────────────────────────────┐
-│  let x = 42                     © Copy   │
-│  print(x)                                │
-└──────────────────────────────────────────┘
-```
+in the top-right corner of the code block instead.
 
 - The **copy icon** is the Octicon "copy" SVG (16×16). Label reads `Copy`.
 - On hover over the `<pre>` element, the copy button fades in.
@@ -61,24 +47,9 @@ works.
 #### 1. HTML (`UpHTMLVisitor.swift`)
 
 All code blocks emit `<pre class="mud-code">`. When a language is specified, a
-header `<div>` is included:
-
-```html
-<pre class="mud-code">
-  <div class="code-header">
-    <span class="code-language">swift</span>
-  </div>
-  <code class="language-swift">…</code>
-</pre>
-```
-
-Language-less code blocks have no header div:
-
-```html
-<pre class="mud-code">
-  <code>…</code>
-</pre>
-```
+header `<div class="code-header">` containing a `<span class="code-language">`
+is included inside the `<pre>`, before the `<code>` element. Language-less code
+blocks have no header div.
 
 
 #### 2. CSS (`mud-up.css`)
@@ -96,28 +67,17 @@ Language-less code blocks have no header div:
 
 #### 3. JavaScript (`copy-code.js`)
 
-A small runtime script that:
-
-1. Queries all `pre.mud-code` elements.
-2. Checks whether each block has a visible `.code-header`.
-3. **Header visible:** appends the copy button to the header.
-4. **Header hidden or absent:** appends the button directly to the `<pre>` with
-   the `code-copy-floating` class.
-5. On click, uses `navigator.clipboard.writeText()` with a
-   `document.execCommand('copy')` fallback.
+A small runtime script that queries all `pre.mud-code` elements, checks whether
+each has a visible `.code-header`, and places the copy button accordingly —
+inside the header when visible, or floating in the `<pre>` otherwise. Uses
+`navigator.clipboard.writeText()` with a `document.execCommand('copy')`
+fallback.
 
 
 #### 4. Extension registration (`RenderExtension.swift`)
 
-```swift
-static let copyCode = RenderExtension(
-    name: "copyCode",
-    marker: "mud-code",
-    cspSources: [],
-    embeddedScripts: [.inline(copyCodeInitJS)],
-    runtimeResources: ["copy-code"]
-)
-```
+A static `.copyCode` extension registered with the `mud-code` marker, an inline
+init script, and a `copy-code` runtime resource.
 
 
 #### 5. ViewToggle (`ViewToggle.swift`)
@@ -135,21 +95,20 @@ A "Code Blocks" section in the Up Mode settings pane with two toggles:
 - **Copy Code** — toggles the `copyCode` extension.
 
 
-## Open questions
+## Resolved questions
 
-1. ~~**Clipboard API availability**~~ — Resolved:
-   `navigator.clipboard.writeText()` works in WKWebView.
+1. **Clipboard API availability** — `navigator.clipboard.writeText()` works in
+   WKWebView.
 
-2. ~~**Header bar revert plan**~~ — Resolved: both layouts are supported.
+2. **Header bar revert plan** — Both layouts (header and floating) are
+   supported.
 
-3. **Down Mode** — Deferred. Down Mode code blocks are the entire document (one
-   big syntax-highlighted block), so a copy button doesn't make sense there in
-   the same way. May revisit later.
+3. **Down Mode** — Deferred.
 
 
 ## Sequence
 
-All steps complete. Remaining work: final testing and commit.
+All steps complete.
 
 1. ~~HTML: `UpHTMLVisitor` emits `<pre class="mud-code">` with header div~~
 2. ~~CSS: header bar styles, floating copy button, visibility toggle~~
