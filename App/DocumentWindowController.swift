@@ -24,7 +24,7 @@ class DocumentWindowController: NSWindowController {
         self.fileURL = url
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 860, height: 740),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -47,6 +47,7 @@ class DocumentWindowController: NSWindowController {
         if let frameString = UserDefaults.standard.string(forKey: Self.frameKey) {
             window.setFrame(NSRectFromString(frameString), display: false)
         } else {
+            window.setContentSize(NSSize(width: 860, height: 740))
             window.center()
         }
 
