@@ -292,12 +292,12 @@
 				7CC9751D2F3401F4001C3BB7 /* Sources */,
 				7CC9751E2F3401F4001C3BB7 /* Frameworks */,
 				7CC9751F2F3401F4001C3BB7 /* Resources */,
-				7C0A00082F5B0003001C3BB7 /* Set Version */,
 				7C6532B22F585D3900B71730 /* CopyFiles */,
 				7C9B0C1D2F5E1000001C3BB7 /* Strip CLI assets (sandboxed) */,
 				7C6532BA2F585DC100B71730 /* ShellScript */,
 				7CC6E6BE2F658ABE00FE7D66 /* CopyFiles */,
 				7CC6E6C12F658B1C00FE7D66 /* ShellScript */,
+				7CA45B002F6E8A0000B71730 /* Increment Build Number (App Store) */,
 			);
 			buildRules = (
 			);
@@ -369,25 +369,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		7C0A00082F5B0003001C3BB7 /* Set Version */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Set Version";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "BUILD_NUMBER_FILE=\"$SRCROOT/Mud.xcodeproj/xcuserdata/BUILD_NUMBER\"\nBUILD=$(cat \"$BUILD_NUMBER_FILE\" 2>/dev/null || echo \"0\")\n\nif [ \"$ACTION\" = \"install\" ]; then\n  BUILD=$((BUILD + 1))\n  echo \"$BUILD\" > \"$BUILD_NUMBER_FILE\"\nfi\n\nVERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo \"0.1.0\")\nVERSION=${VERSION#v}\n\nPLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleShortVersionString $VERSION\" \"$PLIST\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD\" \"$PLIST\"\n";
-		};
 		7C6532BA2F585DC100B71730 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -441,6 +422,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"$CONFIGURATION\" = \"Debug-AppStore\" ] || [ \"$CONFIGURATION\" = \"Release-AppStore\" ]; then\n  rm -rf \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sparkle.framework\"\nfi\n";
+		};
+		7CA45B002F6E8A0000B71730 /* Increment Build Number (App Store) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Increment Build Number (App Store)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Only increment for App Store archives\n[ \"$ACTION\" != \"install\" ] && exit 0\n[[ \"$CONFIGURATION\" != *AppStore* ]] && exit 0\n\nBUILD_NUMBER_FILE=\"$SRCROOT/Mud.xcodeproj/xcuserdata/BUILD_NUMBER\"\nBUILD=$(cat \"$BUILD_NUMBER_FILE\" 2>/dev/null || echo \"0\")\nBUILD=$((BUILD + 1))\necho \"$BUILD\" > \"$BUILD_NUMBER_FILE\"\n\nPLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD\" \"$PLIST\"\necho \"App Store build number: $BUILD\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

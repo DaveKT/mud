@@ -43,6 +43,14 @@ jobs:
           security list-keychains -d user \
             -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
 
+      - name: Derive version
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Resolve packages
         run: |
           xcodebuild -resolvePackageDependencies \
@@ -59,7 +67,9 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             "CODE_SIGN_IDENTITY=Developer ID Application" \
             DEVELOPMENT_TEAM=XVL2AFNXH5 \
-            ENABLE_APP_SANDBOX=NO
+            ENABLE_APP_SANDBOX=NO \
+            MARKETING_VERSION=${{ steps.version.outputs.version }} \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }}
 
       - name: Export
         run: |
@@ -95,19 +105,19 @@ jobs:
 
       - name: Prepare release assets
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          cp "$RUNNER_TEMP/Mud.dmg" "Mud-${VERSION}.dmg"
-          shasum -a 256 "Mud-${VERSION}.dmg" > "Mud-${VERSION}.dmg.sha256"
+          TAG=${{ steps.version.outputs.tag }}
+          cp "$RUNNER_TEMP/Mud.dmg" "Mud-${TAG}.dmg"
+          shasum -a 256 "Mud-${TAG}.dmg" > "Mud-${TAG}.dmg.sha256"
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          gh release create "$VERSION" \
-            "Mud-${VERSION}.dmg" \
-            "Mud-${VERSION}.dmg.sha256" \
-            --title "Mud ${VERSION#v}" \
+          TAG=${{ steps.version.outputs.tag }}
+          gh release create "$TAG" \
+            "Mud-${TAG}.dmg" \
+            "Mud-${TAG}.dmg.sha256" \
+            --title "Mud ${{ steps.version.outputs.version }}" \
             --generate-notes
 
       - name: Clean up keychain
