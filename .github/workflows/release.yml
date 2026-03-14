@@ -59,6 +59,9 @@ jobs:
             -scheme "Mud - Direct"
 
       - name: Archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           xcodebuild archive \
             -project Mud.xcodeproj \
@@ -68,8 +71,8 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             "CODE_SIGN_IDENTITY=Developer ID Application" \
             DEVELOPMENT_TEAM=XVL2AFNXH5 \
-            MARKETING_VERSION=${{ steps.version.outputs.version }} \
-            CURRENT_PROJECT_VERSION=${{ github.run_number }}
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
 
       - name: Export
         run: |
@@ -104,20 +107,22 @@ jobs:
           xcrun stapler staple "$RUNNER_TEMP/Mud.dmg"
 
       - name: Prepare release assets
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          TAG=${{ steps.version.outputs.tag }}
           cp "$RUNNER_TEMP/Mud.dmg" "Mud-${TAG}.dmg"
           shasum -a 256 "Mud-${TAG}.dmg" > "Mud-${TAG}.dmg.sha256"
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          TAG=${{ steps.version.outputs.tag }}
           gh release create "$TAG" \
             "Mud-${TAG}.dmg" \
             "Mud-${TAG}.dmg.sha256" \
-            --title "Mud ${{ steps.version.outputs.version }}" \
+            --title "Mud ${VERSION}" \
             --generate-notes
 
       - name: Build and publish appcast and site
@@ -126,9 +131,9 @@ jobs:
           WEBSITE_SSH_KEY: ${{ secrets.WEBSITE_SSH_KEY }}
           WEBSITE_SSH_USER: ${{ secrets.WEBSITE_SSH_USER }}
           WEBSITE_SSH_HOST: ${{ secrets.WEBSITE_SSH_HOST }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          TAG=${{ steps.version.outputs.tag }}
           DMG="Mud-${TAG}.dmg"
 
           # Write key files
@@ -138,8 +143,7 @@ jobs:
 
           # Build appcast (single-item, no fetch needed)
           .github/scripts/build-appcast \
-            "$DMG" "$VERSION" "${{ github.run_number }}" \
-            "$RUNNER_TEMP/sparkle_key" \
+            "$DMG" "$VERSION" "$RUNNER_TEMP/sparkle_key" \
             > appcast.xml
 
           # Publish appcast and release notes
