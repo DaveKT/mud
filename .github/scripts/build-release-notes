@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Usage: build-release-notes [mud-cli-path]
+#
+# Reads Doc/RELEASES.md, extracts per-version sections, and renders HTML
+# to Site/releases/ using the Mud CLI.
+#
+# The Mud CLI path defaults to the bundled location in Mud.app. Override
+# with the first argument for CI or non-standard installs.
+
+require "fileutils"
+
+RELEASES_PATH = "Doc/RELEASES.md"
+OUTPUT_DIR = "Site/releases"
+
+mud_cli = ARGV[0] || "/Applications/Mud.app/Contents/Helpers/mud"
+
+abort "#{RELEASES_PATH} not found" unless File.exist?(RELEASES_PATH)
+abort "Mud CLI not found at #{mud_cli}" unless File.executable?(mud_cli)
+
+content = File.read(RELEASES_PATH)
+
+# Extract version sections (## vX.Y.Z ... up to next ## or EOF)
+sections = content.scan(/^(## v\S+.*?)(?=^## |\z)/m)
+
+FileUtils.mkdir_p(OUTPUT_DIR)
+
+sections.each do |match|
+  section = match[0].strip
+  version = section[/^## (v\S+)/, 1]
+  next unless version
+
+  # Promote the ## heading to # for the standalone page
+  page = section.sub(/^## /, "# ")
+  outfile = File.join(OUTPUT_DIR, "#{version}.html")
+  IO.popen([mud_cli, "-u"], "r+") do |io|
+    io.write(page)
+    io.close_write
+    File.write(outfile, io.read)
+  end
+  puts "  #{outfile}"
+end
+
+# Full history
+history_file = File.join(OUTPUT_DIR, "history.html")
+IO.popen([mud_cli, "-u"], "r+") do |io|
+  io.write(content)
+  io.close_write
+  File.write(history_file, io.read)
+end
+puts "  #{history_file}"

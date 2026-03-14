@@ -16,8 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.2.app
@@ -122,7 +120,7 @@ jobs:
             --title "Mud ${{ steps.version.outputs.version }}" \
             --generate-notes
 
-      - name: Build and publish appcast
+      - name: Build and publish appcast and site
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
           WEBSITE_SSH_KEY: ${{ secrets.WEBSITE_SSH_KEY }}
@@ -138,21 +136,19 @@ jobs:
           echo "$WEBSITE_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
           chmod 600 "$RUNNER_TEMP/deploy_key"
 
-          # Fetch existing appcast
-          curl -sL -o "$RUNNER_TEMP/existing_appcast.xml" \
-            "https://apps.josephpearson.org/mud/appcast.xml" 2>/dev/null || true
-
-          # Build appcast
+          # Build appcast (single-item, no fetch needed)
           .github/scripts/build-appcast \
             "$DMG" "$VERSION" "${{ github.run_number }}" \
             "$RUNNER_TEMP/sparkle_key" \
-            "$RUNNER_TEMP/existing_appcast.xml" \
             > appcast.xml
 
-          # Publish
+          # Publish appcast and release notes
           scp -i "$RUNNER_TEMP/deploy_key" -o StrictHostKeyChecking=no \
             appcast.xml \
             "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:mud/appcast.xml"
+          scp -i "$RUNNER_TEMP/deploy_key" -o StrictHostKeyChecking=no \
+            -r Site/releases/ \
+            "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:mud/releases/"
 
           # Clean up
           rm -f "$RUNNER_TEMP/sparkle_key" "$RUNNER_TEMP/deploy_key"
