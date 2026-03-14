@@ -18,12 +18,7 @@ enum ViewToggle: String, CaseIterable {
 
     private var defaultsKey: String { "Mud-\(rawValue)" }
 
-    private var defaultValue: Bool {
-        switch self {
-        case .codeHeader: return true
-        default: return false
-        }
-    }
+    private var defaultValue: Bool { true }
 
     var isEnabled: Bool {
         let defaults = UserDefaults.standard
