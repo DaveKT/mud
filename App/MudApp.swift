@@ -22,6 +22,10 @@ struct MudApp: App {
                     SettingsWindowController.shared.openSettings()
                 }
                 .keyboardShortcut(",", modifiers: .command)
+
+                #if SPARKLE
+                CheckForUpdatesView()
+                #endif
             }
 
             CommandGroup(replacing: .newItem) {

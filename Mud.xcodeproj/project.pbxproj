@@ -40,6 +40,8 @@
 		7CB9BB902F38E28B008AB0BC /* Mud.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7CB9BB8F2F38E28B008AB0BC /* Mud.icon */; };
 		7CC6E6B72F657A2200FE7D66 /* DebuggingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */; };
 		7CC6E6C02F658B1300FE7D66 /* Sparkle.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7CC6E6BF2F658B1300FE7D66 /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		7CC6E6E32F6595BD00FE7D66 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC6E6E22F6595BD00FE7D66 /* UpdateSettingsView.swift */; };
+		7CC6E6E52F6595F900FE7D66 /* CheckForUpdatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC6E6E42F6595F900FE7D66 /* CheckForUpdatesView.swift */; };
 		7CC9753A2F340286001C3BB7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7CC975332F340286001C3BB7 /* Assets.xcassets */; };
 		7CC9753D2F340286001C3BB7 /* MudApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975362F340286001C3BB7 /* MudApp.swift */; };
 		7CC975592F34038A001C3BB7 /* MudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7CC975582F34038A001C3BB7 /* MudCore */; };
@@ -125,6 +127,8 @@
 		7CB9BB8F2F38E28B008AB0BC /* Mud.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Mud.icon; sourceTree = "<group>"; };
 		7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebuggingSettingsView.swift; sourceTree = "<group>"; };
 		7CC6E6BF2F658B1300FE7D66 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = Vendor/Sparkle/Sparkle.framework; sourceTree = "<group>"; };
+		7CC6E6E22F6595BD00FE7D66 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
+		7CC6E6E42F6595F900FE7D66 /* CheckForUpdatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckForUpdatesView.swift; sourceTree = "<group>"; };
 		7CC975212F3401F4001C3BB7 /* Mud.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mud.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7CC975332F340286001C3BB7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7CC975352F340286001C3BB7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -189,6 +193,7 @@
 				7C282AD72F4F542E00611919 /* UpModeSettingsView.swift */,
 				7C282AD22F4F542E00611919 /* DownModeSettingsView.swift */,
 				7C282ADE2F50063900611919 /* CommandLineSettingsView.swift */,
+				7CC6E6E22F6595BD00FE7D66 /* UpdateSettingsView.swift */,
 				7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */,
 				7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */,
 				7C282AD52F4F542E00611919 /* ThemePreviewCard.swift */,
@@ -200,6 +205,7 @@
 		7C6532AF2F585CEE00B71730 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7CC6E6BF2F658B1300FE7D66 /* Sparkle.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -207,7 +213,6 @@
 		7CC975182F3401F4001C3BB7 = {
 			isa = PBXGroup;
 			children = (
-				7CC6E6BF2F658B1300FE7D66 /* Sparkle.framework */,
 				7C0A00092F5B0005001C3BB7 /* README.md */,
 				7C0A000B2F5B0006001C3BB7 /* Doc */,
 				7CC975382F340286001C3BB7 /* App */,
@@ -254,6 +259,7 @@
 				7C0A00032F5B0001001C3BB7 /* OutlineNode.swift */,
 				7C0A00052F5B0002001C3BB7 /* OutlineSidebarView.swift */,
 				7C5A00032F4800020046E0CD /* CommandLineInstaller.swift */,
+				7CC6E6E42F6595F900FE7D66 /* CheckForUpdatesView.swift */,
 				7CD093072F587185003E4037 /* ErrorPage.swift */,
 			);
 			path = App;
@@ -465,6 +471,7 @@
 				7C1FD9812F44FAC200BB4076 /* LocalFileSchemeHandler.swift in Sources */,
 				7C282AD82F4F542E00611919 /* ThemePreviewCard.swift in Sources */,
 				7C282AD92F4F542E00611919 /* UpModeSettingsView.swift in Sources */,
+				7CC6E6E32F6595BD00FE7D66 /* UpdateSettingsView.swift in Sources */,
 				7C282ADA2F4F542E00611919 /* SettingsView.swift in Sources */,
 				7C282ADB2F4F542E00611919 /* ThemeSettingsView.swift in Sources */,
 				7C282ADC2F4F542E00611919 /* GeneralSettingsView.swift in Sources */,
@@ -482,6 +489,7 @@
 				7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */,
 				7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */,
 				7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */,
+				7CC6E6E52F6595F900FE7D66 /* CheckForUpdatesView.swift in Sources */,
 				7C442A692F34BB7E0046E0CD /* DocumentContentView.swift in Sources */,
 				7C1238782F5FB22900F384B2 /* CSSColors.swift in Sources */,
 				7C5A00042F4800020046E0CD /* CommandLineInstaller.swift in Sources */,
