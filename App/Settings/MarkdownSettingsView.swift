@@ -24,10 +24,10 @@ struct MarkdownSettingsView: View {
                 HStack(spacing: 0) {
                     Text("Learn more: ")
                         .foregroundStyle(.secondary)
-                    Button("alerts.md") {
+                    Button("alerts-and-asides.md") {
                         SettingsWindowController.shared.window?.close()
                         DocumentController.openBundledDocument(
-                            "alerts", subdirectory: "Doc/Examples")
+                            "alerts-and-asides", subdirectory: "Doc/Examples")
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.link)

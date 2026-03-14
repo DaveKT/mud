@@ -26,7 +26,7 @@ Mud does just one thing — it marks up Markdown! — and it does it really well
 ### Examples
 
 - [Feature showcase](Examples/feature-showcase.md)
-- [Alerts, asides, and callouts](Examples/alerts.md)
+- [Alerts & asides](Examples/alerts-and-asides.md)
 - [Emoji shortcodes](Examples/emoji-shortcodes.md)
 - [Mermaid diagrams](Examples/mermaid-diagrams.md)
 - [Markdown parsing stress test](Examples/markdown-parsing.md)

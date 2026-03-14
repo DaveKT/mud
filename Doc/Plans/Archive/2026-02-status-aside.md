@@ -98,7 +98,7 @@ Four new tests:
 - `statusWithoutValueIsPlainBlockquote` — bare `> Status:` falls through.
 
 
-### `Doc/Examples/alerts.md`
+### `Doc/Examples/alerts-and-asides.md`
 
 Status asides section with three examples: single-line, multi-line, and
 multi-paragraph.
@@ -119,8 +119,9 @@ Updated `alert-*.svg` resource listing to include `status`.
 ## Verification
 
 1. Run unit tests — all four new tests and existing alert tests pass.
-2. Open `Doc/Examples/alerts.md` in Mud — verify the Status asides have orange
-   border, orange icon, orange "Status:" label, and bold default-colour value.
+2. Open `Doc/Examples/alerts-and-asides.md` in Mud — verify the Status asides
+   have orange border, orange icon, orange "Status:" label, and bold
+   default-colour value.
 3. Toggle lighting — verify colours adapt to light and dark modes.
 4. Toggle themes — verify `--text-color` renders correctly across all four.
 5. Check a bare `> Status:` renders as a plain blockquote.
