@@ -168,6 +168,9 @@ struct MudApp: App {
                 Button("HUMANS Guide to Mud") {
                     DocumentController.openBundledDocument("HUMANS", subdirectory: "Doc")
                 }
+                Button("Release Notes") {
+                    DocumentController.openBundledDocument("RELEASES", subdirectory: "Doc")
+                }
             }
         }
     }
