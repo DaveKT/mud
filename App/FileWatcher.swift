@@ -41,14 +41,7 @@ final class FileWatcher {
             // File was replaced (atomic save) - re-establish watch
             if events.contains(.delete) || events.contains(.rename) {
                 self.stopWatching()
-                // Brief delay to let file system settle after rename
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    guard let self else { return }
-                    // Only reload if the file came back (atomic save); ignore genuine deletions.
-                    if self.startWatching() {
-                        self.onChange()
-                    }
-                }
+                self.reestablishWatch()
             } else {
                 self.onChange()
             }
@@ -63,6 +56,25 @@ final class FileWatcher {
 
         source?.resume()
         return true
+    }
+
+    /// Retry delays for re-establishing the watch after an atomic save.
+    /// The file may not yet exist at the path if the editor is slow to land
+    /// the replacement. Retries cover slow disks, network mounts, and
+    /// Spotlight indexing storms.
+    private static let retryDelays: [TimeInterval] = [0.1, 0.3, 1.0]
+
+    private func reestablishWatch(attempt: Int = 0) {
+        let delay = Self.retryDelays[attempt]
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            if self.startWatching() {
+                self.onChange()
+            } else if attempt + 1 < Self.retryDelays.count {
+                self.reestablishWatch(attempt: attempt + 1)
+            }
+            // All retries exhausted and file still gone — genuine deletion.
+        }
     }
 
     private func stopWatching() {
