@@ -176,29 +176,41 @@ The entire file is wrapped in `#if SPARKLE`. Follows the established pattern:
 
 ### 4. Release notes
 
-Sparkle displays per-release notes in its update dialog. The appcast XML
-supports an inline `<description>` element per release item containing HTML.
+Sparkle displays per-release notes in its update dialog. Rather than embedding
+HTML inline in the appcast, use `<sparkle:releaseNotesLink>` to point at hosted
+HTML pages. This keeps the appcast simple and gives us web-browsable release
+notes as a bonus.
 
-**Source:** maintain a `CHANGELOG.md` at the repo root. Each release gets a
-`## Version X.Y.Z` heading with a bulleted list of changes. The workflow
-extracts the section for the current tag, renders it to HTML, and embeds it in
-the appcast.
+**Source:** `Doc/RELEASES.md` (already exists in the repo). Each release gets a
+`## vX.Y.Z` heading followed by prose describing what changed. This is written
+by hand as part of the release workflow — it's not a mechanical changelog, it's
+user-facing copy.
 
-```markdown
-## Version 1.2.0
+**Rendering:** a Ruby script (`.github/scripts/build-release-notes`) extracts
+each version's section from `Doc/RELEASES.md` and calls the Mud CLI to render
+it to HTML. It produces two outputs:
 
-- Added table of contents sidebar
-- Fixed scroll position preservation when toggling modes
-- Improved syntax highlighting for Swift code blocks
-```
+- `Site/releases/vX.Y.Z.html` — per-version release notes page
+- `Site/releases/history.html` — full release history (the entire
+  `Doc/RELEASES.md` rendered)
 
-The workflow step (see below) uses `sed` to extract the relevant section and
-`cmark-gfm` (available on GitHub Actions runners) to convert it to HTML.
+The `Site/` directory is committed to the repo. CI uploads its contents to the
+website alongside the appcast.
+
+**Local release workflow:**
+
+1. Update `MARKETING_VERSION` in `App/Info.plist`
+2. Add a section to `Doc/RELEASES.md` with compelling prose
+3. Run `.github/scripts/build-release-notes` to generate `Site/releases/` HTML
+4. Commit as: `VERSION: X.Y.Z`
+5. Merge to the `main` branch
+6. Tag the commit as `vX.Y.Z`
+7. Push the tag to GitHub to trigger the release workflow
 
 
 ### 5. Release workflow scripts
 
-The release workflow's Sparkle-related logic lives in two scripts under
+The release workflow's Sparkle-related logic lives in scripts under
 `.github/scripts/`, testable locally outside of CI.
 
 **`.github/scripts/update-sparkle`** — downloads a Sparkle release and extracts
@@ -230,80 +242,130 @@ rm -rf "$TMPDIR"
 echo "Sparkle ${SPARKLE_VERSION} installed to Vendor/Sparkle/"
 ```
 
-**`.github/scripts/build-appcast`** — given a signed DMG, generates or updates
-an `appcast.xml`. Designed to be run locally for testing or from CI. Reads
-release notes from `CHANGELOG.md`.
+**`.github/scripts/build-release-notes`** — Ruby script that reads
+`Doc/RELEASES.md`, extracts each version section, and renders HTML via the Mud
+CLI. Produces `Site/releases/vX.Y.Z.html` for each version and
+`Site/releases/history.html` for the full document.
+
+```ruby
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Usage: build-release-notes [mud-cli-path]
+#
+# Reads Doc/RELEASES.md, extracts per-version sections, and renders HTML
+# to Site/releases/ using the Mud CLI.
+#
+# The Mud CLI path defaults to the bundled location in Mud.app. Override
+# with the first argument for CI or non-standard installs.
+
+require "fileutils"
+
+RELEASES_PATH = "Doc/RELEASES.md"
+OUTPUT_DIR = "Site/releases"
+
+mud_cli = ARGV[0] || "/Applications/Mud.app/Contents/Helpers/mud"
+
+abort "#{RELEASES_PATH} not found" unless File.exist?(RELEASES_PATH)
+abort "Mud CLI not found at #{mud_cli}" unless File.executable?(mud_cli)
+
+content = File.read(RELEASES_PATH)
+
+# Extract version sections (## vX.Y.Z ... up to next ## or EOF)
+sections = content.scan(/^(## v\S+.*?)(?=^## |\z)/m)
+
+FileUtils.mkdir_p(OUTPUT_DIR)
+
+sections.each do |match|
+  section = match[0].strip
+  version = section[/^## (v\S+)/, 1]
+  next unless version
+
+  outfile = File.join(OUTPUT_DIR, "#{version}.html")
+  IO.popen([mud_cli, "-u"], "r+") do |io|
+    io.write(section)
+    io.close_write
+    File.write(outfile, io.read)
+  end
+  puts "  #{outfile}"
+end
+
+# Full history
+history_file = File.join(OUTPUT_DIR, "history.html")
+IO.popen([mud_cli, "-u"], "r+") do |io|
+  io.write(content)
+  io.close_write
+  File.write(history_file, io.read)
+end
+puts "  #{history_file}"
+```
+
+**`.github/scripts/build-appcast`** — given a signed DMG, generates an
+`appcast.xml` containing a single item for the current release. Uses
+`<sparkle:releaseNotesLink>` pointing at the hosted per-version HTML page.
+
+The appcast always contains only the latest release. Sparkle checks whether the
+appcast has a version newer than what's installed, so a single-item appcast
+works for users on any older version. This avoids fetching and merging with a
+previous appcast from the website — eliminating a network dependency and the
+risk of silently losing previous entries if the server is unreachable.
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: build-appcast <dmg-path> <version> <key-file> [existing-appcast]
+# Usage: build-appcast <dmg-path> <version> <build-number> <key-file>
 #
 # Outputs appcast.xml to stdout.
 #
+# Sparkle compares sparkle:version against CFBundleVersion (the build number),
+# and displays sparkle:shortVersionString to the user.
+#
 # Example (local):
-#   .github/scripts/build-appcast Mud-v1.2.0.dmg 1.2.0 ~/sparkle_key > appcast.xml
+#   .github/scripts/build-appcast Mud-v1.2.0.dmg 1.2.0 42 ~/sparkle_key > appcast.xml
 #
 # Example (CI):
-#   .github/scripts/build-appcast "$DMG" "$VERSION" "$KEY_FILE" "$EXISTING" > appcast.xml
+#   .github/scripts/build-appcast "$DMG" "$VERSION" "$BUILD" "$KEY_FILE" > appcast.xml
 
 DMG="$1"
 VERSION="$2"
-KEY_FILE="$3"
-EXISTING="${4:-}"
+BUILD="$3"
+KEY_FILE="$4"
 
 SIGN_UPDATE="Vendor/Sparkle/bin/sign_update"
 DOWNLOAD_URL="https://github.com/joseph/mud/releases/download/v${VERSION}/$(basename "$DMG")"
+NOTES_URL="https://apps.josephpearson.org/mud/releases/v${VERSION}.html"
 
 # Sign the DMG
 SIGNATURE=$("$SIGN_UPDATE" "$DMG" --ed-key-file "$KEY_FILE")
 ED_SIG=$(echo "$SIGNATURE" | sed 's/.*edSignature="\([^"]*\)".*/\1/')
 LENGTH=$(echo "$SIGNATURE" | sed 's/.*length="\([^"]*\)".*/\1/')
 
-# Extract release notes from CHANGELOG.md
-NOTES_MD=$(sed -n "/^## Version ${VERSION}$/,/^## /{/^## Version ${VERSION}$/d;/^## /!p}" \
-  CHANGELOG.md 2>/dev/null || true)
-if command -v cmark-gfm &>/dev/null; then
-  NOTES_HTML=$(echo "$NOTES_MD" | cmark-gfm --extension table,autolink,strikethrough)
-else
-  # Fallback: wrap in <pre> if cmark-gfm isn't available
-  NOTES_HTML="<pre>${NOTES_MD}</pre>"
-fi
-
-# Build XML item
-ITEM="    <item>
-      <title>Version ${VERSION}</title>
-      <sparkle:version>${VERSION}</sparkle:version>
-      <pubDate>$(date -R)</pubDate>
-      <description><![CDATA[${NOTES_HTML}]]></description>
-      <enclosure
-        url=\"${DOWNLOAD_URL}\"
-        type=\"application/octet-stream\"
-        sparkle:edSignature=\"${ED_SIG}\"
-        length=\"${LENGTH}\" />
-    </item>"
-
-# Insert into existing appcast or create new one
-if [ -n "$EXISTING" ] && [ -f "$EXISTING" ] && grep -q '<channel>' "$EXISTING"; then
-  sed "/<\/channel>/i\\
-${ITEM}" "$EXISTING"
-else
-  cat <<EOF
+cat <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0"
      xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Mud</title>
-${ITEM}
+    <item>
+      <title>Version ${VERSION}</title>
+      <sparkle:version>${BUILD}</sparkle:version>
+      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+      <pubDate>$(date -R)</pubDate>
+      <sparkle:releaseNotesLink>${NOTES_URL}</sparkle:releaseNotesLink>
+      <enclosure
+        url="${DOWNLOAD_URL}"
+        type="application/octet-stream"
+        sparkle:edSignature="${ED_SIG}"
+        length="${LENGTH}" />
+    </item>
   </channel>
 </rss>
 EOF
-fi
 ```
 
-Both scripts are added to `.gitignore` exceptions (the `Vendor/Sparkle/`
-directory itself is ignored, but the scripts live in `.github/scripts/`).
+All three scripts live in `.github/scripts/` (not in the git-ignored
+`Vendor/Sparkle/` directory).
 
 
 ### 6. Release workflow changes
@@ -347,18 +409,18 @@ both the framework (for the build) and `sign_update` (for appcast generation):
   run: .github/scripts/update-sparkle
 ```
 
-**Add appcast steps after "Create GitHub release":**
+**Add appcast and site deploy steps after "Create GitHub release":**
 
 ```yaml
-- name: Build and publish appcast
+- name: Build and publish appcast and site
   env:
     SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
     WEBSITE_SSH_KEY: ${{ secrets.WEBSITE_SSH_KEY }}
     WEBSITE_SSH_USER: ${{ secrets.WEBSITE_SSH_USER }}
     WEBSITE_SSH_HOST: ${{ secrets.WEBSITE_SSH_HOST }}
   run: |
-    VERSION=${GITHUB_REF#refs/tags/v}
-    TAG=${GITHUB_REF#refs/tags/}
+    VERSION=${{ steps.version.outputs.version }}
+    TAG=${{ steps.version.outputs.tag }}
     DMG="Mud-${TAG}.dmg"
 
     # Write key files
@@ -366,20 +428,19 @@ both the framework (for the build) and `sign_update` (for appcast generation):
     echo "$WEBSITE_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
     chmod 600 "$RUNNER_TEMP/deploy_key"
 
-    # Fetch existing appcast
-    curl -sL -o "$RUNNER_TEMP/existing_appcast.xml" \
-      "https://apps.josephpearson.org/mud/appcast.xml" 2>/dev/null || true
-
-    # Build appcast
+    # Build appcast (single-item, no fetch needed)
     .github/scripts/build-appcast \
-      "$DMG" "$VERSION" "$RUNNER_TEMP/sparkle_key" \
-      "$RUNNER_TEMP/existing_appcast.xml" \
+      "$DMG" "$VERSION" "${{ github.run_number }}" \
+      "$RUNNER_TEMP/sparkle_key" \
       > appcast.xml
 
-    # Publish
+    # Publish appcast and release notes
     scp -i "$RUNNER_TEMP/deploy_key" -o StrictHostKeyChecking=no \
       appcast.xml \
       "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:mud/appcast.xml"
+    scp -i "$RUNNER_TEMP/deploy_key" -o StrictHostKeyChecking=no \
+      -r Site/releases/ \
+      "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:mud/releases/"
 
     # Clean up
     rm -f "$RUNNER_TEMP/sparkle_key" "$RUNNER_TEMP/deploy_key"
@@ -396,6 +457,9 @@ Still to do: update `Doc/AGENTS.md` file quick reference to include:
 - `UpdateSettingsView.swift`
 - `.github/scripts/update-sparkle`
 - `.github/scripts/build-appcast`
+- `.github/scripts/build-release-notes`
+- `Doc/RELEASES.md`
+- `Site/releases/`
 
 
 ## Why not SPM?
@@ -431,9 +495,11 @@ no framework in the bundle, no rejection.
 | `App/CheckForUpdatesView.swift`         | New — menu button + view model (entire file `#if SPARKLE`)  |        |
 | `App/Settings/SettingsView.swift`       | `.updates` pane (`#if SPARKLE`)                             |        |
 | `App/Settings/UpdateSettingsView.swift` | New — update preferences pane (entire file `#if SPARKLE`)   |        |
-| `CHANGELOG.md`                          | New — per-release notes in Markdown                         |        |
-| `.github/scripts/build-appcast`         | New — sign DMG, extract release notes, output appcast XML   |        |
-| `.github/workflows/release.yml`         | Download Sparkle, use Release-Direct config, build appcast  |        |
+| `Doc/RELEASES.md`                       | Release notes in Markdown (already exists)                  |        |
+| `Site/releases/`                        | Pre-rendered release notes HTML (generated by Ruby script)  |        |
+| `.github/scripts/build-release-notes`   | New — Ruby script: extract + render release notes via Mud   |        |
+| `.github/scripts/build-appcast`         | New — sign DMG, output appcast XML with releaseNotesLink    |        |
+| `.github/workflows/release.yml`         | Download Sparkle, Release-Direct, appcast + site deploy     |        |
 | `Doc/AGENTS.md`                         | File quick reference                                        |        |
 
 
