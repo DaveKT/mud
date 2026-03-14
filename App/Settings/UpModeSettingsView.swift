@@ -14,7 +14,7 @@ struct UpModeSettingsView: View {
                         appState.saveAllowRemoteContent()
                     }
                 )) {
-                    Text("Allow Remote Content")
+                    Text("Allow remote content")
                     Text("Load remote images and other external resources referenced in Markdown documents.")
                 }
             }
@@ -30,7 +30,7 @@ struct UpModeSettingsView: View {
                         appState.saveEnabledExtensions()
                     }
                 )) {
-                    Text("Generate Diagrams")
+                    Text("Generate diagrams")
                     HStack(spacing: 0) {
                         Text("Learn more: ")
                         Button("mermaid-diagrams.md") {
@@ -44,13 +44,13 @@ struct UpModeSettingsView: View {
                 }
 
             }
-            Section("Code Blocks") {
+            Section("Code blocks") {
                 Toggle(isOn: Binding(
                     get: { appState.viewToggles.contains(.codeHeader) },
                     set: { _ in appState.toggle(.codeHeader) }
                 )) {
-                    Text("Code Block Headers")
-                    Text("Show a header bar with the language name on code blocks.")
+                    Text("Language name")
+                    Text("Show the name of the code language in a bar above code blocks.")
                 }
                 Toggle(isOn: Binding(
                     get: { appState.enabledExtensions.contains("copyCode") },
@@ -63,8 +63,8 @@ struct UpModeSettingsView: View {
                         appState.saveEnabledExtensions()
                     }
                 )) {
-                    Text("Copy Code")
-                    Text("Show a Copy button on code blocks.")
+                    Text("Copy button")
+                    Text("Show a button to copy the contents of code blocks.")
                 }
             }
         }

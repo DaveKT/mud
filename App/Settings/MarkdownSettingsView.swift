@@ -7,7 +7,7 @@ struct MarkdownSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("DocC Asides", selection: Binding(
+                Picker("DocC asides", selection: Binding(
                     get: { appState.doccAlertMode },
                     set: { newValue in
                         appState.doccAlertMode = newValue

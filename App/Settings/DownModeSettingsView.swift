@@ -6,12 +6,12 @@ struct DownModeSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Line Numbers", isOn: Binding(
+                Toggle("Line numbers", isOn: Binding(
                     get: { appState.viewToggles.contains(.lineNumbers) },
                     set: { _ in appState.toggle(.lineNumbers) }
                 ))
 
-                Toggle("Word Wrap", isOn: Binding(
+                Toggle("Word wrap", isOn: Binding(
                     get: { appState.viewToggles.contains(.wordWrap) },
                     set: { _ in appState.toggle(.wordWrap) }
                 ))
