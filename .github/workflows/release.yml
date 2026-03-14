@@ -147,12 +147,13 @@ jobs:
             > appcast.xml
 
           # Publish appcast and release notes
+          DEST="${WEBSITE_SSH_HOST}/mud"
           scp -i "$RUNNER_TEMP/deploy_key" -o StrictHostKeyChecking=no \
             appcast.xml \
-            "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:mud/appcast.xml"
+            "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:${DEST}/appcast.xml"
           scp -i "$RUNNER_TEMP/deploy_key" -o StrictHostKeyChecking=no \
             -r Site/releases/ \
-            "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:mud/releases/"
+            "${WEBSITE_SSH_USER}@${WEBSITE_SSH_HOST}:${DEST}/releases/"
 
           # Clean up
           rm -f "$RUNNER_TEMP/sparkle_key" "$RUNNER_TEMP/deploy_key"
