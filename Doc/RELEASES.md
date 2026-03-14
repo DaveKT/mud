@@ -1,6 +1,25 @@
 RELEASES
 ===============================================================================
 
+## v1.2.1
+
+- Copy Code button appears on hover over fenced code blocks in Up mode
+- Down mode layout restructured from HTML table to divs for better rendering
+  and accessibility
+- Mermaid diagram rendering is now optional, with a toggle in Up Mode settings
+- New Markdown settings pane with DocC alert mode selector
+- Auto-update support for direct distribution builds via Sparkle
+- Release Notes link in the Help menu
+- F3 and F4 as secondary keyboard shortcuts for sidebar and find
+- Manual reload (Cmd+R) re-establishes the file watcher when the watched file
+  has been replaced
+- File watcher retries with backoff when re-establishing after external changes
+- Local images served via `mud-asset:` are no longer cached, so edits to
+  referenced images appear immediately on reload
+- Settings labels use sentence case throughout
+- Debugging pane in Settings (debug builds only) with preference reset
+
+
 ## v1.1.0
 
 - Settings dialog with sidebar navigation and panes for General, Theme,
