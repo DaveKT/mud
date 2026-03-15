@@ -41,13 +41,12 @@ For full command-line rendering capability, see the direct release below.
 ## Direct release
 
 The direct release of Mud (downloaded from
-[GitHub](https://github.com/joseph/mud/releases))
-includes a useful `mud` CLI tool.
-
+[GitHub](https://github.com/joseph/mud/releases)) includes a useful `mud` CLI
+tool.
 
 After installing this version of Mud, open **Settings → Command Line** and
-click **Install**. This creates a symlink in a directory of your choice
-(e.g. `/usr/local/bin`).
+click **Install**. This creates a symlink in a directory of your choice (e.g.
+`/usr/local/bin`).
 
 Once installed, `mud` opens Markdown files in the GUI — or renders them to HTML
 when rendering flags are given.
@@ -64,6 +63,7 @@ when rendering flags are given.
 | `-u`           | Render to full Up mode HTML document (stdout)   |
 | `-d`           | Render to full Down mode HTML document (stdout) |
 | `-f`           | Render to HTML fragment (no `<html>` wrapper)   |
+| `--standalone` | Self-contained output (images as data URIs)     |
 | `--theme NAME` | Theme: austere, blues, earthy (default), riot   |
 
 Rendering flags read from stdin if no file path is given:
@@ -82,19 +82,29 @@ mud ~/notes/*.md
 ```
 
 
+### Standalone output
+
+Add `--standalone` to produce self-contained HTML on stdout. Local images are
+embedded as data URIs, so the output renders correctly without access to the
+original files:
+
+```sh
+mud -u --standalone README.md > output.html
+mud -d --standalone README.md > output.html
+```
+
+
 ### Browser output
 
 Add `-b` (or `--browser`) to open the rendered output in your default browser
-instead of writing to stdout:
+instead of writing to stdout. This implies `--standalone` — local images are
+embedded as data URIs.
 
 ```sh
 mud -u -b README.md
 mud -d -b README.md
 cat README.md | mud -u -b
 ```
-
-With `-u -b`, local images are embedded as data URIs, so the file renders
-correctly in the browser even if it references images by relative path.
 
 You can pass multiple files — each opens in its own browser tab:
 

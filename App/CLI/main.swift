@@ -12,6 +12,7 @@ var mode: OutputMode?
 var theme = "earthy"
 var htmlClasses: [String] = []
 var browser = false
+var standalone = false
 var fragment = false
 var i = 1  // skip argv[0]
 
@@ -30,6 +31,8 @@ while i < CommandLine.arguments.count {
         mode = .down
     case "--browser", "-b":
         browser = true
+    case "--standalone":
+        standalone = true
     case "--fragment", "-f":
         fragment = true
     case "--line-numbers":
@@ -151,13 +154,16 @@ func render(_ markdown: String, title: String, baseURL: URL?) -> String {
         return body
     }
 
-    if browser {
+    let standalone = browser || standalone
+    if standalone {
         options.standalone = true
         options.extensions = Set(RenderExtension.registry.keys)
     }
 
     let imageResolver: ((_ source: String, _ baseURL: URL) -> String?)? =
-        browser ? { source, base in ImageDataURI.encode(source: source, baseURL: base) } : nil
+        standalone
+        ? { source, base in ImageDataURI.encode(source: source, baseURL: base) }
+        : nil
 
     switch mode {
     case .up:
@@ -247,6 +253,7 @@ func printUsage() {
     Options:
       -f, --fragment     Output HTML body only, no document wrapper
       -b, --browser      Open in default browser instead of stdout
+      --standalone       Self-contained output (images as data URIs)
       --line-numbers     Show line numbers (with -d)
       --word-wrap        Enable word wrapping (with -d)
       --readable-column  Limit content width (with -d or -u)
