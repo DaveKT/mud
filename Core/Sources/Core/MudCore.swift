@@ -79,6 +79,16 @@ public enum MudCore {
                              resolveImageSource: resolveImageSource)
     }
 
+    // MARK: - Change tracking
+
+    /// Computes a list of changes between two parsed Markdown documents
+    /// for the sidebar change list.
+    public static func computeChanges(
+        old: ParsedMarkdown, new: ParsedMarkdown
+    ) -> [DocumentChange] {
+        ChangeList.computeChanges(old: old, new: new)
+    }
+
     /// Extracts headings from a Markdown string for the outline sidebar.
     public static func extractHeadings(_ markdown: String) -> [OutlineHeading] {
         ParsedMarkdown(markdown).headings
