@@ -114,6 +114,7 @@ struct HTMLTemplateTests {
 
     @Test func extensionMermaidAddsScripts() {
         var opts = RenderOptions()
+        opts.standalone = true
         opts.extensions.insert("mermaid")
         let body = "<pre><code class=\"language-mermaid\">graph TD</code></pre>"
         let doc = HTMLTemplate.wrapUp(body: body, options: opts)
@@ -123,6 +124,7 @@ struct HTMLTemplateTests {
 
     @Test func extensionMermaidUpdatesCSP() {
         var opts = RenderOptions()
+        opts.standalone = true
         opts.extensions.insert("mermaid")
         let body = "<pre><code class=\"language-mermaid\">graph TD</code></pre>"
         let doc = HTMLTemplate.wrapUp(body: body, options: opts)
