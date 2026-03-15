@@ -42,7 +42,8 @@ done
 if [ $# -eq 0 ]; then
   if [ ! -t 0 ]; then
     # Piped stdin with no render flags — write to temp file and open in GUI
-    tmp="$(mktemp /tmp/mud-stdin.XXXXXX.md)"
+    tmp="$(mktemp /tmp/mud-stdin.XXXXXX)" && mv "$tmp" "$tmp.md"
+    tmp="$tmp.md"
     cat > "$tmp"
     open -a "$BUNDLE" "$tmp"
   else
