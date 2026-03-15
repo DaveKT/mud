@@ -59,7 +59,7 @@ class DocumentWindowController: NSWindowController {
     }
 
     private func setupContent() {
-        let sidebarView = OutlineSidebarView(state: state) { [weak self] heading in
+        let sidebarView = SidebarView(state: state) { [weak self] heading in
             self?.state.scrollTarget = ScrollTarget(id: UUID(), heading: heading)
         }
         let sidebarHost = NSHostingController(rootView: sidebarView)

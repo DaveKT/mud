@@ -1,0 +1,31 @@
+import SwiftUI
+import MudCore
+
+struct SidebarView: View {
+    enum Pane { case outline, changes }
+
+    @State private var pane: Pane = .outline
+    @ObservedObject var state: DocumentState
+    var onSelectHeading: (OutlineHeading) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: $pane) {
+                Text("Outline").tag(Pane.outline)
+                Text("Changes").tag(Pane.changes)
+            }
+            .pickerStyle(.segmented)
+            .padding(8)
+
+            Group {
+                switch pane {
+                case .outline:
+                    OutlineSidebarView(state: state, onSelect: onSelectHeading)
+                case .changes:
+                    ChangesSidebarView()
+                }
+            }
+            .animation(.none, value: pane)
+        }
+    }
+}
