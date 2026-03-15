@@ -7,6 +7,19 @@ struct MarkdownSettingsView: View {
     var body: some View {
         Form {
             Section {
+                Toggle(isOn: Binding(
+                    get: { appState.useHeadingAsTitle },
+                    set: { newValue in
+                        appState.useHeadingAsTitle = newValue
+                        appState.saveUseHeadingAsTitle()
+                    }
+                )) {
+                    Text("First heading as window title")
+                    Text("Use the first heading in the document as the window title. When off, the filename is used.")
+                }
+            }
+
+            Section {
                 Picker("DocC asides", selection: Binding(
                     get: { appState.doccAlertMode },
                     set: { newValue in

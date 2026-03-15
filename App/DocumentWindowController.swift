@@ -137,9 +137,14 @@ class DocumentWindowController: NSWindowController {
             .store(in: &cancellables)
 
         state.$contentTitle
-            .sink { [weak self] title in
+            .combineLatest(AppState.shared.$useHeadingAsTitle)
+            .sink { [weak self] title, useHeading in
                 guard let self, let window = self.window else { return }
-                window.title = title ?? self.fileURL.lastPathComponent
+                if useHeading, let title {
+                    window.title = title
+                } else {
+                    window.title = self.fileURL.lastPathComponent
+                }
             }
             .store(in: &cancellables)
 

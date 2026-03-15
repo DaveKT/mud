@@ -15,6 +15,7 @@ class AppState: ObservableObject {
     @Published var allowRemoteContent: Bool
     @Published var enabledExtensions: Set<String>
     @Published var doccAlertMode: DocCAlertMode
+    @Published var useHeadingAsTitle: Bool
     var openSettingsAction: (() -> Void)?
 
     private static let lightingKey = "Mud-Lighting"
@@ -26,6 +27,7 @@ class AppState: ObservableObject {
     private static let allowRemoteContentKey = "Mud-AllowRemoteContent"
     private static let enabledExtensionsKey = "Mud-EnabledExtensions"
     private static let doccAlertModeKey = "Mud-DoccAlertMode"
+    private static let useHeadingAsTitleKey = "Mud-UseHeadingAsTitle"
 
     private init() {
         let raw = UserDefaults.standard.string(forKey: Self.lightingKey) ?? ""
@@ -47,6 +49,7 @@ class AppState: ObservableObject {
         }
         let doccRaw = defaults.string(forKey: Self.doccAlertModeKey) ?? ""
         self.doccAlertMode = DocCAlertMode(rawValue: doccRaw) ?? .extended
+        self.useHeadingAsTitle = defaults.object(forKey: Self.useHeadingAsTitleKey) as? Bool ?? true
     }
 
     func saveLighting(_ lighting: Lighting) {
@@ -80,6 +83,10 @@ class AppState: ObservableObject {
 
     func saveDoccAlertMode() {
         UserDefaults.standard.set(doccAlertMode.rawValue, forKey: Self.doccAlertModeKey)
+    }
+
+    func saveUseHeadingAsTitle() {
+        UserDefaults.standard.set(useHeadingAsTitle, forKey: Self.useHeadingAsTitleKey)
     }
 
     func toggle(_ option: ViewToggle) {
