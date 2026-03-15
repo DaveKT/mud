@@ -98,7 +98,7 @@ if files.isEmpty {
         printError("failed to read from stdin")
         exit(2)
     }
-    let html = render(text, title: "", baseURL: nil)
+    let html = render(text, baseURL: nil)
     if browser {
         guard let url = writeTempFile(html: html, name: "stdin") else {
             printError("failed to write temp file")
@@ -120,7 +120,7 @@ if files.isEmpty {
             printError("cannot read file: \(path)")
             exit(2)
         }
-        let html = render(text, title: url.lastPathComponent, baseURL: url)
+        let html = render(text, baseURL: url)
         if browser {
             let baseName = url.deletingPathExtension().lastPathComponent
             guard let tempURL = writeTempFile(html: html, name: baseName) else {
@@ -137,9 +137,8 @@ if files.isEmpty {
 
 // MARK: - Rendering
 
-func render(_ markdown: String, title: String, baseURL: URL?) -> String {
+func render(_ markdown: String, baseURL: URL?) -> String {
     var options = RenderOptions()
-    options.title = title
     options.baseURL = baseURL
     options.theme = theme
     options.htmlClasses = Set(htmlClasses)

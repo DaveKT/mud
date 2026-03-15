@@ -4,7 +4,7 @@ import MudCore
 // MARK: - Document Content View
 
 private enum DocumentContent {
-    case text(String)
+    case parsed(ParsedMarkdown)
     case error(String)  // pre-rendered error page HTML
 }
 
@@ -14,7 +14,7 @@ struct DocumentContentView: View {
     @ObservedObject var findState: FindState
     @ObservedObject private var appState = AppState.shared
 
-    @State private var content: DocumentContent = .text("")
+    @State private var content: DocumentContent = .parsed(ParsedMarkdown(""))
     @State private var fileWatcher: FileWatcher?
     @FocusState private var contentFocused: Bool
     @Environment(\.colorScheme) private var environmentColorScheme
@@ -22,7 +22,7 @@ struct DocumentContentView: View {
 
     private var displayHTML: String {
         switch content {
-        case .text:            return modeHTML
+        case .parsed:          return modeHTML
         case .error(let html): return html
         }
     }
@@ -34,7 +34,6 @@ struct DocumentContentView: View {
 
     private var renderOptions: RenderOptions {
         var opts = RenderOptions()
-        opts.title = fileURL.lastPathComponent
         opts.baseURL = fileURL
         opts.theme = appState.theme.rawValue
         opts.blockRemoteContent = !appState.allowRemoteContent
@@ -47,17 +46,17 @@ struct DocumentContentView: View {
 
     private var displayContentID: String {
         switch content {
-        case .text(let text): return "\(text)\(renderOptions.contentIdentity)"
-        case .error:          return "load-error"
+        case .parsed(let parsed): return "\(parsed.markdown)\(renderOptions.contentIdentity)"
+        case .error:              return "load-error"
         }
     }
 
     private var modeHTML: String {
-        guard case .text(let text) = content else { return "" }
+        guard case .parsed(let parsed) = content else { return "" }
         if state.mode == .down {
-            return MudCore.renderDownModeDocument(text, options: renderOptions)
+            return MudCore.renderDownModeDocument(parsed, options: renderOptions)
         }
-        return MudCore.renderUpModeDocument(text, options: renderOptions,
+        return MudCore.renderUpModeDocument(parsed, options: renderOptions,
             resolveImageSource: Self.mudAssetResolver)
     }
 
@@ -168,9 +167,10 @@ struct DocumentContentView: View {
                 content = .error(ErrorPage.fileEncodingError())
                 return
             }
-            content = .text(text)
-            state.outlineHeadings = MudCore.extractHeadings(text)
-            state.contentTitle = Self.extractTitle(from: text)
+            let parsed = ParsedMarkdown(text)
+            content = .parsed(parsed)
+            state.outlineHeadings = parsed.headings
+            state.contentTitle = parsed.title
         } catch let cocoaError as CocoaError where cocoaError.code == .fileReadNoSuchFile {
             content = .error(ErrorPage.fileNotFound(error: cocoaError))
         } catch {
@@ -179,7 +179,8 @@ struct DocumentContentView: View {
     }
 
     private func openInBrowser() {
-        guard case .text(let text) = content else { return }
+        guard case .parsed(let parsed) = content else { return }
+        let text = parsed.markdown
         let tempDir = NSTemporaryDirectory()
         let baseName = fileURL.deletingPathExtension().lastPathComponent
         let tempURL = URL(fileURLWithPath: tempDir)
@@ -208,23 +209,6 @@ struct DocumentContentView: View {
             withApplicationAt: browserURL,
             configuration: NSWorkspace.OpenConfiguration()
         )
-    }
-}
-
-// MARK: - Title Extraction
-
-private extension DocumentContentView {
-    /// Extracts a display title from the first non-blank line of Markdown,
-    /// stripping leading `#` and `*` characters.
-    static func extractTitle(from text: String) -> String? {
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            let trimmed = line.drop(while: { $0 == " " || $0 == "\t" })
-            if trimmed.isEmpty { continue }
-            let stripped = trimmed.drop(while: { $0 == "#" || $0 == "*" })
-            let title = stripped.trimmingCharacters(in: .whitespaces)
-            return title.isEmpty ? nil : title
-        }
-        return nil
     }
 }
 

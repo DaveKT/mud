@@ -133,10 +133,11 @@ MVP plan.
 
 **Core/ key files:**
 
+- `ParsedMarkdown.swift` — Parse-once handle: AST, headings, and title
 - `RenderExtension.swift` — Client-side rendering extension type and registry
 - `RenderOptions.swift` — Rendering configuration value type
-- `MudCore.swift` — Public API: renderUpToHTML, renderDownToHTML,
-  renderUpModeDocument, renderDownModeDocument, extractHeadings
+- `MudCore.swift` — Public API: rendering functions (String and ParsedMarkdown
+  overloads), extractHeadings convenience
 - `Rendering/UpHTMLVisitor.swift` — AST → rendered HTML
 - `Rendering/DownHTMLVisitor.swift` — AST → syntax-highlighted raw HTML
 - `Rendering/HTMLDocument.swift` — Structured HTML document builder
