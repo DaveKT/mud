@@ -132,6 +132,7 @@ jobs:
           WEBSITE_SSH_USER: ${{ secrets.WEBSITE_SSH_USER }}
           WEBSITE_SSH_HOST: ${{ secrets.WEBSITE_SSH_HOST }}
           VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           DMG="Mud-${TAG}.dmg"
@@ -143,7 +144,7 @@ jobs:
 
           # Build appcast (single-item, no fetch needed)
           .github/scripts/build-appcast \
-            "$DMG" "$VERSION" "$RUNNER_TEMP/sparkle_key" \
+            "$DMG" "$VERSION" "$BUILD_NUMBER" "$RUNNER_TEMP/sparkle_key" \
             > appcast.xml
 
           # Publish appcast and release notes

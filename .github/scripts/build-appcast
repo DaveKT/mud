@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: build-appcast <dmg-path> <version> <key-file>
+# Usage: build-appcast <dmg-path> <version> <build-number> <key-file>
 #
 # Outputs appcast.xml to stdout.
 #
-# Sparkle compares sparkle:version against the running app's
-# CFBundleShortVersionString (the marketing version) to determine
-# whether an update is available.
+# Sparkle compares sparkle:version against the running app's CFBundleVersion
+# (the build number) to decide whether an update is available.
+# sparkle:shortVersionString is the human-readable marketing version.
 #
 # Example (local):
-#   .github/scripts/build-appcast Mud-v1.2.0.dmg 1.2.0 ~/sparkle_key > appcast.xml
+#   .github/scripts/build-appcast Mud-v1.2.0.dmg 1.2.0 1 ~/sparkle_key > appcast.xml
 #
 # Example (CI):
-#   .github/scripts/build-appcast "$DMG" "$VERSION" "$KEY_FILE" > appcast.xml
+#   .github/scripts/build-appcast "$DMG" "$VERSION" "$BUILD_NUMBER" "$KEY_FILE" > appcast.xml
 
 DMG="$1"
 VERSION="$2"
-KEY_FILE="$3"
+BUILD_NUMBER="$3"
+KEY_FILE="$4"
 
 SIGN_UPDATE="Vendor/Sparkle/bin/sign_update"
 DOWNLOAD_URL="https://github.com/joseph/mud/releases/download/v${VERSION}/$(basename "$DMG")"
@@ -36,7 +37,8 @@ cat <<EOF
     <title>Mud</title>
     <item>
       <title>Version ${VERSION}</title>
-      <sparkle:version>${VERSION}</sparkle:version>
+      <sparkle:version>${BUILD_NUMBER}</sparkle:version>
+      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
       <pubDate>$(date -R)</pubDate>
       <sparkle:releaseNotesLink>${NOTES_URL}</sparkle:releaseNotesLink>
       <enclosure
