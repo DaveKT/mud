@@ -70,64 +70,61 @@ sequenceDiagram
 
 ## Architecture
 
-### Layer 1: Diff engine (MudCore)
+### Layer 1: Diff engine (MudCore) — implemented
 
-The diff engine lives in MudCore because it needs AST access and integrates
-with rendering. It has no UI dependencies.
+Implemented in `Core/Sources/Core/Diff/`. Works with `ParsedMarkdown` values
+directly (pre-parsed ASTs, no redundant parsing).
 
-**Leveraging `ParsedMarkdown` :** MudCore already has a `ParsedMarkdown` struct
-(from the title-extraction work) that parses once and stores the `Document`
-AST, headings, and source text. The diff engine works with `ParsedMarkdown`
-values directly — `BlockMatcher` takes two `ParsedMarkdown` inputs and walks
-their pre-parsed ASTs. No redundant parsing.
+**`BlockMatcher.swift`** — `BlockMatcher.match(old:new:) -> [BlockMatch]`. Two
+phases:
 
-**New files in `Core/Sources/Core/Diff/` :**
+1. **Fingerprint matching.** `LeafBlockCollector` (a `MarkupWalker`) flattens
+   each AST into leaf blocks: paragraphs, headings, code blocks, list items,
+   table head/rows, blockquote paragraphs, thematic breaks, HTML blocks. Nested
+   lists are handled specially — the item's own paragraph becomes a leaf, then
+   inner list items become separate leaves. Each block carries its source text
+   as the fingerprint (not plain text — formatting-only changes like `text` →
+   `**text**` are detected). `CollectionDifference` on the fingerprint arrays
+   identifies unchanged, inserted, and removed blocks.
 
-- `BlockMatcher.swift` — given two `ParsedMarkdown` values (old and new), match
-  leaf blocks between their ASTs. Two phases:
+2. **Modification detection.** Gap-based pairing: unchanged blocks serve as
+   anchors, and the gaps between them contain removals and insertions. Within
+   each gap, removals pair with insertions from the end (closest to the next
+   anchor). Excess removals become deletions at the front of the gap; excess
+   insertions become insertions at the end.
 
-  1. **Fingerprint matching.** Flatten each AST into a list of leaf blocks
-     (paragraphs, headings, code blocks, individual list items, table rows,
-     blockquote paragraphs). Compute a content fingerprint (hash of source text
-     within the block's range) for each. Run `CollectionDifference` on the
-     fingerprint arrays to identify unchanged, inserted, and removed blocks.
-     Source text (not plain text) so that formatting-only changes (e.g. `text`
-     → `**text**`) are detected as modifications.
+Output is a `[BlockMatch]` list: `.unchanged(old, new)`, `.modified(old, new)`,
+`.inserted(new)`, or `.deleted(old)`. Each `LeafBlock` carries the AST node,
+source text, fingerprint, and 1-based source line.
 
-  2. **Modification detection.** Post-process the `CollectionDifference` output
-     to pair removals and insertions at the same effective position. If
-     old-index N was removed and new-index N was inserted (after accounting for
-     prior offsets), merge them into a single `.modified(old, new)` match. This
-     is a positional heuristic — simpler than content-similarity matching, but
-     sufficient to detect in-place edits (the common case). Unpaired removals
-     become `.deleted(old)`, unpaired insertions become `.inserted(new)`.
+**`DiffContext.swift`** — `DiffContext(old:new:)` runs `BlockMatcher`
+internally and builds lookup tables keyed by `SourceKey` (line/column range).
+API:
 
-  Output is a `[BlockMatch]` list: `.unchanged(old, new)`,
-  `.modified(old, new)`, `.inserted(new)`, or `.deleted(old)`. Each entry
-  carries source ranges from the AST nodes for both rendering integration and
-  line-range mapping (see Down mode below).
+- `annotation(for: Markup) -> BlockAnnotation?` — returns `.inserted` or
+  `.modified` for changed blocks, `nil` for unchanged. Never returns `.deleted`
+  (deleted blocks don't exist in the new AST).
+- `changeID(for: Markup) -> String?` — deterministic IDs (`"change-1"`,
+  `"change-2"`, ...) for `data-change-id` attributes.
+- `precedingDeletions(before: Markup) -> [RenderedDeletion]` — deleted and
+  modified-old blocks that should appear before a given node, pre-rendered as
+  HTML via a separate `UpHTMLVisitor` walk.
+- `trailingDeletions() -> [RenderedDeletion]` — deletions after the last
+  surviving block (or all deletions when new document is empty).
 
-- `DiffContext.swift` — the bridge between diffing and rendering. Built from
-  `BlockMatcher` output. Provides:
+`RenderedDeletion` carries `.html`, `.changeID`, `.summary`, and
+`.isModificationOld` (so `ChangeList` can count a modification as one sidebar
+entry, not two).
 
-  - `annotation(for: Markup) -> BlockAnnotation?` — looked up by source range
-    during AST walking. Annotation type is `.inserted`, `.deleted`, or
-    `.modified` (content changed but block still exists).
-  - `precedingDeletions(before: Markup) -> [RenderedDeletion]` — deleted and
-    modified-old blocks that should appear before a given node, pre-rendered as
-    HTML.
+The `DiffContext` is an optional input to the rendering functions. When `nil`,
+rendering proceeds exactly as today (zero overhead for the common case).
 
-  The `DiffContext` is an optional input to the rendering functions. When
-  `nil`, rendering proceeds exactly as today (zero overhead for the common
-  case).
-
-- `ChangeList.swift` — extracts a flat `[DocumentChange]` array from the
-  `DiffContext` for the sidebar. Each `DocumentChange` carries:
-
-  - `id: String` (matches `data-change-id` in HTML)
-  - `type: ChangeType` (.insertion, .deletion, .modification)
-  - `summary: String` (first ~60 characters of changed content)
-  - `sourceLine: Int` (for scroll targeting)
+**`ChangeList.swift`** — `ChangeList.computeChanges(old:new:)` walks
+`DiffContext` and leaf blocks to produce a `[DocumentChange]` array for the
+sidebar. Filters out `isModificationOld` deletions. Each `DocumentChange`
+carries `id`, `type` (.insertion/.deletion/.modification), `summary` (~60
+chars, word-boundary truncation), and `sourceLine` (for scroll targeting;
+deletions use the following block's line).
 
 
 ### Layer 2: Rendering integration (MudCore)
@@ -577,8 +574,10 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
 1. ~~**Sidebar UI** — `SidebarView` container, segmented control, placeholder
    `ChangesSidebarView` .~~ _Done._
 
-2. **Diff engine** — `BlockMatcher`, `DiffContext`, `ChangeList` in MudCore.
-   Unit-testable in isolation. (`WordDiff` deferred to Approach B.)
+2. ~~**Diff engine** — `BlockMatcher` , `DiffContext` , `ChangeList` in
+   MudCore. Unit-testable in isolation. (`WordDiff` deferred to Approach B.)~~
+   _Done._ Implemented in `Core/Sources/Core/Diff/`.
+   `MudCore.computeChanges(old:new:)` is the public API.
 
 3. **Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
    through `renderUpModeDocument`. Verify with snapshot tests.
