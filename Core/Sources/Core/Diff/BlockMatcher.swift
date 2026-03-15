@@ -32,28 +32,59 @@ enum BlockMatcher {
             }
         }
 
-        // Phase 2: Pair removals and insertions at the same index into
-        // modifications (positional heuristic from the plan).
-        var modOldForNew: [Int: Int] = [:] // newIndex → oldIndex
-        for oi in removedOld.sorted() {
-            if insertedNew.contains(oi) {
-                modOldForNew[oi] = oi
-                removedOld.remove(oi)
-                insertedNew.remove(oi)
+        // Find unchanged pairs (anchors) by walking both index
+        // sequences and skipping removed/inserted indices.
+        var anchors: [(old: Int, new: Int)] = []
+        do {
+            var oi = 0, ni = 0
+            while oi < oldBlocks.count && ni < newBlocks.count {
+                if removedOld.contains(oi) { oi += 1; continue }
+                if insertedNew.contains(ni) { ni += 1; continue }
+                anchors.append((old: oi, new: ni))
+                oi += 1; ni += 1
             }
         }
 
-        // Build old→new mapping for unchanged blocks by walking both
-        // index sequences and skipping removed/inserted indices.
-        var unchangedOldForNew: [Int: Int] = [:] // newIndex → oldIndex
-        var oi = 0, ni = 0
-        while oi < oldBlocks.count && ni < newBlocks.count {
-            if removedOld.contains(oi) { oi += 1; continue }
-            if insertedNew.contains(ni) || modOldForNew[ni] != nil {
-                ni += 1; continue
+        // Phase 2: Gap-based modification pairing.
+        //
+        // Between each pair of anchors there's a gap containing some
+        // removals and some insertions. Within each gap, pair removals
+        // with insertions so that excess removals land at the front
+        // (pure deletions) and excess insertions land at the end (pure
+        // insertions). This is achieved by offsetting the longer list:
+        // removals are skipped from the front, insertions are paired
+        // from the front.
+        var modOldForNew: [Int: Int] = [:] // newIndex → oldIndex
+        let boundaries =
+            [(-1, -1)]
+            + anchors.map { ($0.old, $0.new) }
+            + [(oldBlocks.count, newBlocks.count)]
+
+        for i in 0..<(boundaries.count - 1) {
+            let (prevOld, prevNew) = boundaries[i]
+            let (nextOld, nextNew) = boundaries[i + 1]
+
+            let gapRemovals = ((prevOld + 1)..<nextOld)
+                .filter { removedOld.contains($0) }
+            let gapInsertions = ((prevNew + 1)..<nextNew)
+                .filter { insertedNew.contains($0) }
+
+            // Offset removals so excess deletions are at the front.
+            let remOffset = max(0, gapRemovals.count - gapInsertions.count)
+            let pairCount = min(gapRemovals.count, gapInsertions.count)
+            for j in 0..<pairCount {
+                let ri = gapRemovals[remOffset + j]
+                let ii = gapInsertions[j]
+                modOldForNew[ii] = ri
+                removedOld.remove(ri)
+                insertedNew.remove(ii)
             }
-            unchangedOldForNew[ni] = oi
-            oi += 1; ni += 1
+        }
+
+        // Convert anchors to the lookup dictionary.
+        var unchangedOldForNew: [Int: Int] = [:] // newIndex → oldIndex
+        for anchor in anchors {
+            unchangedOldForNew[anchor.new] = anchor.old
         }
 
         // Build the result in new-document order, interleaving deletions
