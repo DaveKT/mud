@@ -84,9 +84,28 @@ their pre-parsed ASTs. No redundant parsing.
 **New files in `Core/Sources/Core/Diff/` :**
 
 - `BlockMatcher.swift` — given two `ParsedMarkdown` values (old and new), match
-  leaf blocks between their ASTs by content fingerprint. Produces a
-  `[BlockMatch]` list: each entry is `.matched(old, new)`, `.inserted(new)`, or
-  `.deleted(old)`. Uses content hashing via `CollectionDifference`.
+  leaf blocks between their ASTs. Two phases:
+
+  1. **Fingerprint matching.** Flatten each AST into a list of leaf blocks
+     (paragraphs, headings, code blocks, individual list items, table rows,
+     blockquote paragraphs). Compute a content fingerprint (hash of source text
+     within the block's range) for each. Run `CollectionDifference` on the
+     fingerprint arrays to identify unchanged, inserted, and removed blocks.
+     Source text (not plain text) so that formatting-only changes (e.g. `text`
+     → `**text**`) are detected as modifications.
+
+  2. **Modification detection.** Post-process the `CollectionDifference` output
+     to pair removals and insertions at the same effective position. If
+     old-index N was removed and new-index N was inserted (after accounting for
+     prior offsets), merge them into a single `.modified(old, new)` match. This
+     is a positional heuristic — simpler than content-similarity matching, but
+     sufficient to detect in-place edits (the common case). Unpaired removals
+     become `.deleted(old)`, unpaired insertions become `.inserted(new)`.
+
+  Output is a `[BlockMatch]` list: `.unchanged(old, new)`,
+  `.modified(old, new)`, `.inserted(new)`, or `.deleted(old)`. Each entry
+  carries source ranges from the AST nodes for both rendering integration and
+  line-range mapping (see Down mode below).
 
 - `DiffContext.swift` — the bridge between diffing and rendering. Built from
   `BlockMatcher` output. Provides:
@@ -154,7 +173,14 @@ a `diffContext`, to avoid recursion).
 `DownHTMLVisitor.highlight()` gains an optional `diffContext: DiffContext?`
 parameter.
 
-Down mode operates on source lines, so the integration is line-level:
+Down mode uses the same AST-based `DiffContext` as Up mode — one diff engine,
+two rendering integrations. Block-level matches carry source ranges from the
+AST nodes. `DiffContext` maps these to line ranges: a block spanning lines 5–10
+marked as deleted means lines 5–10 are all deletion lines. A block spanning
+lines 5–10 marked as modified means those lines are replaced (old lines
+deleted, new lines inserted).
+
+Line-level integration:
 
 1. **Deleted lines** are re-inserted into the line array at their original
    positions, wrapped in `<del>` spans and styled distinctly (dimmed text,
@@ -162,8 +188,9 @@ Down mode operates on source lines, so the integration is line-level:
 
 2. **Inserted lines** get an `<ins>` wrapper around the line content.
 
-3. **Modified lines** are treated as a deletion of the old line followed by an
-   insertion of the new line, exactly as in `git diff`.
+3. **Modified blocks** are expanded to their constituent lines: old lines (from
+   the waypoint source) are re-inserted as deletions, new lines are marked as
+   insertions. Same visual result as `git diff`.
 
 
 #### RenderOptions change
@@ -262,7 +289,11 @@ struct Waypoint: Identifiable {
 
 `ChangeTracker` is a per-window `ObservableObject`. `DocumentState` gains a
 `let changeTracker = ChangeTracker()` field (same pattern as
-`let find = FindState()`).
+`let find = FindState()`). `DocumentContentView` observes it directly via
+`@ObservedObject var changeTracker: ChangeTracker` — passed separately, not
+accessed through `state.changeTracker`. (SwiftUI does not observe nested
+`ObservableObject` fields automatically, so this follows the same pattern used
+for `FindState`.)
 
 Waypoints are in-memory only. They do not persist across closing and re-opening
 the document. Old waypoints are retained in the `waypoints` array for a future
