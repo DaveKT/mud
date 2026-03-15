@@ -75,6 +75,12 @@ sequenceDiagram
 The diff engine lives in MudCore because it needs AST access and integrates
 with rendering. It has no UI dependencies.
 
+**Leveraging `ParsedMarkdown` :** MudCore already has a `ParsedMarkdown` struct
+(from the title-extraction work) that parses once and stores the `Document`
+AST, headings, and source text. The diff engine works with `ParsedMarkdown`
+values directly — `BlockMatcher` takes two `ParsedMarkdown` inputs and walks
+their pre-parsed ASTs. No redundant parsing.
+
 **New files in `Core/Sources/Core/Diff/` :**
 
 - `WordDiff.swift` — tokenise text into words, run diff, produce `[DiffToken]`.
@@ -82,11 +88,10 @@ with rendering. It has no UI dependencies.
   internally). A `DiffToken` is either `.unchanged(String)`,
   `.inserted(String)`, or `.deleted(String)`.
 
-- `BlockMatcher.swift` — given two parsed ASTs (old and new), match blocks
-  between them by type and content similarity. Produces a `[BlockMatch]` list:
-  each entry is `.matched(old, new)`, `.inserted(new)`, or `.deleted(old)`.
-  Uses content hashing for fast fingerprinting and falls back to similarity
-  scoring for fuzzy matches.
+- `BlockMatcher.swift` — given two `ParsedMarkdown` values (old and new), match
+  leaf blocks between their ASTs by content fingerprint. Produces a
+  `[BlockMatch]` list: each entry is `.matched(old, new)`, `.inserted(new)`, or
+  `.deleted(old)`. Uses content hashing via `CollectionDifference`.
 
 - `DiffContext.swift` — the bridge between diffing and rendering. Built from
   `BlockMatcher` output + per-block `WordDiff` results. Provides:
@@ -177,16 +182,17 @@ struct RenderOptions {
 }
 ```
 
-When `waypoint` is non-nil, the render functions internally:
+`RenderOptions` is `Sendable + Equatable`. `String?` satisfies both.
+(`ParsedMarkdown` won't — it holds a swift-markdown `Document` reference.)
 
-1. Parse both old (waypoint) and new markdown into ASTs
-2. Run block matching + word diff → `DiffContext`
-3. Pass `DiffContext` to the visitor, which injects change markers
+When `waypoint` is non-nil, the render functions internally parse it, run block
+matching + word diff → `DiffContext`, and pass it to the visitor.
 
-The `contentIdentity` hash includes `waypoint` presence so content changes when
-change tracking is toggled. Since theme/zoom changes go through JS (without
-re-calling the render function), the diff is only computed when content
-actually changes — not on every visual update.
+The `contentIdentity` hash includes the waypoint so content changes when change
+tracking is toggled. Since theme/zoom changes go through JS (without re-calling
+the render function), the diff is only computed when content actually changes —
+not on every visual update. Mode toggles (up ↔ down) do re-render, but the diff
+cost is negligible for typical Markdown file sizes.
 
 
 #### API changes
@@ -195,13 +201,16 @@ The existing render function signatures are unchanged — they already accept
 `RenderOptions`, which now carries the waypoint. One new function:
 
 ```swift
-// Compute sidebar change list from two content strings
-MudCore.computeChanges(old: String, new: String) -> [DocumentChange]
+// Compute sidebar change list from two ParsedMarkdown values
+MudCore.computeChanges(
+    old: ParsedMarkdown, new: ParsedMarkdown
+) -> [DocumentChange]
 ```
 
 This is called by `ChangeTracker` when content changes, independently of
-rendering. The diff is computed twice (once here, once during rendering) but
-this is negligible for typical Markdown file sizes.
+rendering. It works directly with pre-parsed ASTs — no redundant parsing. The
+render functions also compute the diff internally (re-parsing the waypoint
+string), but this is negligible for typical file sizes.
 
 
 ### Layer 3: State management (App)
@@ -214,9 +223,9 @@ class ChangeTracker: ObservableObject {
     @Published private(set) var changes: [DocumentChange] = []
     @Published var selectedChangeID: String?
 
-    /// The content of the active waypoint (for RenderOptions).
+    /// The raw content of the active waypoint (for RenderOptions).
     var activeWaypointContent: String? {
-        waypoints.last?.content
+        waypoints.last?.parsed.markdown
     }
 
     /// The timestamp of the active waypoint (for sidebar display).
@@ -224,17 +233,20 @@ class ChangeTracker: ObservableObject {
         waypoints.last?.timestamp
     }
 
-    func setInitialWaypoint(_ content: String)
-    func update(_ currentContent: String)  // recomputes changes
-    func accept(_ currentContent: String)  // pushes new waypoint
+    func setInitialWaypoint(_ parsed: ParsedMarkdown)
+    func update(_ currentParsed: ParsedMarkdown)  // recomputes changes
+    func accept(_ currentParsed: ParsedMarkdown)   // pushes new waypoint
 }
 
 struct Waypoint: Identifiable {
     let id: UUID
-    let content: String
+    let parsed: ParsedMarkdown  // pre-parsed; AST reused for diffing
     let timestamp: Date
 }
 ```
+
+`ChangeTracker` stores waypoints as `ParsedMarkdown` values so the AST is
+parsed once per waypoint and reused for every subsequent diff.
 
 `ChangeTracker` is a per-window `ObservableObject`. `DocumentState` gains a
 `let changeTracker = ChangeTracker()` field (same pattern as
@@ -246,9 +258,11 @@ waypoint-selector UI but are not otherwise used.
 
 **Integration with `DocumentContentView` :**
 
-- `loadFromDisk()` calls `changeTracker.update(text)` after reading new
-  content. On first load, this creates the initial waypoint. On subsequent
-  loads, it calls `MudCore.computeChanges()` and updates `changes`.
+- `loadFromDisk()` already creates a `ParsedMarkdown` value (from the
+  title-extraction work). After setting `content = .parsed(parsed)`, it calls
+  `changeTracker.update(parsed)`. On first load this creates the initial
+  waypoint; on subsequent loads it diffs against the active waypoint via
+  `MudCore.computeChanges(old:new:)` and updates `changes`.
 - The `renderOptions` computed property sets
   `opts.waypoint = changeTracker.activeWaypointContent` when the content
   differs from the waypoint (i.e. there are changes to show). When content
@@ -260,44 +274,14 @@ waypoint-selector UI but are not otherwise used.
 
 ### Layer 4: Sidebar UI (App)
 
-**New file: `App/SidebarView.swift`**
+**`App/SidebarView.swift`** and **`App/ChangesSidebarView.swift`** are already
+implemented. `SidebarView` wraps a segmented Outline/Changes picker with
+`OutlineSidebarView` and `ChangesSidebarView` as panes.
+`DocumentWindowController.setupContent()` already wires `SidebarView` in place
+of the old direct `OutlineSidebarView`.
 
-A container view that wraps both sidebar panes:
-
-```
-struct SidebarView: View {
-    enum Pane { case outline, changes }
-
-    @State private var pane: Pane = .outline
-    @ObservedObject var state: DocumentState
-    var onSelectHeading: (OutlineHeading) -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("", selection: $pane) {
-                Text("Outline").tag(Pane.outline)
-                Text("Changes").tag(Pane.changes)
-            }
-            .pickerStyle(.segmented)
-            .padding(8)
-
-            switch pane {
-            case .outline:
-                OutlineSidebarView(state: state, onSelect: onSelectHeading)
-            case .changes:
-                ChangesSidebarView(changeTracker: state.changeTracker)
-            }
-        }
-    }
-}
-```
-
-`DocumentWindowController.setupContent()` replaces the direct
-`OutlineSidebarView` with `SidebarView`.
-
-**New file: `App/ChangesSidebarView.swift`**
-
-Displays:
+`ChangesSidebarView` currently shows a static "No Changes" empty state. It
+needs to be extended to accept a `ChangeTracker` and display:
 
 1. **Status line** at the top: "X changes since HH:MM" (or "today at HH:MM",
    "yesterday", etc.) with an **Accept** button.
@@ -478,27 +462,30 @@ overlapping formatting.
 
 ## Implementation sequence
 
-1. **Diff engine** — `WordDiff`, `BlockMatcher`, `DiffContext`, `ChangeList` in
+1. ~~**Sidebar UI** — `SidebarView` container, segmented control, placeholder
+   `ChangesSidebarView` .~~ _Done._
+
+2. **Diff engine** — `WordDiff`, `BlockMatcher`, `DiffContext`, `ChangeList` in
    MudCore. Unit-testable in isolation.
 
-2. **Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
+3. **Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
    through `renderUpModeDocument`. Verify with snapshot tests.
 
-3. **Down mode integration** — `DownHTMLVisitor` changes. Similar snapshot
+4. **Down mode integration** — `DownHTMLVisitor` changes. Similar snapshot
    tests.
 
-4. **ChangeTracker** — state management in App layer. Wire to
-   `DocumentContentView.loadFromDisk()`.
+5. **ChangeTracker + RenderOptions** — state management in App layer, waypoint
+   field on `RenderOptions`. Wire to `DocumentContentView.loadFromDisk()`.
 
-5. **CSS** — change marker styles, theme variable additions.
+6. **CSS** — change marker styles, theme variable additions.
 
-6. **Sidebar UI** — `SidebarView` container, `ChangesSidebarView`, segmented
-   control, change list.
+7. **Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
+   list, status line, Accept button.
 
-7. **JS + WebView** — `scrollToChange`, `revealChange`, wire to sidebar
+8. **JS + WebView** — `scrollToChange`, `revealChange`, wire to sidebar
    selection.
 
-8. **Polish** — keyboard shortcuts (Next Change / Previous Change), menu items,
+9. **Polish** — keyboard shortcuts (Next Change / Previous Change), menu items,
    edge cases (empty document, binary files, very large diffs).
 
 
