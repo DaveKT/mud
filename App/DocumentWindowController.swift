@@ -136,6 +136,13 @@ class DocumentWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
+        state.$contentTitle
+            .sink { [weak self] title in
+                guard let self, let window = self.window else { return }
+                window.title = title ?? self.fileURL.lastPathComponent
+            }
+            .store(in: &cancellables)
+
         // Track sidebar collapse state for persistence
         if let sidebarItem = splitVC?.splitViewItems.first {
             sidebarItem.publisher(for: \.isCollapsed)

@@ -18,6 +18,7 @@ class DocumentState: ObservableObject {
     @Published var reloadID: UUID?
     @Published var outlineHeadings: [OutlineHeading] = []
     @Published var scrollTarget: ScrollTarget?
+    @Published var contentTitle: String?
     let find = FindState()
 
     func toggleMode() {

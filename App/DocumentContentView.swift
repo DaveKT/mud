@@ -170,6 +170,7 @@ struct DocumentContentView: View {
             }
             content = .text(text)
             state.outlineHeadings = MudCore.extractHeadings(text)
+            state.contentTitle = Self.extractTitle(from: text)
         } catch let cocoaError as CocoaError where cocoaError.code == .fileReadNoSuchFile {
             content = .error(ErrorPage.fileNotFound(error: cocoaError))
         } catch {
@@ -207,6 +208,23 @@ struct DocumentContentView: View {
             withApplicationAt: browserURL,
             configuration: NSWorkspace.OpenConfiguration()
         )
+    }
+}
+
+// MARK: - Title Extraction
+
+private extension DocumentContentView {
+    /// Extracts a display title from the first non-blank line of Markdown,
+    /// stripping leading `#` and `*` characters.
+    static func extractTitle(from text: String) -> String? {
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            let trimmed = line.drop(while: { $0 == " " || $0 == "\t" })
+            if trimmed.isEmpty { continue }
+            let stripped = trimmed.drop(while: { $0 == "#" || $0 == "*" })
+            let title = stripped.trimmingCharacters(in: .whitespaces)
+            return title.isEmpty ? nil : title
+        }
+        return nil
     }
 }
 
