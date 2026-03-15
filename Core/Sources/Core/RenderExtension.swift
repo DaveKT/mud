@@ -45,7 +45,7 @@ public struct RenderExtension: Sendable {
     static let copyCode = RenderExtension(
         name: "copyCode",
         marker: "mud-code",
-        cspSources: [],
+        cspSources: ["'unsafe-inline'"],
         embeddedScripts: [.inline(copyCodeInitJS)],
         runtimeResources: ["copy-code"]
     )
