@@ -30,23 +30,23 @@ Development is broken down into three stages: Planning, Underway, Complete.
 
 ## Stage 2: Underway
 
-- In a fresh session, give the plan to CC and tell it to implement tests for
-  the 1st phase. (Sometimes I ask it first how well it understands the plan —
-  if necessary I can `/resume` the context-rich planning session to flesh out
-  the gaps.)
-- Tell CC to update the markdown plan with progress to date.
+- In a fresh session, give the plan to Claude Code and tell it to implement
+  tests for the 1st phase. (Sometimes I ask it first how well it understands the
+  plan — if necessary I can `/resume` the context-rich planning session to flesh
+  out the gaps.)
+- Tell Claude Code to update the markdown plan with progress to date.
 - Review tests & plan, commit: "Tests: cases for XYZ phase 1".
-- In the same session, tell CC to implement the 1st phase.
+- In the same session, tell Claude Code to implement the 1st phase.
 - Run tests.
-- Tell CC to update the markdown plan with progress again.
+- Tell Claude Code to update the markdown plan with progress again.
 - Review code & plan, commit: "XYZ: phase 1".
 - Repeat for each subsequent phase, usually in a fresh session per phase.
 
 
 ## Stage 3: Complete
 
-- In a fresh session, give the plan to CC and tell it to finalize it and
-  simplify it (usually replacing verbatim code blocks with brief functional
+- In a fresh session, give the plan to Claude Code and tell it to finalize it
+  and simplify it (usually replacing verbatim code blocks with brief functional
   summaries).
 - Mark the plan as complete and move it to `doc/plans/archive/`.
 - Commit the plan: "Doc: complete and archive plan for XYZ".
@@ -61,19 +61,20 @@ this level of documentation and revision and TDD substantially reduces
 [cognitive debt](https://simonwillison.net/guides/agentic-engineering-patterns/interactive-explanations/).
 
 [Mud](https://apps.josephpearson.org/mud) is a great fit for this workflow
-because I can have CC running in a terminal on the right half of my screen, and
-Mud displaying the plan on the left half of my screen (where my beloved vim
-used to be). As Claude Code writes and rewrites the plan, it updates
-immediately in Mud.
+because I can have Claude Code running in a terminal on the right half of my
+screen, and Mud displaying the plan on the left half of my screen. As Claude
+Code writes and rewrites the plan, it updates immediately in Mud.
 
 ![Mud & Claude side-by-side](plan-workflows-side-by-side.png)
 
 
--------------------------------------------------------------------------------
+## Resources
+
+A few more resources if you're interested in adopting this plan-centric
+workflow with coding agents…
 
 
-A few more resources if you're interested in this plan-centric workflow with
-Claude Code...
+### Claude Code configuration
 
 I configure my workspace `settings.local.json` to use the current project's
 `doc/plans/` directory rather than its obscure internal one:
@@ -84,7 +85,10 @@ I configure my workspace `settings.local.json` to use the current project's
 }
 ```
 
-I have these instructions in my workspace `CLAUDE.md`:
+### Agent instructions
+
+I have these instructions in my workspace `CLAUDE.md`. One of the biggest
+wins here is **telling the agent that it can use diagrams** to explain things.
 
 ````markdown
 ## Writing plans
@@ -95,27 +99,34 @@ For any project that is a discrete local Git repository, you will find a
 Within this directory, we write our dev plans in markdown files with names that
 are prefixed with the year-and-month of creation. Some example file names:
 
-```
 * 2026-01-logging-refactor.md
-* 2026-01-token-exchange.md
-```
+* 2026-01-token-exchange-authentication.md
 
 When entering plan mode, the system suggests a plan file with a random name.
 Ignore the random name. Instead, create the plan file directly at the correct
-`YYYY-MM-short-description.md` path in `doc/plans/` using the Write tool. If
-the file already exists under the random name (e.g. from a previous attempt),
-rename it with `git mv` if tracked or `mv` if untracked.
+`YYYY-MM-short-description.md` path in `doc/plans/` using the Write tool.
 
 The first heading should be "Plan: " followed by the name in _Title Case_,
 followed by a "Status:" callout. eg:
 
 ```
-Plan: Token Exchange
+Plan: Token Exchange Authentication
 ===============================================================================
 
 > Status: Planning
+
+…
 ```
 
-Valid statuses include: Planning, Underway, Complete. Once marked as "Complete",
-the plan can be moved into the doc/plans/archive/ subdirectory.
+Valid statuses include: Planning, Underway, Complete.
+
+Feel free to use Mermaid diagrams in plans to explain concepts and flows
+visually.
+
+When marking a plan as Complete, replace implementation code blocks with a
+short prose summary of the functional/visual change. Don't duplicate code
+that's now in the codebase. Leave diagrammatic code-blocks in place.
+
+Once marked as "Complete", the plan can be moved into the doc/plans/archive/
+subdirectory.
 ````

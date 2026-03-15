@@ -29,10 +29,10 @@ Mud does just one thing — it marks up Markdown! — and it does it really well
 - [Alerts & asides](Examples/alerts-and-asides.md)
 - [Emoji shortcodes](Examples/emoji-shortcodes.md)
 - [Mermaid diagrams](Examples/mermaid-diagrams.md)
-- [Markdown parsing stress test](Examples/markdown-parsing.md)
+- [Code highlighting](Examples/code-highlighting.md)
 - [Image embedding](Examples/image-embedding.md)
 - [Link handling](Examples/link-handling.md)
-- [Code highlighting](Examples/code-highlighting.md)
+- [Markdown parsing stress test](Examples/markdown-parsing.md)
 
 
 ## Keyboard shortcuts
@@ -74,13 +74,3 @@ Mud does just one thing — it marks up Markdown! — and it does it really well
 | ⌘R       | Reload                                       |
 | ⌘P       | Print…                                       |
 | ⌘⇧B      | Open in Browser _(direct distribution only)_ |
-
-
-## Markdown extensions
-
-TODO:
-
-- Tables
-- Alerts, asides, and callouts
-- Diagrams
-- Emoji shortcodes

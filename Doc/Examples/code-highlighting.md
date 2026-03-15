@@ -79,7 +79,7 @@ end
 ```
 
 
-## Unknown language (should fall back to `highlightAuto`)
+## Unknown language
 
 ```foobar
 DECLARE @x INT = 42;
@@ -89,7 +89,7 @@ END IF;
 ```
 
 
-## No language (should use `highlightAuto`)
+## No language
 
 ```
 for i in range(10):

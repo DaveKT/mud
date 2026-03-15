@@ -22,7 +22,7 @@ writes to it, or Codex, or whatever you use.
 ![The Mud app, showing Mark Up mode](Site/mud-ss-01.png)
 ![The Mud app, showing Mark Down mode](Site/mud-ss-02.png)
 
-Mud shows you both sides of every document:
+Mud shows you both sides of the document:
 
 - **Mark Up** renders your Markdown as styled HTML — GitHub-flavored, with
   syntax-highlighted code.
@@ -82,30 +82,26 @@ Markdown plan document to an issue for any proposed fix or improvement.
 
 ## Screenshots
 
-![Screenshot: Mud](Site/screenshots/mud-ss-03.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-04.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-05.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-06.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-07.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-08.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-09.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-10.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-11.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-12.png)
-![Screenshot: Mud](Site/screenshots/mud-ss-13.png)
+![Screenshot: Syntax highlighting, with Outline in Sidebar](Site/screenshots/mud-ss-03.png)
+![Screenshot: Keyboard shortcuts in a table](Site/screenshots/mud-ss-04.png)
+![Screenshot: Rendering — Alerts and asides](Site/screenshots/mud-ss-05.png)
+![Screenshot: Rendering — Diagrams](Site/screenshots/mud-ss-06.png)
+![Screenshot: Settings > General](Site/screenshots/mud-ss-07.png)
+![Screenshot: Settings > Markdown](Site/screenshots/mud-ss-08.png)
+![Screenshot: Settings > Theme](Site/screenshots/mud-ss-09.png)
+![Screenshot: Settings > Up Mode](Site/screenshots/mud-ss-10.png)
+![Screenshot: Rendering — Table](Site/screenshots/mud-ss-11.png)
+![Screenshot: Rendering — Task list](Site/screenshots/mud-ss-12.png)
+![Screenshot: Rendering — Status aside](Site/screenshots/mud-ss-13.png)
+
+
+## Documents
+
+- [Doc/HUMANS.md](Doc/HUMANS.md) — orientation guide for human beings
+- [Doc/AGENTS.md](Doc/AGENTS.md) — architecture guide for coding agents
+- [Doc/RELEASES.md](Doc/RELEASES.md) — versioned changelog
 
 
 ## License
 
 MIT with Commons Clause. See [Doc/LICENSE.md](Doc/LICENSE.md).
-
-
-## Documents
-
-- [Doc/AGENTS.md](Doc/AGENTS.md) — architecture guide for coding agents
-- [Doc/LICENSE.md](Doc/LICENSE.md) — open source license
-
-
-------------------------------------------------------------------------------
-
-![Mud.app icon](Doc/Mud.png)
