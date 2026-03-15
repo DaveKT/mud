@@ -8,10 +8,10 @@ Plan: Track Changes
 
 Add a change-tracking feature to Mud. When a document is opened, its content is
 snapshot as a "waypoint". On each subsequent reload (file change), the current
-content is word-diffed against the waypoint, and `<ins>`/ `<del>` elements are
-injected into the rendered HTML (both Up and Down modes). A new sidebar pane
-lists each change; selecting one scrolls to and highlights it. Deletions are
-hidden unless selected.
+content is diffed against the waypoint at the block level and `<ins>`/ `<del>`
+elements are injected into the rendered HTML (both Up and Down modes). A new
+sidebar pane lists each change; selecting one scrolls to and highlights it.
+Deletions are hidden unless selected.
 
 
 ## Concepts
@@ -83,25 +83,20 @@ their pre-parsed ASTs. No redundant parsing.
 
 **New files in `Core/Sources/Core/Diff/` :**
 
-- `WordDiff.swift` — tokenise text into words, run diff, produce `[DiffToken]`.
-  Uses Swift's `CollectionDifference` on word arrays (which uses Myers
-  internally). A `DiffToken` is either `.unchanged(String)`,
-  `.inserted(String)`, or `.deleted(String)`.
-
 - `BlockMatcher.swift` — given two `ParsedMarkdown` values (old and new), match
   leaf blocks between their ASTs by content fingerprint. Produces a
   `[BlockMatch]` list: each entry is `.matched(old, new)`, `.inserted(new)`, or
   `.deleted(old)`. Uses content hashing via `CollectionDifference`.
 
 - `DiffContext.swift` — the bridge between diffing and rendering. Built from
-  `BlockMatcher` output + per-block `WordDiff` results. Provides:
+  `BlockMatcher` output. Provides:
 
   - `annotation(for: Markup) -> BlockAnnotation?` — looked up by source range
-    during AST walking
-  - `precedingDeletions(before: Markup) -> [RenderedDeletion]` — deleted blocks
-    that should appear before a given node
-  - `inlineAnnotations(for: Markup) -> [InlineAnnotation]` — word-level
-    `<ins>`/ `<del>` positions within a modified block
+    during AST walking. Annotation type is `.inserted`, `.deleted`, or
+    `.modified` (content changed but block still exists).
+  - `precedingDeletions(before: Markup) -> [RenderedDeletion]` — deleted and
+    modified-old blocks that should appear before a given node, pre-rendered as
+    HTML.
 
   The `DiffContext` is an optional input to the rendering functions. When
   `nil`, rendering proceeds exactly as today (zero overhead for the common
@@ -135,20 +130,23 @@ These helpers:
 
 1. Emit any **preceding deletions** — pre-rendered HTML from deleted blocks,
    wrapped in `<del class="mud-change mud-change-del" data-change-id="…">`.
+   This includes the old version of modified blocks (see below).
 
 2. For **inserted blocks**, wrap the entire block output in
    `<ins class="mud-change mud-change-ins" data-change-id="…">`.
 
-3. For **modified blocks**, set a flag so that inline text emission
-   (`visitText`) consults the word-level diff and wraps changed runs in
-   `<ins>`/ `<del>` spans.
+3. For **modified blocks**, emit the old version as a preceding deletion
+   (hidden by default), then wrap the new version in
+   `<ins class="mud-change mud-change-mod" data-change-id="…">`. The new
+   version renders normally — no inline word-level markers. This is the
+   `git diff` model: modification = delete old + insert new.
 
 When `diffContext` is nil, these helpers are no-ops — the hot path is
 unchanged.
 
-To render deleted blocks for insertion into the current document, the diff
-engine renders each deleted block in isolation using a separate `UpHTMLVisitor`
-walk (without a `diffContext`, to avoid recursion).
+To render deleted and modified-old blocks for insertion, the diff engine
+renders each block in isolation using a separate `UpHTMLVisitor` walk (without
+a `diffContext`, to avoid recursion).
 
 
 #### Down mode
@@ -156,19 +154,16 @@ walk (without a `diffContext`, to avoid recursion).
 `DownHTMLVisitor.highlight()` gains an optional `diffContext: DiffContext?`
 parameter.
 
-Down mode operates on source lines, so the integration is more direct:
+Down mode operates on source lines, so the integration is line-level:
 
 1. **Deleted lines** are re-inserted into the line array at their original
-   positions, wrapped in `<del>` spans and styled distinctly (e.g. dimmed text,
-   strikethrough).
+   positions, wrapped in `<del>` spans and styled distinctly (dimmed text,
+   strikethrough). Show a dash (`–`) in the line number column.
 
 2. **Inserted lines** get an `<ins>` wrapper around the line content.
 
-3. **Modified lines** use the word-level diff to wrap changed words within the
-   existing syntax-highlight spans.
-
-Line numbers for deleted lines could show the old line number (dimmed) or be
-blank — this is a UX detail to decide during implementation.
+3. **Modified lines** are treated as a deletion of the old line followed by an
+   insertion of the new line, exactly as in `git diff`.
 
 
 #### RenderOptions change
@@ -178,21 +173,38 @@ blank — this is a UX detail to decide during implementation.
 ```swift
 struct RenderOptions {
     // ... existing fields ...
-    var waypoint: String?  // old content to diff against; nil = no tracking
+    var waypoint: ParsedMarkdown?  // old content to diff against; nil = no tracking
 }
 ```
 
-`RenderOptions` is `Sendable + Equatable`. `String?` satisfies both.
-(`ParsedMarkdown` won't — it holds a swift-markdown `Document` reference.)
+`RenderOptions` is `Sendable + Equatable`. swift-markdown's `Document` struct
+wraps a reference-counted `RawMarkup` tree which declares no `Sendable`
+conformance, so `ParsedMarkdown` needs explicit conformances:
 
-When `waypoint` is non-nil, the render functions internally parse it, run block
-matching + word diff → `DiffContext`, and pass it to the visitor.
+```swift
+extension ParsedMarkdown: @unchecked Sendable {}
 
-The `contentIdentity` hash includes the waypoint so content changes when change
-tracking is toggled. Since theme/zoom changes go through JS (without re-calling
-the render function), the diff is only computed when content actually changes —
-not on every visual update. Mode toggles (up ↔ down) do re-render, but the diff
-cost is negligible for typical Markdown file sizes.
+extension ParsedMarkdown: Equatable {
+    public static func == (lhs: ParsedMarkdown, rhs: ParsedMarkdown) -> Bool {
+        lhs.markdown == rhs.markdown
+    }
+}
+```
+
+`@unchecked Sendable` is justified because `ParsedMarkdown` is immutable (all
+`let` fields) and the underlying `RawMarkup` tree has no mutation API.
+`Equatable` by source string comparison is semantically correct — identical
+source always produces identical ASTs.
+
+When `waypoint` is non-nil, the render functions run block matching →
+`DiffContext` using the pre-parsed ASTs from both the current `ParsedMarkdown`
+and the waypoint `ParsedMarkdown`. No re-parsing.
+
+`contentIdentity` includes a waypoint discriminator (hash of
+`waypoint?.markdown`) so content changes when the waypoint changes (e.g.
+Accept). Since theme/zoom changes go through JS (without re-calling the render
+function), the diff is only computed when content actually changes — not on
+every visual update.
 
 
 #### API changes
@@ -208,9 +220,8 @@ MudCore.computeChanges(
 ```
 
 This is called by `ChangeTracker` when content changes, independently of
-rendering. It works directly with pre-parsed ASTs — no redundant parsing. The
-render functions also compute the diff internally (re-parsing the waypoint
-string), but this is negligible for typical file sizes.
+rendering. Both paths (rendering and sidebar) work with pre-parsed ASTs — no
+redundant parsing anywhere.
 
 
 ### Layer 3: State management (App)
@@ -223,9 +234,9 @@ class ChangeTracker: ObservableObject {
     @Published private(set) var changes: [DocumentChange] = []
     @Published var selectedChangeID: String?
 
-    /// The raw content of the active waypoint (for RenderOptions).
-    var activeWaypointContent: String? {
-        waypoints.last?.parsed.markdown
+    /// The active waypoint's ParsedMarkdown (for RenderOptions).
+    var activeWaypoint: ParsedMarkdown? {
+        waypoints.last?.parsed
     }
 
     /// The timestamp of the active waypoint (for sidebar display).
@@ -245,8 +256,9 @@ struct Waypoint: Identifiable {
 }
 ```
 
-`ChangeTracker` stores waypoints as `ParsedMarkdown` values so the AST is
-parsed once per waypoint and reused for every subsequent diff.
+`ParsedMarkdown` is parsed once per waypoint. The same value flows to
+`RenderOptions.waypoint` (for rendering) and to
+`MudCore.computeChanges(old:new:)` (for the sidebar). No re-parsing anywhere.
 
 `ChangeTracker` is a per-window `ObservableObject`. `DocumentState` gains a
 `let changeTracker = ChangeTracker()` field (same pattern as
@@ -264,9 +276,9 @@ waypoint-selector UI but are not otherwise used.
   waypoint; on subsequent loads it diffs against the active waypoint via
   `MudCore.computeChanges(old:new:)` and updates `changes`.
 - The `renderOptions` computed property sets
-  `opts.waypoint = changeTracker.activeWaypointContent` when the content
-  differs from the waypoint (i.e. there are changes to show). When content
-  matches the waypoint, `opts.waypoint` stays nil (no markers needed).
+  `opts.waypoint = changeTracker.activeWaypoint` when the content differs from
+  the waypoint (i.e. there are changes to show). When content matches the
+  waypoint, `opts.waypoint` stays nil (no markers needed).
 - The existing content-identity mechanism handles WebView reloads — since
   `contentIdentity` includes the waypoint, enabling/disabling change tracking
   naturally triggers a re-render.
@@ -355,8 +367,9 @@ Option 2 is simpler and avoids modifying the existing `ScrollTarget` type.
 **New file: `Resources/mud-changes.css`** (or additions to `mud.css`)
 
 ```css
-/* Change markers */
-.mud-change-ins {
+/* Block-level change markers */
+.mud-change-ins,
+.mud-change-mod {
     background-color: var(--change-ins-bg);
     border-left: 3px solid var(--change-ins-border);
     padding-left: 4px;
@@ -379,10 +392,6 @@ Option 2 is simpler and avoids modifying the existing `ScrollTarget` type.
     outline: 2px solid var(--change-active-border);
     outline-offset: 2px;
 }
-
-/* Inline word-level changes */
-ins.mud-word { background-color: var(--change-ins-word-bg); text-decoration: none; }
-del.mud-word { background-color: var(--change-del-word-bg); text-decoration: line-through; }
 ```
 
 Theme files gain `--change-*` CSS variables so change colours harmonise with
@@ -408,56 +417,128 @@ each theme.
 5. **Sidebar pane state** — Per-window (`@State` in `SidebarView`), not
    persisted.
 
+6. **Diff granularity** — Block-level only for the initial implementation
+   (Approach A). See the section below for the full analysis and evolution
+   path.
 
-## Concerns to resolve
 
-### Word-level diffs across inline formatting in Up mode
+## Diff granularity approaches
 
-Block-level change tracking is straightforward: wrap entire blocks in `<ins>`/
-`<del>`. But for **modified blocks**, the plan calls for word-level `<ins>`/
-`<del>` injection during the `UpHTMLVisitor` walk. This is the hardest part of
-the feature because change boundaries don't respect inline formatting
-boundaries.
+Three approaches for how changes are presented in the rendered document,
+ordered from simplest to most precise. We implement **Approach A** first and
+may evolve to **B** later. **C** is documented for completeness.
 
-Consider a paragraph changing from `This is **important** and relevant` to
-`This is **critical** and relevant`. The word diff identifies
-`important → critical`, but in the AST, "important" lives inside a `Strong`
-node. The visitor processes it via a separate `visitText` call nested inside
-`visitStrong`. To inject `<del>important</del><ins>critical</ins>` correctly,
-the visitor must:
 
-1. **Track a character offset** across multiple `visitText` calls within a
-   single paragraph (since the word diff operates on the paragraph's plain
-   text, not individual AST nodes).
+### Approach A: Block-level only (the `git diff` model) — ACTIVE
 
-2. **Split text emission** at change boundaries — when a `visitText` call
-   covers text that is partly unchanged and partly changed, it must emit the
-   unchanged portion, open an `<ins>` or `<del>`, emit the changed portion, and
-   close it.
+Modifications are treated as a deletion of the old block followed by an
+insertion of the new block. No word-level diffing. This is how `git diff`
+presents modified lines: old line in red, new line in green.
 
-3. **Handle cross-boundary changes** — when a change spans from one inline node
-   into another (e.g., from plain text into emphasis, or across a link
-   boundary), `<ins>`/ `<del>` elements must be closed before the formatting
-   boundary and reopened after it, to produce valid HTML.
+**In Up mode:** for a modified paragraph, the old version is rendered as a
+hidden `<del>` block (revealable via the sidebar), and the new version is
+rendered normally inside an `<ins>` wrapper with a "modified" visual indicator.
 
-This needs its own detailed design before implementation. Possible approach:
+**In Down mode:** for a modified line, the old line is re-inserted as a hidden
+`<del>` row, and the new line gets an `<ins>` wrapper.
 
-- Before visiting a modified paragraph's children, pre-compute a list of
-  `InlineEdit` records: each carries a character-offset range (relative to the
-  paragraph's full plain text) and a type (insertion/deletion).
-- Maintain a running character offset as `visitText` calls accumulate.
-- In `visitText`, check whether the current text overlaps any `InlineEdit`
-  ranges. If so, split the text at the edit boundaries and wrap the affected
-  segments.
-- If an edit range extends beyond the current `visitText` call, close the
-  `<ins>`/ `<del>` at the end and set a flag to reopen it in the next
-  `visitText` call.
+**Pros:**
 
-This keeps the complexity contained within `visitText` and a small amount of
-per-paragraph state, without touching other visit methods. But it needs careful
-testing with edge cases: changes inside code spans, changes spanning emphasis
-boundaries, changes at the start/end of inline nodes, adjacent changes, and
-overlapping formatting.
+- Simplest to implement — no `WordDiff` engine, no inline marker injection, no
+  cross-boundary concerns
+- Always readable, even for heavily rewritten prose
+- Matches the `git diff` mental model developers are used to
+
+**Cons:**
+
+- A single typo fix in a 200-word paragraph shows the entire paragraph as
+  modified (old + new). The sidebar tells you which paragraph changed, but you
+  must visually compare the two versions to spot the difference.
+
+
+### Approach B: Block-level with word highlights (enhanced `git diff`)
+
+Same structure as A — modifications are shown as old block (hidden) + new block
+(visible). But within each version, changed words get a subtle background
+highlight: insertions in the new block, deletions in the old block.
+
+Crucially, this is **not interleaved**. The new version only has insertion
+marks. The old version only has deletion marks. Each version reads as natural
+prose with a bit of colour.
+
+**Implementation (deferred):**
+
+- Add `WordDiff.swift` to `Core/Sources/Core/Diff/` — tokenise text into words,
+  diff via `CollectionDifference`, produce `[DiffToken]`.
+- `DiffContext` gains `wordAnnotations(for: Markup) -> [WordAnnotation]` —
+  character-offset ranges within a block's plain text.
+- In `UpHTMLVisitor`, when rendering a modified block (old or new version),
+  `visitText` consults word annotations and wraps changed runs in
+  `<mark class="mud-word-ins">` or `<mark class="mud-word-del">`.
+- The cross-boundary problem (a highlight spanning from plain text into
+  emphasis) still exists but is less severe than Approach C because each
+  version has only one type of mark — no interleaving of `<ins>` and `<del>`.
+  The approach: close the `<mark>` before the formatting boundary and reopen it
+  after. Only `visitText` needs modification.
+
+**CSS additions for B:**
+
+```css
+mark.mud-word-ins { background-color: var(--change-ins-word-bg); }
+mark.mud-word-del { background-color: var(--change-del-word-bg); }
+```
+
+**Pros:**
+
+- Same readability as A for large changes
+- Precise highlighting for small changes (typo fixes, number edits)
+- Each version still reads as natural prose
+
+**Cons:**
+
+- Requires `WordDiff` engine
+- Cross-boundary `<mark>` handling needed in `visitText` (simpler than C but
+  still non-trivial)
+
+
+### Approach C: Inline word-level (the `--word-diff` model)
+
+Interleaved `<ins>` and `<del>` elements within the text of modified blocks.
+The old text is deleted inline and the new text is inserted inline, producing
+output like: `This is <del>important</del><ins>critical</ins> and relevant`.
+
+**Implementation (not planned):**
+
+- Same `WordDiff` engine as Approach B.
+
+- `DiffContext` provides `InlineAnnotation` records with character-offset
+  ranges and types (insertion/deletion).
+
+- `UpHTMLVisitor.visitText` must:
+
+  1. Track a running character offset across calls within a paragraph.
+  2. Split text emission at change boundaries.
+  3. Close `<ins>`/ `<del>` before inline formatting boundaries and reopen
+     after them, to produce valid HTML (e.g., when a change spans from plain
+     text into `<strong>`).
+
+- Substantial edge-case surface: changes inside code spans, changes spanning
+  emphasis boundaries, adjacent changes, overlapping formatting.
+
+**Pros:**
+
+- Most precise — you see exactly what changed without comparing two versions
+- Compact — no duplicate blocks
+
+**Cons:**
+
+- Least readable for prose. Interleaved markers break reading flow, even for
+  unchanged text surrounding the change. Empirically, `git diff` (line-level)
+  is consistently more readable than `git diff --word-diff` for prose edits.
+- Hardest to implement. The cross-boundary problem requires careful state
+  management in the visitor and extensive edge-case testing.
+- Modifications cannot be hidden — they're inline in the text, not separate
+  blocks.
 
 
 ## Implementation sequence
@@ -465,8 +546,8 @@ overlapping formatting.
 1. ~~**Sidebar UI** — `SidebarView` container, segmented control, placeholder
    `ChangesSidebarView` .~~ _Done._
 
-2. **Diff engine** — `WordDiff`, `BlockMatcher`, `DiffContext`, `ChangeList` in
-   MudCore. Unit-testable in isolation.
+2. **Diff engine** — `BlockMatcher`, `DiffContext`, `ChangeList` in MudCore.
+   Unit-testable in isolation. (`WordDiff` deferred to Approach B.)
 
 3. **Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
    through `renderUpModeDocument`. Verify with snapshot tests.
