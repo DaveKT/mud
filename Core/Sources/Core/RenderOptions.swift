@@ -9,7 +9,7 @@ public struct RenderOptions: Sendable, Equatable {
     public var title: String = ""
     public var baseURL: URL? = nil
     public var theme: String = "earthy"
-    public var includeBaseTag: Bool = true
+    public var standalone: Bool = false
     public var blockRemoteContent: Bool = false
     public var extensions: Set<String> = []
 

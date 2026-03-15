@@ -185,7 +185,7 @@ struct DocumentContentView: View {
             .appendingPathComponent(baseName)
             .appendingPathExtension("html")
         var exportOptions = renderOptions
-        exportOptions.includeBaseTag = false
+        exportOptions.standalone = true
         let exportHTML: String
         if state.mode == .down {
             exportHTML = MudCore.renderDownModeDocument(text,

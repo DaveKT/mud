@@ -152,7 +152,7 @@ func render(_ markdown: String, title: String, baseURL: URL?) -> String {
     }
 
     if browser {
-        options.includeBaseTag = false
+        options.standalone = true
         options.extensions = Set(RenderExtension.registry.keys)
     }
 

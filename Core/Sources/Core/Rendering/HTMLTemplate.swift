@@ -11,11 +11,13 @@ public enum HTMLTemplate {
             : ["mud-asset:", "data:", "https:"]
         doc.bodyContent = "    <article class=\"up-mode-output\">\n\(body)\n    </article>"
 
-        for name in options.extensions {
-            guard let ext = RenderExtension.registry[name],
-                  body.contains(ext.marker) else { continue }
-            doc.cspScriptSrc.append(contentsOf: ext.cspSources)
-            doc.bodyScripts.append(contentsOf: ext.embeddedScripts)
+        if options.standalone {
+            for name in options.extensions {
+                guard let ext = RenderExtension.registry[name],
+                      body.contains(ext.marker) else { continue }
+                doc.cspScriptSrc.append(contentsOf: ext.cspSources)
+                doc.bodyScripts.append(contentsOf: ext.embeddedScripts)
+            }
         }
 
         return doc.render()

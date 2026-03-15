@@ -23,7 +23,7 @@ struct HTMLDocument {
 
     init(options: RenderOptions) {
         self.title = options.title
-        self.baseURL = options.includeBaseTag ? options.baseURL : nil
+        self.baseURL = options.standalone ? nil : options.baseURL
         self.htmlClasses = options.htmlClasses.isEmpty
             ? [] : options.htmlClasses.sorted()
         self.htmlStyles = options.zoomLevel != 1.0
