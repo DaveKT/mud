@@ -1,6 +1,15 @@
 RELEASES
 ===============================================================================
 
+## v1.2.2
+
+- New `--standalone` CLI flag produces self-contained HTML on stdout with
+  images embedded as data URIs and all scripts inlined — the same treatment as
+  `--browser`, without opening a browser window
+- Copy Code button no longer duplicates when hovering repeatedly over a code
+  block
+
+
 ## v1.2.1
 
 - Copy Code button appears on hover over fenced code blocks in Up mode
