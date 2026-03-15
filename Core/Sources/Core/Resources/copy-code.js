@@ -29,6 +29,7 @@
   }
 
   document.querySelectorAll('pre.mud-code').forEach(function(pre) {
+    if (pre.querySelector('.code-copy-btn')) return;
     var header = pre.querySelector('.code-header');
     if (header && !header.offsetParent) header = null;
     var btn = document.createElement('button');
