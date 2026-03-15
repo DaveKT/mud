@@ -183,10 +183,10 @@ When `waypoint` is non-nil, the render functions internally:
 2. Run block matching + word diff → `DiffContext`
 3. Pass `DiffContext` to the visitor, which injects change markers
 
-The `contentIdentity` hash includes `waypoint` presence so content changes
-when change tracking is toggled. Since theme/zoom changes go through JS
-(without re-calling the render function), the diff is only computed when
-content actually changes — not on every visual update.
+The `contentIdentity` hash includes `waypoint` presence so content changes when
+change tracking is toggled. Since theme/zoom changes go through JS (without
+re-calling the render function), the diff is only computed when content
+actually changes — not on every visual update.
 
 
 #### API changes
@@ -240,9 +240,9 @@ struct Waypoint: Identifiable {
 `let changeTracker = ChangeTracker()` field (same pattern as
 `let find = FindState()`).
 
-Waypoints are in-memory only. They do not persist across closing and
-re-opening the document. Old waypoints are retained in the `waypoints` array
-for a future waypoint-selector UI but are not otherwise used.
+Waypoints are in-memory only. They do not persist across closing and re-opening
+the document. Old waypoints are retained in the `waypoints` array for a future
+waypoint-selector UI but are not otherwise used.
 
 **Integration with `DocumentContentView` :**
 
@@ -254,8 +254,8 @@ for a future waypoint-selector UI but are not otherwise used.
   differs from the waypoint (i.e. there are changes to show). When content
   matches the waypoint, `opts.waypoint` stays nil (no markers needed).
 - The existing content-identity mechanism handles WebView reloads — since
-  `contentIdentity` includes the waypoint, enabling/disabling change
-  tracking naturally triggers a re-render.
+  `contentIdentity` includes the waypoint, enabling/disabling change tracking
+  naturally triggers a re-render.
 
 
 ### Layer 4: Sidebar UI (App)
@@ -405,82 +405,75 @@ Theme files gain `--change-*` CSS variables so change colours harmonise with
 each theme.
 
 
-## Key design decisions to resolve
+## Key design decisions (resolved)
 
-### 1. Block matching strategy
+1. **Block matching strategy** — LCS on block fingerprints via Swift's
+   `CollectionDifference`. Handles adds/removes/reorders well. Fuzzy matching
+   for modified blocks can be added later.
 
-The quality of the diff depends heavily on how well we match blocks between the
-old and new ASTs.
+2. **Block granularity** — Leaf blocks (individual list items, table rows,
+   blockquote paragraphs), not top-level containers. Finer diffs, more precise
+   sidebar entries.
 
-**Option A — Positional + content hash.** Walk both ASTs in parallel, matching
-by position first, then by content similarity for displaced blocks. Fast but
-brittle when blocks are reordered.
+3. **Diff computation** — Synchronous. Markdown files are typically small.
+   Profile during implementation and move to async if needed.
 
-**Option B — LCS on block fingerprints.** Compute a fingerprint (content hash)
-for each top-level block, then run LCS/ `CollectionDifference` on the
-fingerprint arrays. Handles reordering well. Doesn't match blocks whose content
-changed significantly.
+4. **Deleted line numbers in Down mode** — Show a dash (`–`) in the line number
+   column, styled with the deletion colour.
 
-**Option C — Hybrid.** LCS on fingerprints first (catches moves and unchanged
-blocks), then fuzzy-match remaining unmatched blocks by content similarity.
-
-**Recommendation:** Start with **Option B** for the MVP. It's simple, handles
-the common case (blocks added/removed/reordered) well, and
-`CollectionDifference` is built into Swift. Fuzzy matching (Option C) can be
-added later if needed.
+5. **Sidebar pane state** — Per-window (`@State` in `SidebarView`), not
+   persisted.
 
 
-### 2. Granularity of "block"
+## Concerns to resolve
 
-What constitutes a block for matching purposes?
+### Word-level diffs across inline formatting in Up mode
 
-- **Top-level blocks only** (paragraphs, headings, code blocks, block quotes,
-  lists) — simpler, but a single word change in a long list shows the entire
-  list as modified.
-- **Leaf blocks** (individual list items, table rows, blockquote paragraphs) —
-  finer granularity, better diffs, but more complex matching.
+Block-level change tracking is straightforward: wrap entire blocks in `<ins>`/
+`<del>`. But for **modified blocks**, the plan calls for word-level `<ins>`/
+`<del>` injection during the `UpHTMLVisitor` walk. This is the hardest part of
+the feature because change boundaries don't respect inline formatting
+boundaries.
 
-**Recommendation:** Match at the **leaf block** level. The AST already provides
-this structure. It produces more useful diffs and more precise sidebar entries.
+Consider a paragraph changing from `This is **important** and relevant` to
+`This is **critical** and relevant`. The word diff identifies
+`important → critical`, but in the AST, "important" lives inside a `Strong`
+node. The visitor processes it via a separate `visitText` call nested inside
+`visitStrong`. To inject `<del>important</del><ins>critical</ins>` correctly,
+the visitor must:
 
+1. **Track a character offset** across multiple `visitText` calls within a
+   single paragraph (since the word diff operates on the paragraph's plain
+   text, not individual AST nodes).
 
-### 3. Where the diff is computed
+2. **Split text emission** at change boundaries — when a `visitText` call
+   covers text that is partly unchanged and partly changed, it must emit the
+   unchanged portion, open an `<ins>` or `<del>`, emit the changed portion, and
+   close it.
 
-- **Synchronous in `loadFromDisk()`** — simple, but could cause a perceptible
-  pause on very large documents.
-- **Async on a background queue** — non-blocking, but requires careful state
-  management and a brief "computing changes…" state.
+3. **Handle cross-boundary changes** — when a change spans from one inline node
+   into another (e.g., from plain text into emphasis, or across a link
+   boundary), `<ins>`/ `<del>` elements must be closed before the formatting
+   boundary and reopened after it, to produce valid HTML.
 
-**Recommendation:** Start **synchronous**. Markdown files are typically small
-(< 100 KB). Profile during implementation and move to async if needed.
+This needs its own detailed design before implementation. Possible approach:
 
+- Before visiting a modified paragraph's children, pre-compute a list of
+  `InlineEdit` records: each carries a character-offset range (relative to the
+  paragraph's full plain text) and a type (insertion/deletion).
+- Maintain a running character offset as `visitText` calls accumulate.
+- In `visitText`, check whether the current text overlaps any `InlineEdit`
+  ranges. If so, split the text at the edit boundaries and wrap the affected
+  segments.
+- If an edit range extends beyond the current `visitText` call, close the
+  `<ins>`/ `<del>` at the end and set a flag to reopen it in the next
+  `visitText` call.
 
-### 4. Deleted line numbers in Down mode
-
-When deleted lines are re-inserted into the Down mode display, what line
-numbers should they show?
-
-- **Old line number** (dimmed) — gives context about where the line was.
-- **Blank / dash** — visually distinct, doesn't confuse current numbering.
-- **No line number column** — simplest.
-
-**Recommendation:** Show a **dash** (`–`) in the line number column, styled
-with the deletion colour. This is visually clear without implying the line
-exists at a current line number.
-
-
-### 5. Sidebar pane state scope
-
-Should the Outline/Changes pane selection be per-window or global?
-
-- **Per-window** (`DocumentState`) — different documents can show different
-  panes.
-- **Global** (`AppState`) — switching affects all windows, consistent with how
-  lighting/theme/view toggles work.
-
-**Recommendation:** **Per-window** (`@State` in `SidebarView`). Unlike lighting
-or theme, the pane selection is tied to the review state of a specific
-document. Not persisted to UserDefaults.
+This keeps the complexity contained within `visitText` and a small amount of
+per-paragraph state, without touching other visit methods. But it needs careful
+testing with edge cases: changes inside code spans, changes spanning emphasis
+boundaries, changes at the start/end of inline nodes, adjacent changes, and
+overlapping formatting.
 
 
 ## Implementation sequence
@@ -509,14 +502,16 @@ document. Not persisted to UserDefaults.
    edge cases (empty document, binary files, very large diffs).
 
 
-## Open questions
+## Resolved questions
 
-- Should "Accept" be undoable? (Undo would pop the waypoint stack and recompute
-  the diff against the previous waypoint.)
-- Should there be a keyboard shortcut for Accept? For Next/Previous Change?
-- Should changes persist across app relaunch? (Probably not for MVP — the
-  waypoint is the moment the document was opened.)
-- How should the feature interact with Print / Open in Browser? (Probably strip
-  change markers from exported HTML.)
-- Should there be a global toggle to disable change tracking entirely? (Useful
-  if the feature has performance impact on very large files.)
+- **Undo Accept?** — No. Old waypoints are retained in memory for a future
+  waypoint-selector UI, which will provide this capability. No stop-gap undo
+  needed.
+- **Keyboard shortcuts?** — Deferred. May add shortcuts for Accept,
+  Next/Previous Change later.
+- **Persist waypoints?** — No. In-memory only. Closing the document discards
+  all waypoints.
+- **Print / Open in Browser?** — Build `RenderOptions` without a waypoint. No
+  change markers in exported HTML.
+- **Global disable toggle?** — Deferred. May add a "Change Tracking" settings
+  pane in the future for this and other related preferences.
