@@ -43,10 +43,10 @@ sections.each do |match|
 end
 
 # Full history
-history_file = File.join(OUTPUT_DIR, "history.html")
+index_file = File.join(OUTPUT_DIR, "index.html")
 IO.popen([mud_cli, "-u"], "r+") do |io|
   io.write(content)
   io.close_write
-  File.write(history_file, io.read)
+  File.write(index_file, io.read)
 end
-puts "  #{history_file}"
+puts "  #{index_file}"
