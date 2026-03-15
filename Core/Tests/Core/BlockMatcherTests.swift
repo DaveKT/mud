@@ -141,6 +141,18 @@ struct BlockMatcherTests {
     #expect(matches[1].isModified)
   }
 
+  @Test func deletionBeforeModification() {
+    let old = ParsedMarkdown("Alpha.\n\nBeta.\n\nGamma.\n")
+    let new = ParsedMarkdown("Beta revised.\n\nGamma.\n")
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    // Alpha deleted, Beta modified to "Beta revised", Gamma unchanged.
+    #expect(matches.count == 3)
+    #expect(matches[0].isDeleted)   // Alpha
+    #expect(matches[1].isModified)  // Beta → Beta revised
+    #expect(matches[2].isUnchanged) // Gamma
+  }
+
   @Test func adjacentModifications() {
     let old = ParsedMarkdown("Alpha.\n\nBeta.\n\nGamma.\n")
     let new = ParsedMarkdown("Alpha changed.\n\nBeta changed.\n\nGamma.\n")
