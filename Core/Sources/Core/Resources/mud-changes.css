@@ -37,9 +37,16 @@
     background: color-mix(in srgb, var(--change-mod) 8%, transparent);
 }
 
-/* Deletions: hidden by default, revealed via sidebar selection */
+/* Deletions: hidden by default, revealed via sidebar selection.
+   Inner <li> uses display:block to suppress list-item markers and
+   prevent counter increment — otherwise revealing a deleted item
+   inside an <ol> renumbers subsequent items. */
 .mud-change-del {
     display: none;
+}
+
+.mud-change-del li {
+    display: block;
 }
 
 .mud-change-del.mud-change-revealed {
