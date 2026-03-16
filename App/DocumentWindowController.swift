@@ -65,8 +65,9 @@ class DocumentWindowController: NSWindowController {
             onSelectHeading: { [weak self] heading in
                 self?.state.scrollTarget = ScrollTarget(id: UUID(), heading: heading)
             },
-            onSelectChange: { _ in
-                // Scroll-to-change wiring deferred to Step 8 (JS + WebView).
+            onSelectChange: { [weak self] changeID in
+                self?.state.changeScrollTarget = ChangeScrollTarget(
+                    id: UUID(), changeID: changeID)
             }
         )
         let sidebarHost = NSHostingController(rootView: sidebarView)

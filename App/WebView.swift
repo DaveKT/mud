@@ -55,6 +55,7 @@ struct WebView: NSViewRepresentable {
     var zoomLevel: Double = 1.0
     var searchQuery: SearchQuery?
     var scrollTarget: ScrollTarget?
+    var changeScrollTarget: ChangeScrollTarget?
     var reloadID: UUID?
     var printID: UUID?
     var extensions: Set<String> = []
@@ -143,6 +144,17 @@ struct WebView: NSViewRepresentable {
             webView.evaluateJavaScript(js)
         }
 
+        // Handle change scroll target
+        if let target = changeScrollTarget,
+           context.coordinator.lastChangeScrollTargetID != target.id {
+            context.coordinator.lastChangeScrollTargetID = target.id
+            let escaped = target.changeID
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+            webView.evaluateJavaScript("Mud.revealChange('\(escaped)')")
+            webView.evaluateJavaScript("Mud.scrollToChange('\(escaped)')")
+        }
+
         // Handle print via WKWebView.printOperation(with:)
         if let printID = printID,
            context.coordinator.lastPrintID != printID {
@@ -202,6 +214,7 @@ struct WebView: NSViewRepresentable {
         var lastMode: Mode?
         var lastSearchID: UUID?
         var lastScrollTargetID: UUID?
+        var lastChangeScrollTargetID: UUID?
         var lastPrintID: UUID?
         var lastReloadID: UUID?
         var activeExtensions: [RenderExtension] = []

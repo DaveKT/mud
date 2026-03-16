@@ -3,7 +3,7 @@ import MudCore
 
 struct ChangesSidebarView: View {
     @ObservedObject var changeTracker: ChangeTracker
-    var onSelectChange: (DocumentChange) -> Void
+    var onSelectChange: (String) -> Void
 
     var body: some View {
         if changeTracker.changes.isEmpty {
@@ -24,11 +24,8 @@ struct ChangesSidebarView: View {
             }
             .listStyle(.sidebar)
             .onChange(of: changeTracker.selectedChangeID) { _, newValue in
-                guard let id = newValue,
-                      let change = changeTracker.changes.first(
-                          where: { $0.id == id }
-                      ) else { return }
-                onSelectChange(change)
+                guard let id = newValue else { return }
+                onSelectChange(id)
             }
         }
     }

@@ -9,6 +9,11 @@ struct ScrollTarget: Equatable {
     let heading: OutlineHeading
 }
 
+struct ChangeScrollTarget: Equatable {
+    let id: UUID
+    let changeID: String
+}
+
 // MARK: - Document State
 
 class DocumentState: ObservableObject {
@@ -18,6 +23,7 @@ class DocumentState: ObservableObject {
     @Published var reloadID: UUID?
     @Published var outlineHeadings: [OutlineHeading] = []
     @Published var scrollTarget: ScrollTarget?
+    @Published var changeScrollTarget: ChangeScrollTarget?
     @Published var contentTitle: String?
     let find = FindState()
     let changeTracker = ChangeTracker()

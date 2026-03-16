@@ -100,6 +100,7 @@ struct DocumentContentView: View {
             zoomLevel: renderOptions.zoomLevel,
             searchQuery: findState.currentQuery,
             scrollTarget: state.scrollTarget,
+            changeScrollTarget: state.changeScrollTarget,
             reloadID: state.reloadID,
             printID: state.printID,
             extensions: appState.enabledExtensions,

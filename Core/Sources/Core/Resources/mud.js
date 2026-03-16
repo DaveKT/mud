@@ -210,6 +210,31 @@
     }
   }
 
+  // -- Change tracking ------------------------------------------------------
+
+  function scrollToChange(id) {
+    var el = document.querySelector('[data-change-id="' + id + '"]');
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("mud-change-active");
+    setTimeout(function () {
+      el.classList.remove("mud-change-active");
+    }, 2000);
+  }
+
+  function revealChange(id) {
+    // Hide any previously revealed deletion.
+    var revealed = document.querySelectorAll(".mud-change-revealed");
+    for (var i = 0; i < revealed.length; i++) {
+      revealed[i].classList.remove("mud-change-revealed");
+    }
+    // Reveal the targeted deletion (if it is one).
+    var el = document.querySelector('[data-change-id="' + id + '"]');
+    if (el && el.classList.contains("mud-change-del")) {
+      el.classList.add("mud-change-revealed");
+    }
+  }
+
   // -- Body classes ---------------------------------------------------------
 
   function setClass(name, enabled) {
@@ -248,6 +273,8 @@
     setClass: setClass,
     setZoom: setZoom,
     scrollToHeading: scrollToHeading,
-    scrollToLine: scrollToLine
+    scrollToLine: scrollToLine,
+    scrollToChange: scrollToChange,
+    revealChange: revealChange
   };
 })();

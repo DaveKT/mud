@@ -8,7 +8,7 @@ struct SidebarView: View {
     @ObservedObject var state: DocumentState
     @ObservedObject var changeTracker: ChangeTracker
     var onSelectHeading: (OutlineHeading) -> Void
-    var onSelectChange: (DocumentChange) -> Void
+    var onSelectChange: (String) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
