@@ -128,6 +128,12 @@ struct RenderedDeletion {
     /// standalone deletion). The rendering layer treats both the same,
     /// but the sidebar counts a modification as one entry, not two.
     let isModificationOld: Bool
+    /// When non-nil, the deletion must be wrapped in this structural
+    /// HTML tag (e.g. `"li"`) instead of the default `<del>`. This
+    /// avoids invalid nesting like `<del><li>…</li></del>` inside a
+    /// list. The `html` field contains only the inner content (no
+    /// wrapper tag).
+    let wrapperTag: String?
 }
 
 // MARK: - Source key
@@ -168,12 +174,24 @@ extension DiffContext {
         isModificationOld: Bool = false
     ) -> RenderedDeletion {
         var visitor = UpHTMLVisitor()
-        visitor.visit(block.markup)
+        let isListItem = block.markup is ListItem
+        if isListItem {
+            // Render only the children so the HTML contains inner
+            // content without a <li> wrapper. The rendering layer
+            // wraps this in a <li> carrying the deletion class,
+            // avoiding invalid <del><li>…</li></del> nesting.
+            for child in block.markup.children {
+                visitor.visit(child)
+            }
+        } else {
+            visitor.visit(block.markup)
+        }
         return RenderedDeletion(
             html: visitor.result,
             changeID: changeID,
             summary: blockSummary(block),
-            isModificationOld: isModificationOld
+            isModificationOld: isModificationOld,
+            wrapperTag: isListItem ? "li" : nil
         )
     }
 

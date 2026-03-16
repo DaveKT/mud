@@ -64,6 +64,52 @@ struct UpModeChangeTrackingTests {
     #expect(html.contains("Beta"))
   }
 
+  // MARK: - List item deletions
+
+  @Test func deletedUnorderedListItemProducesValidHTML() {
+    let old = "- Alpha\n- Beta\n- Gamma\n"
+    let new = "- Alpha\n- Gamma\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    // The deletion must be a <li> carrying the del class — not a <del>
+    // wrapping a <li>, which is invalid HTML inside <ul>.
+    #expect(html.contains("mud-change-del"))
+    #expect(html.contains("Beta"))
+    #expect(!html.contains("<del"), "Deleted list item must not use a <del> wrapper")
+  }
+
+  @Test func deletedOrderedListItemProducesValidHTML() {
+    let old = "1. First\n2. Second\n3. Third\n"
+    let new = "1. First\n3. Third\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    #expect(html.contains("mud-change-del"))
+    #expect(html.contains("Second"))
+    #expect(!html.contains("<del"), "Deleted list item must not use a <del> wrapper")
+  }
+
+  @Test func deletedListItemContentDoesNotLeakIntoSurvivor() {
+    let old = "1. First\n2. Second\n3. Third\n"
+    let new = "1. First\n3. Third\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    // "Second" and "Third" must not appear in the same <li>.
+    // Find the <li> that contains "Third" and verify it does not
+    // also contain "Second".
+    let liPattern = /<li>[^<]*Third[^<]*<\/li>/
+    if let match = html.firstMatch(of: liPattern) {
+      let liContent = String(html[match.range])
+      #expect(!liContent.contains("Second"),
+        "Surviving item must not contain deleted item's content")
+    }
+  }
+
   // MARK: - Deletions
 
   @Test func deletedParagraphEmittedAsDel() {

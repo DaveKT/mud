@@ -294,10 +294,20 @@ struct UpHTMLVisitor: MarkupWalker {
     private mutating func emitChangeOpen(for node: Markup) {
         guard let diffContext else { return }
         for del in diffContext.precedingDeletions(before: node) {
-            result += "<del class=\"mud-change mud-change-del\""
-            result += " data-change-id=\"\(del.changeID)\">"
-            result += del.html
-            result += "</del>\n"
+            if let tag = del.wrapperTag, node is ListItem {
+                // Structural wrapper: emit as a sibling element (e.g.
+                // <li>) carrying the deletion class. This keeps the
+                // HTML valid — <del> cannot wrap <li> inside a list.
+                result += "<\(tag) class=\"mud-change mud-change-del\""
+                result += " data-change-id=\"\(del.changeID)\">"
+                result += del.html
+                result += "</\(tag)>\n"
+            } else {
+                result += "<del class=\"mud-change mud-change-del\""
+                result += " data-change-id=\"\(del.changeID)\">"
+                result += del.html
+                result += "</del>\n"
+            }
         }
         if let annotation = diffContext.annotation(for: node),
            let changeID = diffContext.changeID(for: node) {
