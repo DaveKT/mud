@@ -77,8 +77,8 @@ class DocumentWindowController: NSWindowController {
 
         let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebarHost)
         sidebarItem.canCollapse = true
-        sidebarItem.minimumThickness = 180
-        sidebarItem.maximumThickness = 320
+        sidebarItem.minimumThickness = 246
+        sidebarItem.maximumThickness = 400
 
         let contentItem = NSSplitViewItem(viewController: contentHost)
 
