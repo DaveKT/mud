@@ -37,14 +37,22 @@ struct UpHTMLVisitor: MarkupWalker {
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
+        // Alerts bypass visitParagraph, so check the first child
+        // paragraph for change annotations and emit markers around
+        // the entire alert.
+        let innerParagraph = blockQuote.children.first(where: { $0 is Paragraph })
         if let (category, title) = alertDetector.detectGFMAlert(blockQuote) {
             emitAlertOpen(category)
+            if let p = innerParagraph { emitChangeOpen(for: p) }
             emitAlertTitle(category, title)
             emitGFMAlertContent(blockQuote, category: category)
+            if let p = innerParagraph { emitChangeClose(for: p) }
             result += "</blockquote>\n"
         } else if let (category, title, content) = alertDetector.detectDocCAlert(blockQuote) {
             emitAlertOpen(category)
+            if let p = innerParagraph { emitChangeOpen(for: p) }
             emitDocCAlertTitleAndContent(category, title, content)
+            if let p = innerParagraph { emitChangeClose(for: p) }
             result += "</blockquote>\n"
         } else {
             result += "<blockquote>\n"
