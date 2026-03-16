@@ -165,27 +165,58 @@ added when table change-tracking is needed.
 
 #### Down mode
 
-`DownHTMLVisitor.highlight()` gains an optional `diffContext: DiffContext?`
-parameter.
+Down mode is line-based, not AST-based. It renders raw markdown source in a
+table with line numbers. The output is `<div class="dl">` rows, each with
+`<span class="ln">` (line number) and `<span class="lc">` (line content).
+`DownHTMLVisitor` is a stateless `Sendable` struct (stored as `static let` in
+MudCore), so unlike `UpHTMLVisitor` it cannot carry a mutable `diffContext`
+field.
 
-Down mode uses the same AST-based `DiffContext` as Up mode — one diff engine,
-two rendering integrations. Block-level matches carry source ranges from the
-AST nodes. `DiffContext` maps these to line ranges: a block spanning lines 5–10
-marked as deleted means lines 5–10 are all deletion lines. A block spanning
-lines 5–10 marked as modified means those lines are replaced (old lines
-deleted, new lines inserted).
+The bridge between block-level diff data and line-level rendering is
+**`LineDiffMap`** — a new struct in `Core/Sources/Core/Diff/` built from
+`BlockMatcher.match()` results. It maps block source ranges to line ranges and
+provides line-level lookups:
 
-Line-level integration:
+- `annotation(forLine:) -> LineAnnotation?` — returns `.inserted(changeID)` or
+  `.modified(changeID)` for new-document lines that fall within an inserted or
+  modified block. Returns `nil` for unchanged lines.
+- `deletionGroups: [DeletionGroup]` — old-document source lines to interleave,
+  each carrying: a position ("before new-doc line N" or "trailing"), the old
+  source lines, and a changeID. For modifications, the old block's lines appear
+  as a deletion group before the new block's lines.
 
-1. **Deleted lines** are re-inserted into the line array at their original
-   positions, wrapped in `<del>` spans and styled distinctly (dimmed text,
-   strikethrough). Show a dash (`–`) in the line number column.
+**Integration point: `MudCore.renderDownToHTML`** — when `waypoint` is set:
 
-2. **Inserted lines** get an `<ins>` wrapper around the line content.
+1. Run `BlockMatcher.match(old:new:)` and build a `LineDiffMap`.
+2. Highlight old markdown via `DownHTMLVisitor` → extract rendered line content
+   strings for deletion groups (so deleted lines get the same `md-*`
+   syntax-highlight spans as surviving lines).
+3. Highlight new markdown via normal path → rendered line content strings.
+4. Modified layout phase: interleave deleted lines and add CSS classes to
+   changed lines.
 
-3. **Modified blocks** are expanded to their constituent lines: old lines (from
-   the waypoint source) are re-inserted as deletions, new lines are marked as
-   insertions. Same visual result as `git diff`.
+**HTML structure** — change tracking uses CSS classes on the existing
+`<div class="dl">` rows rather than wrapping content in `<ins>`/ `<del>`. This
+avoids conflicts with syntax-highlighting spans inside line content and is
+cleaner for the line-based model:
+
+```html
+<!-- Unchanged -->
+<div class="dl"><span class="ln">1</span><span class="lc">…</span></div>
+<!-- Inserted -->
+<div class="dl dl-ins" data-change-id="change-1"><span class="ln">3</span><span class="lc">…</span></div>
+<!-- Deleted (re-inserted from old doc) -->
+<div class="dl dl-del" data-change-id="change-2"><span class="ln">–</span><span class="lc">…</span></div>
+```
+
+The `dl-ins`/ `dl-del` classes provide the same styling hooks as Up mode's
+`mud-change-ins`/ `mud-change-del`. The `data-change-id` attribute enables JS
+scroll/reveal targeting, which works identically on `<div>` as on `<ins>`/
+`<del>`.
+
+Up mode uses semantic `<ins>`/ `<del>` because its block structure naturally
+supports wrapper elements. Down mode's flex-row table structure does not — CSS
+classes on the existing rows are the right mechanism.
 
 
 #### RenderOptions and ParsedMarkdown changes — implemented
