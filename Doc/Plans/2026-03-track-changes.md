@@ -2,7 +2,8 @@ Plan: Track Changes
 ===============================================================================
 
 > Status: Underway
-
+>
+> Current task: Step 9 - Polish…
 
 ## Overview
 
@@ -510,73 +511,33 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    selection.~~ _Done._ `ChangeScrollTarget` flows from sidebar through
    `DocumentState` to `WebView`. JS reveal + scroll with flash animation.
 
-9. **Polish** — consecutive change grouping (see below), keyboard shortcuts
-   (Next Change / Previous Change), menu items, edge cases.
+9. **Polish** — ~~consecutive change grouping~~ _done_; keyboard shortcuts
+   (Next Change / Previous Change), menu items, edge cases still open.
 
 
-## Polish: Consecutive change grouping
+## Polish: Consecutive change grouping — implemented
 
-When multiple changes are consecutive (no unchanged block between them), the
-sidebar should condense them into a single entry. This is a UI-level
-optimisation — the underlying `[DocumentChange]` array, HTML, and CSS are
-unchanged.
+Consecutive changes (no unchanged block between them) are condensed into a
+single sidebar entry. The grouping signal is computed at the data layer; the
+UI-level grouping is a presentation transform.
 
+**`DocumentChange.isConsecutive`** — boolean computed in `ChangeList` using a
+`sawUnchangedSinceLastChange` flag. Always `false` for the first change. The
+underlying `[DocumentChange]` array is unchanged in structure.
 
-### Grouping strategy
+**`ChangeGroup`** (in `ChangesSidebarView.swift`) — built by
+`ChangeGroup.build(from:)`, a one-pass grouper that breaks on `!isConsecutive`.
+Each group carries: `changeIDs: [String]`, `type` (most significant:
+modification > insertion > deletion), `summary` (first change's text), and
+`count`.
 
-Group all consecutive changes regardless of type. An unchanged block is the
-only thing that breaks a group. Two deletions followed by three modifications
-(with no unchanged block between them) become one sidebar entry, not five.
+**`ChangeGroupRow`** — icon by type priority, summary text, count badge `"(N)"`
+when count > 1.
 
-This matches the user's mental model: "I changed this section." Splitting by
-type within the same region adds noise without much value.
-
-
-### Sidebar entry design
-
-Each group row shows:
-
-- **Icon:** the most significant change type in the group. Priority:
-  modification > insertion > deletion. (When a section is rewritten, calling it
-  "modified" is more informative than "deleted" or "inserted".)
-- **Summary:** the first change's summary text (gives context about which
-  section changed).
-- **Count:** "(5)" or "5 changes" after the summary when count > 1.
-
-Implementation: `ChangesSidebarView` builds display groups by walking
-`changeTracker.changes` and merging consecutive entries. Each group carries the
-list of constituent change IDs.
-
-
-### Scroll and reveal
-
-Clicking a group scrolls to the first change ID in the group. If the group
-contains deletions, all of them are revealed.
-
-`Mud.revealChange(id)` becomes `Mud.revealChanges(ids)` — accepts an array of
-change IDs and reveals all targeted deletions:
-
-```javascript
-Mud.revealChanges = function(ids) {
-    var revealed = document.querySelectorAll(".mud-change-revealed");
-    for (var i = 0; i < revealed.length; i++) {
-        revealed[i].classList.remove("mud-change-revealed");
-    }
-    for (var j = 0; j < ids.length; j++) {
-        var el = document.querySelector('[data-change-id="' + ids[j] + '"]');
-        if (el && el.classList.contains("mud-change-del")) {
-            el.classList.add("mud-change-revealed");
-        }
-    }
-};
-```
-
-`Mud.scrollToChange(id)` remains unchanged — targets a single ID.
-
-The `onSelectChange` callback changes from `(String) -> Void` to
-`([String]) -> Void`. `ChangeScrollTarget.changeID` becomes
-`changeIDs: [String]`. `WebView.updateNSView` calls `Mud.revealChanges(ids)`
-then `Mud.scrollToChange(ids[0])`.
+**`Mud.revealChanges(ids)`** — accepts an array, reveals all targeted
+deletions. `Mud.scrollToChange(id)` unchanged (targets first ID).
+`onSelectChange` callback is `([String]) -> Void`.
+`ChangeScrollTarget.changeIDs: [String]`.
 
 
 ## Resolved questions
