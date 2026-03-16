@@ -59,9 +59,16 @@ class DocumentWindowController: NSWindowController {
     }
 
     private func setupContent() {
-        let sidebarView = SidebarView(state: state) { [weak self] heading in
-            self?.state.scrollTarget = ScrollTarget(id: UUID(), heading: heading)
-        }
+        let sidebarView = SidebarView(
+            state: state,
+            changeTracker: state.changeTracker,
+            onSelectHeading: { [weak self] heading in
+                self?.state.scrollTarget = ScrollTarget(id: UUID(), heading: heading)
+            },
+            onSelectChange: { _ in
+                // Scroll-to-change wiring deferred to Step 8 (JS + WebView).
+            }
+        )
         let sidebarHost = NSHostingController(rootView: sidebarView)
 
         let contentView = DocumentContentView(fileURL: fileURL, state: state, findState: state.find, changeTracker: state.changeTracker)

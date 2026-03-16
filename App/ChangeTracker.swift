@@ -17,6 +17,9 @@ class ChangeTracker: ObservableObject {
     @Published private(set) var changes: [DocumentChange] = []
     @Published var selectedChangeID: String?
 
+    /// The most recent content passed to `update(_:)`.
+    private(set) var currentParsed: ParsedMarkdown?
+
     /// The active waypoint's ParsedMarkdown (for RenderOptions).
     var activeWaypoint: ParsedMarkdown? {
         waypoints.last?.parsed
@@ -31,6 +34,7 @@ class ChangeTracker: ObservableObject {
     /// waypoint (no changes). On subsequent calls, diffs against the
     /// active waypoint and updates the change list.
     func update(_ parsed: ParsedMarkdown) {
+        currentParsed = parsed
         if waypoints.isEmpty {
             waypoints.append(Waypoint(parsed: parsed, timestamp: Date()))
         } else if let old = activeWaypoint {
@@ -40,8 +44,9 @@ class ChangeTracker: ObservableObject {
 
     /// Accepts the current content as a new waypoint. Clears all changes
     /// until the next file modification.
-    func accept(_ parsed: ParsedMarkdown) {
-        waypoints.append(Waypoint(parsed: parsed, timestamp: Date()))
+    func accept() {
+        guard let current = currentParsed else { return }
+        waypoints.append(Waypoint(parsed: current, timestamp: Date()))
         changes = []
         selectedChangeID = nil
     }

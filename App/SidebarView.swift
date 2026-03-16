@@ -6,7 +6,9 @@ struct SidebarView: View {
 
     @State private var pane: Pane = .outline
     @ObservedObject var state: DocumentState
+    @ObservedObject var changeTracker: ChangeTracker
     var onSelectHeading: (OutlineHeading) -> Void
+    var onSelectChange: (DocumentChange) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -22,7 +24,8 @@ struct SidebarView: View {
                 case .outline:
                     OutlineSidebarView(state: state, onSelect: onSelectHeading)
                 case .changes:
-                    ChangesSidebarView()
+                    ChangesSidebarView(changeTracker: changeTracker,
+                                       onSelectChange: onSelectChange)
                 }
             }
             .animation(.none, value: pane)
