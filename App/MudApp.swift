@@ -69,6 +69,42 @@ struct MudApp: App {
             CommandGroup(replacing: .undoRedo) { }
 
             CommandGroup(before: .toolbar) {
+                Button(appState.sidebarVisible && appState.sidebarPane == .outline
+                       ? "Hide Outline" : "Show Outline") {
+                    if appState.sidebarVisible && appState.sidebarPane == .outline {
+                        NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
+                    } else {
+                        appState.sidebarPane = .outline
+                        appState.saveSidebarPane()
+                        if !appState.sidebarVisible {
+                            NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
+                        }
+                    }
+                }
+                .keyboardShortcut("o", modifiers: [.command, .shift])
+
+                Button(appState.trackChangesEnabled
+                       ? "Hide Changes" : "Show Changes") {
+                    if appState.trackChangesEnabled {
+                        appState.trackChangesEnabled = false
+                        appState.saveTrackChangesEnabled()
+                        if appState.sidebarVisible {
+                            NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
+                        }
+                    } else {
+                        appState.trackChangesEnabled = true
+                        appState.saveTrackChangesEnabled()
+                        appState.sidebarPane = .changes
+                        appState.saveSidebarPane()
+                        if !appState.sidebarVisible {
+                            NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
+                        }
+                    }
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+
+                Divider()
+
                 Toggle("Mark Up", isOn: Binding(
                     get: { appState.modeInActiveTab == .up },
                     set: { newValue in
@@ -95,27 +131,11 @@ struct MudApp: App {
 
                 Divider()
 
-                Toggle("Sidebar", isOn: Binding(
-                    get: { appState.sidebarVisible },
-                    set: { _ in
-                        NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
-                    }
-                ))
-                .keyboardShortcut("s", modifiers: [.command, .control])
-
                 Toggle("Readable Column", isOn: Binding(
                     get: { appState.viewToggles.contains(.readableColumn) },
                     set: { _ in appState.toggle(.readableColumn) }
                 ))
-
-                Toggle("Show Changes", isOn: Binding(
-                    get: { appState.trackChangesEnabled },
-                    set: { newValue in
-                        appState.trackChangesEnabled = newValue
-                        appState.saveTrackChangesEnabled()
-                    }
-                ))
-                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .keyboardShortcut("r", modifiers: [.command, .shift])
 
                 Divider()
 

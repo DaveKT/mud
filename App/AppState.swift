@@ -11,6 +11,7 @@ class AppState: ObservableObject {
     @Published var upModeZoomLevel: Double
     @Published var downModeZoomLevel: Double
     @Published var sidebarVisible: Bool
+    @Published var sidebarPane: SidebarPane
     @Published var trackChangesEnabled: Bool
     @Published var quitOnClose: Bool
     @Published var allowRemoteContent: Bool
@@ -24,6 +25,7 @@ class AppState: ObservableObject {
     private static let upModeZoomKey = "Mud-UpModeZoomLevel"
     private static let downModeZoomKey = "Mud-DownModeZoomLevel"
     private static let sidebarVisibleKey = "Mud-SidebarVisible"
+    private static let sidebarPaneKey = "Mud-SidebarPane"
     private static let trackChangesEnabledKey = "Mud-TrackChangesEnabled"
     private static let quitOnCloseKey = "Mud-QuitOnClose"
     private static let allowRemoteContentKey = "Mud-AllowRemoteContent"
@@ -41,6 +43,8 @@ class AppState: ObservableObject {
         self.upModeZoomLevel = defaults.object(forKey: Self.upModeZoomKey) as? Double ?? 1.0
         self.downModeZoomLevel = defaults.object(forKey: Self.downModeZoomKey) as? Double ?? 1.0
         self.sidebarVisible = defaults.bool(forKey: Self.sidebarVisibleKey)
+        let paneRaw = defaults.string(forKey: Self.sidebarPaneKey) ?? ""
+        self.sidebarPane = SidebarPane(rawValue: paneRaw) ?? .outline
         self.trackChangesEnabled = defaults.object(forKey: Self.trackChangesEnabledKey) as? Bool ?? true
         self.quitOnClose = defaults.object(forKey: Self.quitOnCloseKey) as? Bool ?? true
         self.allowRemoteContent = defaults.object(forKey: Self.allowRemoteContentKey) as? Bool ?? true
@@ -70,6 +74,10 @@ class AppState: ObservableObject {
 
     func saveSidebarVisible() {
         UserDefaults.standard.set(sidebarVisible, forKey: Self.sidebarVisibleKey)
+    }
+
+    func saveSidebarPane() {
+        UserDefaults.standard.set(sidebarPane.rawValue, forKey: Self.sidebarPaneKey)
     }
 
     func saveTrackChangesEnabled() {
@@ -104,4 +112,11 @@ class AppState: ObservableObject {
         }
         option.save(viewToggles.contains(option))
     }
+}
+
+// MARK: - Sidebar Pane
+
+enum SidebarPane: String {
+    case outline
+    case changes
 }

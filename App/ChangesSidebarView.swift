@@ -108,7 +108,7 @@ struct ChangesSidebarView: View {
     private var disabledState: some View {
         VStack {
             ContentUnavailableView(
-                "Changes Off",
+                "Changes Hidden",
                 systemImage: "eye.slash",
                 description: Text("Enable in\nMud > Settings > General.")
             )

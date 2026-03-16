@@ -2,9 +2,7 @@ import SwiftUI
 import MudCore
 
 struct SidebarView: View {
-    enum Pane { case outline, changes }
-
-    @State private var pane: Pane = .outline
+    @ObservedObject private var appState = AppState.shared
     @ObservedObject var state: DocumentState
     @ObservedObject var changeTracker: ChangeTracker
     var onSelectHeading: (OutlineHeading) -> Void
@@ -12,15 +10,18 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $pane) {
-                Text("Outline").tag(Pane.outline)
-                Text("Changes").tag(Pane.changes)
+            Picker("", selection: $appState.sidebarPane) {
+                Text("Outline").tag(SidebarPane.outline)
+                Text("Changes").tag(SidebarPane.changes)
             }
             .pickerStyle(.segmented)
             .padding(8)
+            .onChange(of: appState.sidebarPane) { _, _ in
+                appState.saveSidebarPane()
+            }
 
             Group {
-                switch pane {
+                switch appState.sidebarPane {
                 case .outline:
                     OutlineSidebarView(state: state, onSelect: onSelectHeading)
                 case .changes:
@@ -28,7 +29,7 @@ struct SidebarView: View {
                                        onSelectChange: onSelectChange)
                 }
             }
-            .animation(.none, value: pane)
+            .animation(.none, value: appState.sidebarPane)
         }
     }
 }

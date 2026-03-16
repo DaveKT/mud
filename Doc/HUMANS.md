@@ -39,11 +39,14 @@ Mud does just one thing — it marks up Markdown! — and it does it really well
 
 ### Viewing
 
-| Shortcut  | Action                                |
-| --------- | ------------------------------------- |
-| Space     | Toggle Mark Up / Mark Down mode       |
-| F3 or ⌘⌃S | Toggle sidebar                        |
-| F6 or ⌘L  | Cycle lighting (Auto → Bright → Dark) |
+| Shortcut | Action                                |
+| -------- | ------------------------------------- |
+| Space    | Toggle Mark Up / Mark Down mode       |
+| ⌘⇧O      | Show / hide Outline sidebar           |
+| ⌘⇧C      | Show / hide Changes sidebar           |
+| ⌘⇧R      | Toggle readable column                |
+| F3       | Toggle sidebar                        |
+| F6 or ⌘L | Cycle lighting (Auto → Bright → Dark) |
 
 
 ### Zoom
