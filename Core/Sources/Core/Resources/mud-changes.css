@@ -5,6 +5,9 @@
     --change-ins: #1a7f37;
     --change-del: #cf222e;
     --change-mod: #0969da;
+    --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, white);
+    --change-del-tint: color-mix(in srgb, var(--change-del) 20%, white);
+    --change-mod-tint: color-mix(in srgb, var(--change-mod) 20%, white);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -12,54 +15,82 @@
     --change-ins: #3fb950;
     --change-del: #f85149;
     --change-mod: #58a6ff;
+    --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, black);
+    --change-del-tint: color-mix(in srgb, var(--change-del) 20%, black);
+    --change-mod-tint: color-mix(in srgb, var(--change-mod) 20%, black);
 }
 }
 
 
 /* ── Up mode ────────────────────────────────────────────────────── */
 
+/* Full-bleed overlay: a ::before pseudo-element extends far beyond
+   the change wrapper and is clipped by overflow-x:hidden on
+   .up-mode-output, producing a tint strip that spans the full
+   article column width regardless of nesting depth. */
+
 .mud-change-ins,
 .mud-change-mod {
     display: block;
-    margin-left: -6px;
-    padding-left: 4px;
-    border-radius: 2px;
+    position: relative;
     text-decoration: none;
 }
 
-.mud-change-ins {
-    border-left: 2px solid color-mix(in srgb, var(--change-ins) 50%, transparent);
-    background: color-mix(in srgb, var(--change-ins) 8%, transparent);
+.mud-change-ins::before,
+.mud-change-mod::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -100vw;
+    right: -100vw;
+    mix-blend-mode: multiply;
+    pointer-events: none;
 }
 
-.mud-change-mod {
-    border-left: 2px solid color-mix(in srgb, var(--change-mod) 50%, transparent);
-    background: color-mix(in srgb, var(--change-mod) 8%, transparent);
+.mud-change-ins::before {
+    background: var(--change-ins-tint);
 }
 
-/* Deletions: hidden by default, revealed via sidebar selection.
-   Inner <li> uses display:block to suppress list-item markers and
-   prevent counter increment — otherwise revealing a deleted item
-   inside an <ol> renumbers subsequent items. */
+.mud-change-mod::before {
+    background: var(--change-mod-tint);
+}
+
+@media (prefers-color-scheme: dark) {
+.mud-change-ins::before,
+.mud-change-mod::before {
+    mix-blend-mode: screen;
+}
+}
+
 .mud-change-del {
     display: none;
 }
 
-.mud-change-del li {
-    display: block;
-}
-
 .mud-change-del.mud-change-revealed {
     display: block;
-    margin-left: -6px;
-    padding-left: 4px;
-    border-radius: 2px;
-    border-left: 2px solid color-mix(in srgb, var(--change-del) 40%, transparent);
-    background: color-mix(in srgb, var(--change-del) 6%, transparent);
-    opacity: 0.6;
+    position: relative;
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--change-del) 50%, transparent);
     text-decoration-thickness: 1.5px;
+}
+
+.mud-change-del.mud-change-revealed::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -100vw;
+    right: -100vw;
+    background: var(--change-del-tint);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+.mud-change-del.mud-change-revealed::before {
+    mix-blend-mode: screen;
+}
 }
 
 

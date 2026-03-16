@@ -5,6 +5,7 @@
     padding: 2em;
     box-sizing: content-box;
     background: var(--bg-color);
+    overflow-x: hidden;
 }
 
 .is-readable-column .up-mode-output {
