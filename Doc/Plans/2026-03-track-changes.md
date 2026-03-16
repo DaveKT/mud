@@ -1,7 +1,7 @@
 Plan: Track Changes
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
 
 
 ## Overview
@@ -239,68 +239,32 @@ rendering. Both paths (rendering and sidebar) work with pre-parsed ASTs — no
 redundant parsing anywhere.
 
 
-### Layer 3: State management (App)
+### Layer 3: State management (App) — implemented
 
-**New file: `App/ChangeTracker.swift`**
+**`App/ChangeTracker.swift`** — per-window `ObservableObject`. `update()`
+creates the initial waypoint on first call, diffs via
+`MudCore.computeChanges(old:new:)` on subsequent calls. `accept()` pushes a new
+waypoint and clears changes. `activeWaypoint` and `activeWaypointTimestamp` are
+computed from `waypoints.last`.
 
-```swift
-class ChangeTracker: ObservableObject {
-    @Published private(set) var waypoints: [Waypoint] = []
-    @Published private(set) var changes: [DocumentChange] = []
-    @Published var selectedChangeID: String?
-
-    /// The active waypoint's ParsedMarkdown (for RenderOptions).
-    var activeWaypoint: ParsedMarkdown? {
-        waypoints.last?.parsed
-    }
-
-    /// The timestamp of the active waypoint (for sidebar display).
-    var activeWaypointTimestamp: Date? {
-        waypoints.last?.timestamp
-    }
-
-    func setInitialWaypoint(_ parsed: ParsedMarkdown)
-    func update(_ currentParsed: ParsedMarkdown)  // recomputes changes
-    func accept(_ currentParsed: ParsedMarkdown)   // pushes new waypoint
-}
-
-struct Waypoint: Identifiable {
-    let id: UUID
-    let parsed: ParsedMarkdown  // pre-parsed; AST reused for diffing
-    let timestamp: Date
-}
-```
-
-`ParsedMarkdown` is parsed once per waypoint. The same value flows to
-`RenderOptions.waypoint` (for rendering) and to
-`MudCore.computeChanges(old:new:)` (for the sidebar). No re-parsing anywhere.
-
-`ChangeTracker` is a per-window `ObservableObject`. `DocumentState` gains a
-`let changeTracker = ChangeTracker()` field (same pattern as
+`DocumentState` has `let changeTracker = ChangeTracker()` (same pattern as
 `let find = FindState()`). `DocumentContentView` observes it directly via
-`@ObservedObject var changeTracker: ChangeTracker` — passed separately, not
-accessed through `state.changeTracker`. (SwiftUI does not observe nested
-`ObservableObject` fields automatically, so this follows the same pattern used
-for `FindState`.)
+`@ObservedObject var changeTracker: ChangeTracker` — passed separately from
+`DocumentWindowController`, not accessed through `state.changeTracker`.
 
 Waypoints are in-memory only. They do not persist across closing and re-opening
-the document. Old waypoints are retained in the `waypoints` array for a future
-waypoint-selector UI but are not otherwise used.
+the document. Old waypoints are retained for a future waypoint-selector UI.
 
-**Integration with `DocumentContentView` :**
+**`DocumentContentView` integration:**
 
-- `loadFromDisk()` already creates a `ParsedMarkdown` value (from the
-  title-extraction work). After setting `content = .parsed(parsed)`, it calls
-  `changeTracker.update(parsed)`. On first load this creates the initial
-  waypoint; on subsequent loads it diffs against the active waypoint via
-  `MudCore.computeChanges(old:new:)` and updates `changes`.
-- The `renderOptions` computed property sets
-  `opts.waypoint = changeTracker.activeWaypoint` when the content differs from
-  the waypoint (i.e. there are changes to show). When content matches the
-  waypoint, `opts.waypoint` stays nil (no markers needed).
-- The existing content-identity mechanism handles WebView reloads — since
-  `contentIdentity` includes the waypoint, enabling/disabling change tracking
-  naturally triggers a re-render.
+- `loadFromDisk()` calls `changeTracker.update(parsed)` after setting content
+  and extracting headings/title.
+- `renderOptions` sets `opts.waypoint = changeTracker.activeWaypoint` only when
+  `!changeTracker.changes.isEmpty`. No markers when content matches the
+  waypoint.
+- `openInBrowser()` sets `exportOptions.waypoint = nil` — no change markers in
+  exports.
+- The `contentIdentity` mechanism handles re-renders naturally.
 
 
 ### Layer 4: Sidebar UI (App)
@@ -577,13 +541,14 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    `LineDiffMap` bridges block matches to line ranges. `highlightWithChanges()`
    and `buildLayoutWithChanges()` added.
 
-5. **ChangeTracker + RenderOptions** — state management in App layer, waypoint
-   field on `RenderOptions`. Wire to `DocumentContentView.loadFromDisk()`.
+5. ~~**ChangeTracker + RenderOptions** — state management in App layer,
+   waypoint field on `RenderOptions` . Wire to
+   `DocumentContentView.loadFromDisk()` .~~ _Done._
 
-6. **Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
+6. **CSS** — change marker styles, theme variable additions.
+
+7. **Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
    list, status line, Accept button.
-
-7. **CSS** — change marker styles, theme variable additions.
 
 8. **JS + WebView** — `scrollToChange`, `revealChange`, wire to sidebar
    selection.
