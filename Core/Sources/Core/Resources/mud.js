@@ -228,11 +228,22 @@
     for (var i = 0; i < revealed.length; i++) {
       revealed[i].classList.remove("mud-change-revealed");
     }
-    // Reveal targeted deletions.
+    // Reveal targeted deletions and modification old-versions.
     for (var j = 0; j < ids.length; j++) {
       var el = document.querySelector('[data-change-id="' + ids[j] + '"]');
-      if (el && el.classList.contains("mud-change-del")) {
+      if (!el) continue;
+      if (el.classList.contains("mud-change-del")) {
         el.classList.add("mud-change-revealed");
+      }
+      // For modifications, the old-version <del> is the immediately
+      // preceding sibling (emitted by emitChangeOpen before the <ins>).
+      // Walk backwards to reveal all associated deletions.
+      if (el.classList.contains("mud-change-mod")) {
+        var prev = el.previousElementSibling;
+        while (prev && prev.classList.contains("mud-change-del")) {
+          prev.classList.add("mud-change-revealed");
+          prev = prev.previousElementSibling;
+        }
       }
     }
   }
