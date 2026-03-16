@@ -1,0 +1,93 @@
+/* Mud - change tracking styles (shared between Up and Down mode) */
+
+/* Accent colors for change types */
+:root {
+    --change-ins: #1a7f37;
+    --change-del: #cf222e;
+    --change-mod: #0969da;
+}
+
+@media (prefers-color-scheme: dark) {
+:root {
+    --change-ins: #3fb950;
+    --change-del: #f85149;
+    --change-mod: #58a6ff;
+}
+}
+
+
+/* ── Up mode ────────────────────────────────────────────────────── */
+
+.mud-change-ins,
+.mud-change-mod {
+    display: block;
+    margin-left: -6px;
+    padding-left: 4px;
+    border-radius: 2px;
+    text-decoration: none;
+}
+
+.mud-change-ins {
+    border-left: 2px solid color-mix(in srgb, var(--change-ins) 50%, transparent);
+    background: color-mix(in srgb, var(--change-ins) 8%, transparent);
+}
+
+.mud-change-mod {
+    border-left: 2px solid color-mix(in srgb, var(--change-mod) 50%, transparent);
+    background: color-mix(in srgb, var(--change-mod) 8%, transparent);
+}
+
+/* Deletions: hidden by default, revealed via sidebar selection */
+.mud-change-del {
+    display: none;
+}
+
+.mud-change-del.mud-change-revealed {
+    display: block;
+    margin-left: -6px;
+    padding-left: 4px;
+    border-radius: 2px;
+    border-left: 2px solid color-mix(in srgb, var(--change-del) 40%, transparent);
+    background: color-mix(in srgb, var(--change-del) 6%, transparent);
+    opacity: 0.6;
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--change-del) 50%, transparent);
+    text-decoration-thickness: 1.5px;
+}
+
+
+/* ── Down mode ──────────────────────────────────────────────────── */
+
+.dl-ins .ln {
+    color: var(--change-ins);
+}
+
+.dl-ins .lc {
+    background: color-mix(in srgb, var(--change-ins) 6%, transparent);
+}
+
+.dl-del .ln {
+    color: var(--change-del);
+}
+
+.dl-del .lc {
+    background: color-mix(in srgb, var(--change-del) 6%, transparent);
+    opacity: 0.55;
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--change-del) 40%, transparent);
+    text-decoration-thickness: 1.5px;
+}
+
+
+/* ── Active highlight (both modes) ──────────────────────────────── */
+
+.mud-change-active,
+.dl.mud-change-active {
+    animation: change-flash 2s ease-out;
+}
+
+@keyframes change-flash {
+    0%   { box-shadow: 0 0 0 0 transparent; }
+    10%  { box-shadow: 0 0 0 3px color-mix(in srgb, var(--change-mod) 40%, transparent); }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}

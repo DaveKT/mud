@@ -5,7 +5,7 @@ public enum HTMLTemplate {
     /// Wraps body HTML in an Up-mode document.
     static func wrapUp(body: String, options: RenderOptions) -> String {
         var doc = HTMLDocument(options: options)
-        doc.styles = [themeCSS(for: options.theme), sharedCSS, upCSS]
+        doc.styles = [themeCSS(for: options.theme), sharedCSS, upCSS, changesCSS]
         doc.cspImgSrc = options.blockRemoteContent
             ? ["mud-asset:", "data:"]
             : ["mud-asset:", "data:", "https:"]
@@ -26,7 +26,7 @@ public enum HTMLTemplate {
     /// Wraps pre-built body HTML in a Down-mode document.
     static func wrapDown(bodyHTML: String, options: RenderOptions) -> String {
         var doc = HTMLDocument(options: options)
-        doc.styles = [themeCSS(for: options.theme), sharedCSS, downCSS]
+        doc.styles = [themeCSS(for: options.theme), sharedCSS, downCSS, changesCSS]
         doc.bodyContent = """
             <div class="down-mode-output">
                 \(bodyHTML)
@@ -49,6 +49,10 @@ public enum HTMLTemplate {
 
     private static var downCSS: String {
         loadResource("mud-down", type: "css") ?? ""
+    }
+
+    private static var changesCSS: String {
+        loadResource("mud-changes", type: "css") ?? ""
     }
 
     /// Returns the CSS custom-property block for the given theme name.
