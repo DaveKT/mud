@@ -3,10 +3,15 @@ import MudCore
 
 struct ChangesSidebarView: View {
     @ObservedObject var changeTracker: ChangeTracker
+    @ObservedObject private var appState = AppState.shared
     var onSelectChange: ([String]) -> Void
 
     var body: some View {
-        if changeTracker.changes.isEmpty {
+        if !appState.trackChangesEnabled {
+            disabledState
+        } else if changeTracker.isPaused {
+            pausedState
+        } else if changeTracker.changes.isEmpty {
             emptyState
         } else {
             changeList
@@ -50,7 +55,7 @@ struct ChangesSidebarView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Button("Accept") {
-                acceptChanges()
+                changeTracker.accept()
             }
             .controlSize(.small)
         }
@@ -67,25 +72,69 @@ struct ChangesSidebarView: View {
         return "\(count) \(noun)"
     }
 
-    // MARK: - Empty state
+    // MARK: - Empty state (0 changes, not paused)
 
     private var emptyState: some View {
+        VStack(spacing: 0) {
+            emptyStatusBar
+            Spacer()
+        }
+    }
+
+    private var emptyStatusBar: some View {
+        HStack {
+            Text(emptyStatusText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Pause") {
+                changeTracker.isPaused = true
+            }
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
+    private var emptyStatusText: String {
+        if let time = formattedTimestamp {
+            return "0 changes since \(time)"
+        }
+        return "0 changes"
+    }
+
+    // MARK: - Disabled state (global toggle off)
+
+    private var disabledState: some View {
         VStack {
             ContentUnavailableView(
-                "No Changes",
-                systemImage: "checkmark.circle",
-                description: Text(emptyDescription)
+                "Changes Off",
+                systemImage: "eye.slash",
+                description: Text("Enable in\nMud > Settings > General.")
             )
             Spacer()
         }
         .padding(.top, 16)
     }
 
-    private var emptyDescription: String {
-        if let time = formattedTimestamp {
-            return "No changes since \(time)"
+    // MARK: - Paused state (per-document)
+
+    private var pausedState: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Track Changes is paused")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Resume") {
+                    changeTracker.isPaused = false
+                }
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            Spacer()
         }
-        return "This document has no changes."
     }
 
     // MARK: - Timestamp formatting
@@ -109,11 +158,6 @@ struct ChangesSidebarView: View {
         }
     }
 
-    // MARK: - Actions
-
-    private func acceptChanges() {
-        changeTracker.accept()
-    }
 }
 
 // MARK: - Change group

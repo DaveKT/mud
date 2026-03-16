@@ -108,6 +108,15 @@ struct MudApp: App {
                     set: { _ in appState.toggle(.readableColumn) }
                 ))
 
+                Toggle("Show Changes", isOn: Binding(
+                    get: { appState.trackChangesEnabled },
+                    set: { newValue in
+                        appState.trackChangesEnabled = newValue
+                        appState.saveTrackChangesEnabled()
+                    }
+                ))
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+
                 Divider()
 
                 Button("Actual Size") {

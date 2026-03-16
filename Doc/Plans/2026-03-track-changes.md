@@ -511,8 +511,9 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    selection.~~ _Done._ `ChangeScrollTarget` flows from sidebar through
    `DocumentState` to `WebView`. JS reveal + scroll with flash animation.
 
-9. **Polish** — ~~consecutive change grouping~~ _done_; keyboard shortcuts
-   (Next Change / Previous Change), menu items, edge cases still open.
+9. **Polish** — ~~consecutive change grouping~~ _done_; ~~global toggle and
+   per-document pause~~ _done_; keyboard shortcuts (Next Change / Previous
+   Change), menu items, edge cases still open.
 
 
 ## Polish: Consecutive change grouping — implemented
@@ -551,5 +552,9 @@ deletions. `Mud.scrollToChange(id)` unchanged (targets first ID).
   all waypoints.
 - **Print / Open in Browser?** — Build `RenderOptions` without a waypoint. No
   change markers in exported HTML.
-- **Global disable toggle?** — Deferred. May add a "Change Tracking" settings
-  pane in the future for this and other related preferences.
+- **Global disable toggle?** — `AppState.trackChangesEnabled`, persisted.
+  Toggle in View menu and Settings > General. When off, waypoints are not
+  passed to renderers; sidebar shows "Track Changes is Off".
+- **Per-document pause?** — `ChangeTracker.isPaused`. When paused, `update()`
+  stores content but skips diffing. Sidebar shows "Track Changes is paused"
+  with a Resume button.

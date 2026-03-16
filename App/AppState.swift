@@ -11,6 +11,7 @@ class AppState: ObservableObject {
     @Published var upModeZoomLevel: Double
     @Published var downModeZoomLevel: Double
     @Published var sidebarVisible: Bool
+    @Published var trackChangesEnabled: Bool
     @Published var quitOnClose: Bool
     @Published var allowRemoteContent: Bool
     @Published var enabledExtensions: Set<String>
@@ -23,6 +24,7 @@ class AppState: ObservableObject {
     private static let upModeZoomKey = "Mud-UpModeZoomLevel"
     private static let downModeZoomKey = "Mud-DownModeZoomLevel"
     private static let sidebarVisibleKey = "Mud-SidebarVisible"
+    private static let trackChangesEnabledKey = "Mud-TrackChangesEnabled"
     private static let quitOnCloseKey = "Mud-QuitOnClose"
     private static let allowRemoteContentKey = "Mud-AllowRemoteContent"
     private static let enabledExtensionsKey = "Mud-EnabledExtensions"
@@ -39,6 +41,7 @@ class AppState: ObservableObject {
         self.upModeZoomLevel = defaults.object(forKey: Self.upModeZoomKey) as? Double ?? 1.0
         self.downModeZoomLevel = defaults.object(forKey: Self.downModeZoomKey) as? Double ?? 1.0
         self.sidebarVisible = defaults.bool(forKey: Self.sidebarVisibleKey)
+        self.trackChangesEnabled = defaults.object(forKey: Self.trackChangesEnabledKey) as? Bool ?? true
         self.quitOnClose = defaults.object(forKey: Self.quitOnCloseKey) as? Bool ?? true
         self.allowRemoteContent = defaults.object(forKey: Self.allowRemoteContentKey) as? Bool ?? true
         let allExtensions = Set(RenderExtension.registry.keys)
@@ -67,6 +70,10 @@ class AppState: ObservableObject {
 
     func saveSidebarVisible() {
         UserDefaults.standard.set(sidebarVisible, forKey: Self.sidebarVisibleKey)
+    }
+
+    func saveTrackChangesEnabled() {
+        UserDefaults.standard.set(trackChangesEnabled, forKey: Self.trackChangesEnabledKey)
     }
 
     func saveQuitOnClose() {
