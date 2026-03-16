@@ -16,8 +16,49 @@ public struct DownHTMLVisitor: Sendable {
         _ markdown: String,
         doccAlertMode: DocCAlertMode = .extended
     ) -> String {
-        // Phase 1: Collect span events and code block info from
-        // the AST.
+        let result = highlightLines(markdown, doccAlertMode: doccAlertMode)
+        return buildLayout(
+            result.rendered, codeBlocks: result.codeBlocks)
+    }
+
+    /// Renders with change-tracking markers for Down mode.
+    ///
+    /// Highlights both old and new markdown, builds a `LineDiffMap`
+    /// from block matches, and produces a layout that interleaves
+    /// deleted old-doc lines and annotates inserted/modified new-doc
+    /// lines.
+    func highlightWithChanges(
+        new newMarkdown: String,
+        old oldMarkdown: String,
+        matches: [BlockMatch],
+        doccAlertMode: DocCAlertMode = .extended
+    ) -> String {
+        let newResult = highlightLines(
+            newMarkdown, doccAlertMode: doccAlertMode)
+        let oldResult = highlightLines(
+            oldMarkdown, doccAlertMode: doccAlertMode)
+        let diffMap = LineDiffMap(matches: matches)
+        return buildLayoutWithChanges(
+            newResult.rendered,
+            codeBlocks: newResult.codeBlocks,
+            diffMap: diffMap,
+            oldRendered: oldResult.rendered)
+    }
+
+    // MARK: - Phase 1+2: Highlight lines
+
+    private struct HighlightResult {
+        let rendered: [String]
+        let codeBlocks: [CodeBlockInfo]
+    }
+
+    /// Runs Phase 1 (AST event collection) and Phase 2 (per-line
+    /// rendering) without building the final layout.
+    private func highlightLines(
+        _ markdown: String,
+        doccAlertMode: DocCAlertMode
+    ) -> HighlightResult {
+        // Phase 1: Collect span events and code block info.
         let doc = MarkdownParser.parse(markdown)
         let sourceLines = markdown.split(
             separator: "\n", omittingEmptySubsequences: false
@@ -41,9 +82,8 @@ public struct DownHTMLVisitor: Sendable {
             lines: lines, lineCount: lineCount,
             events: events, codeBlocks: collector.codeBlocks)
 
-        // Phase 3: Wrap rendered content in structural layout.
-        return buildLayout(
-            rendered, codeBlocks: collector.codeBlocks)
+        return HighlightResult(
+            rendered: rendered, codeBlocks: collector.codeBlocks)
     }
 
     // MARK: - SpanEvent
@@ -617,6 +657,103 @@ public struct DownHTMLVisitor: Sendable {
             }
         }
         return roles
+    }
+
+    // MARK: - Phase 3 (diff-aware): Build layout with changes
+
+    /// Variant of `buildLayout` that interleaves deleted old-doc lines
+    /// and annotates inserted/modified new-doc lines.
+    private func buildLayoutWithChanges(
+        _ rendered: [String],
+        codeBlocks: [CodeBlockInfo],
+        diffMap: LineDiffMap,
+        oldRendered: [String]
+    ) -> String {
+        let roles = lineRoles(
+            lineCount: rendered.count, codeBlocks: codeBlocks)
+
+        var html = "<div class=\"down-lines\">"
+        var inScroll = false
+        var groupIdx = 0
+
+        for (i, content) in rendered.enumerated() {
+            let lineNum = i + 1
+            let role = roles[i]
+
+            // Emit deletion groups that precede this line.
+            while groupIdx < diffMap.deletionGroups.count,
+                  diffMap.deletionGroups[groupIdx].beforeNewLine <= lineNum
+            {
+                emitDeletionGroup(
+                    diffMap.deletionGroups[groupIdx],
+                    oldRendered: oldRendered, to: &html)
+                groupIdx += 1
+            }
+
+            // Open dc-scroll wrapper before the first fence/code line.
+            if (role == .fence || role == .code) && !inScroll {
+                html += "<div class=\"dc-scroll\">"
+                inScroll = true
+            }
+
+            // Line div: combine role class with optional change class.
+            let roleClass: String
+            switch role {
+            case .regular: roleClass = "dl"
+            case .fence:   roleClass = "dl dc-fence"
+            case .code:    roleClass = "dl dc-code"
+            }
+
+            if let annotation = diffMap.annotation(forLine: lineNum) {
+                html += "<div class=\"\(roleClass) dl-ins\""
+                html += " data-change-id=\"\(annotation.changeID)\">"
+            } else {
+                html += "<div class=\"\(roleClass)\">"
+            }
+
+            html += "<span class=\"ln\">\(lineNum)</span>"
+            html += "<span class=\"lc\">\(content)</span>"
+            html += "</div>"
+
+            // Close dc-scroll wrapper after the last fence/code line.
+            if inScroll {
+                let nextRole = i + 1 < roles.count
+                    ? roles[i + 1] : .regular
+                if nextRole != .fence && nextRole != .code {
+                    html += "</div>"
+                    inScroll = false
+                }
+            }
+        }
+
+        // Trailing deletion groups.
+        while groupIdx < diffMap.deletionGroups.count {
+            emitDeletionGroup(
+                diffMap.deletionGroups[groupIdx],
+                oldRendered: oldRendered, to: &html)
+            groupIdx += 1
+        }
+
+        html += "</div>"
+        return html
+    }
+
+    /// Emits a deletion group's lines into the HTML output.
+    private func emitDeletionGroup(
+        _ group: DeletionGroup,
+        oldRendered: [String],
+        to html: inout String
+    ) {
+        for oldLine in group.oldLineRange {
+            let oldIdx = oldLine - 1
+            let content = oldIdx >= 0 && oldIdx < oldRendered.count
+                ? oldRendered[oldIdx] : ""
+            html += "<div class=\"dl dl-del\""
+            html += " data-change-id=\"\(group.changeID)\">"
+            html += "<span class=\"ln\">\u{2013}</span>"
+            html += "<span class=\"lc\">\(content)</span>"
+            html += "</div>"
+        }
     }
 
 }

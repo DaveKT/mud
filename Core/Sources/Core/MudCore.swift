@@ -45,6 +45,22 @@ public enum MudCore {
         return HTMLTemplate.wrapUp(body: body, options: options)
     }
 
+    /// Renders a parsed Markdown document to HTML for Down mode (body only).
+    public static func renderDownToHTML(
+        _ parsed: ParsedMarkdown,
+        options: RenderOptions = .init()
+    ) -> String {
+        if let waypoint = options.waypoint {
+            let matches = BlockMatcher.match(old: waypoint, new: parsed)
+            return downVisitor.highlightWithChanges(
+                new: parsed.markdown, old: waypoint.markdown,
+                matches: matches,
+                doccAlertMode: options.doccAlertMode)
+        }
+        return downVisitor.highlight(
+            parsed.markdown, doccAlertMode: options.doccAlertMode)
+    }
+
     /// Renders a parsed Markdown document to a complete HTML document
     /// for Down mode. When `options.title` is empty, the title is
     /// auto-extracted from the first heading.
@@ -56,8 +72,7 @@ public enum MudCore {
         if options.title.isEmpty {
             options.title = parsed.title ?? ""
         }
-        let bodyHTML = downVisitor.highlight(
-            parsed.markdown, doccAlertMode: options.doccAlertMode)
+        let bodyHTML = renderDownToHTML(parsed, options: options)
         return HTMLTemplate.wrapDown(bodyHTML: bodyHTML, options: options)
     }
 
@@ -103,7 +118,12 @@ public enum MudCore {
         _ text: String,
         options: RenderOptions = .init()
     ) -> String {
-        downVisitor.highlight(text, doccAlertMode: options.doccAlertMode)
+        if options.waypoint != nil {
+            return renderDownToHTML(
+                ParsedMarkdown(text), options: options)
+        }
+        return downVisitor.highlight(
+            text, doccAlertMode: options.doccAlertMode)
     }
 
     /// Renders Markdown text to a complete HTML document for Down mode.
