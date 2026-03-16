@@ -289,57 +289,30 @@ states:
 placeholder (scroll-to-change deferred to Step 8).
 
 
-### Layer 5: WebView and JavaScript (App + Resources)
+### Layer 5: WebView and JavaScript (App + Resources) — implemented
 
-**Scroll-to-change:**
+**`mud.js`** — two new functions on the `Mud` namespace:
 
-Add `Mud.scrollToChange(id)` in `mud.js`:
+- `Mud.scrollToChange(id)` — queries `[data-change-id="…"]`, scrolls to center,
+  adds `mud-change-active` class (triggers CSS flash animation, auto-removed
+  after 2s).
+- `Mud.revealChange(id)` — clears any previous `mud-change-revealed` class,
+  then adds it to the target if it has `mud-change-del` (so non-deletion
+  changes are scrolled to but not "revealed").
 
-```javascript
-Mud.scrollToChange = function(id) {
-    const el = document.querySelector('[data-change-id="' + id + '"]');
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('mud-change-active');
-    // Remove active class after 2s
-    setTimeout(() => el.classList.remove('mud-change-active'), 2000);
-};
-```
+**`ChangeScrollTarget`** (in `DocumentState.swift`) — a separate published
+property, parallel to `ScrollTarget`. Carries a UUID (for deduplication) and a
+`changeID` string.
 
-**Deletion reveal:**
+**`WebView.updateNSView`** — checks `changeScrollTarget`, calls
+`Mud.revealChange()` then `Mud.scrollToChange()` (reveal first so the element
+is visible before scrolling). Uses `lastChangeScrollTargetID` for
+deduplication, same pattern as other targets.
 
-Deletions are hidden by default via CSS:
-
-```css
-.mud-change-del { display: none; }
-.mud-change-del.mud-change-revealed { display: block; }
-```
-
-When a deletion is selected in the sidebar, JS reveals it:
-
-```javascript
-Mud.revealChange = function(id) {
-    document.querySelectorAll('.mud-change-revealed')
-        .forEach(el => el.classList.remove('mud-change-revealed'));
-    const el = document.querySelector('[data-change-id="' + id + '"]');
-    if (el) el.classList.add('mud-change-revealed');
-};
-```
-
-When the selection is cleared (or moves to a non-deletion), all revealed
-deletions are hidden again.
-
-**Scroll target extension:**
-
-`DocumentState.scrollTarget` currently only supports headings. We need a
-parallel mechanism for changes. Options:
-
-1. Add a `ScrollTarget.change(id: String)` variant
-2. Use a separate `@Published var changeScrollTarget: String?`
-
-Option 2 is simpler and avoids modifying the existing `ScrollTarget` type.
-`WebView.updateNSView()` would check this property and call
-`Mud.scrollToChange(id)` / `Mud.revealChange(id)` via JS.
+**Sidebar → WebView flow:** `ChangesSidebarView` selection → `onSelectChange`
+callback (passes change ID string) → `DocumentWindowController` creates
+`ChangeScrollTarget` → `DocumentState` publishes it → `DocumentContentView`
+passes to `WebView` → JS execution.
 
 
 ### Layer 6: CSS (Resources) — implemented
@@ -533,11 +506,77 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    list, status line, Accept button.~~ _Done._ (Reordered: built before CSS
    since the UI was needed to validate the wiring.)
 
-8. **JS + WebView** — `scrollToChange`, `revealChange`, wire to sidebar
-   selection.
+8. ~~**JS + WebView** — `scrollToChange` , `revealChange` , wire to sidebar
+   selection.~~ _Done._ `ChangeScrollTarget` flows from sidebar through
+   `DocumentState` to `WebView`. JS reveal + scroll with flash animation.
 
-9. **Polish** — keyboard shortcuts (Next Change / Previous Change), menu items,
-   edge cases (empty document, binary files, very large diffs).
+9. **Polish** — consecutive change grouping (see below), keyboard shortcuts
+   (Next Change / Previous Change), menu items, edge cases.
+
+
+## Polish: Consecutive change grouping
+
+When multiple changes are consecutive (no unchanged block between them), the
+sidebar should condense them into a single entry. This is a UI-level
+optimisation — the underlying `[DocumentChange]` array, HTML, and CSS are
+unchanged.
+
+
+### Grouping strategy
+
+Group all consecutive changes regardless of type. An unchanged block is the
+only thing that breaks a group. Two deletions followed by three modifications
+(with no unchanged block between them) become one sidebar entry, not five.
+
+This matches the user's mental model: "I changed this section." Splitting by
+type within the same region adds noise without much value.
+
+
+### Sidebar entry design
+
+Each group row shows:
+
+- **Icon:** the most significant change type in the group. Priority:
+  modification > insertion > deletion. (When a section is rewritten, calling it
+  "modified" is more informative than "deleted" or "inserted".)
+- **Summary:** the first change's summary text (gives context about which
+  section changed).
+- **Count:** "(5)" or "5 changes" after the summary when count > 1.
+
+Implementation: `ChangesSidebarView` builds display groups by walking
+`changeTracker.changes` and merging consecutive entries. Each group carries the
+list of constituent change IDs.
+
+
+### Scroll and reveal
+
+Clicking a group scrolls to the first change ID in the group. If the group
+contains deletions, all of them are revealed.
+
+`Mud.revealChange(id)` becomes `Mud.revealChanges(ids)` — accepts an array of
+change IDs and reveals all targeted deletions:
+
+```javascript
+Mud.revealChanges = function(ids) {
+    var revealed = document.querySelectorAll(".mud-change-revealed");
+    for (var i = 0; i < revealed.length; i++) {
+        revealed[i].classList.remove("mud-change-revealed");
+    }
+    for (var j = 0; j < ids.length; j++) {
+        var el = document.querySelector('[data-change-id="' + ids[j] + '"]');
+        if (el && el.classList.contains("mud-change-del")) {
+            el.classList.add("mud-change-revealed");
+        }
+    }
+};
+```
+
+`Mud.scrollToChange(id)` remains unchanged — targets a single ID.
+
+The `onSelectChange` callback changes from `(String) -> Void` to
+`([String]) -> Void`. `ChangeScrollTarget.changeID` becomes
+`changeIDs: [String]`. `WebView.updateNSView` calls `Mud.revealChanges(ids)`
+then `Mud.scrollToChange(ids[0])`.
 
 
 ## Resolved questions
