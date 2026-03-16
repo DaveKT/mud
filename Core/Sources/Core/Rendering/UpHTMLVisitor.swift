@@ -30,6 +30,10 @@ struct UpHTMLVisitor: MarkupWalker {
 
     var alertDetector = AlertDetector()
 
+    /// When non-nil, change markers (`<ins>`/`<del>`) are emitted for
+    /// blocks that differ from the waypoint document.
+    var diffContext: DiffContext?
+
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
@@ -72,6 +76,7 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitListItem(_ listItem: ListItem) {
+        emitChangeOpen(for: listItem)
         if inTightList {
             result += "<li>"
         } else {
@@ -86,19 +91,23 @@ struct UpHTMLVisitor: MarkupWalker {
         }
         descendInto(listItem)
         result += "</li>\n"
+        emitChangeClose(for: listItem)
     }
 
     // MARK: - Block leaves
 
     mutating func visitHeading(_ heading: Heading) {
+        emitChangeOpen(for: heading)
         let level = heading.level
         let slug = slugTracker.slug(for: heading.plainText)
         result += "<h\(level) id=\"\(slug)\">"
         descendInto(heading)
         result += "</h\(level)>\n"
+        emitChangeClose(for: heading)
     }
 
     mutating func visitParagraph(_ paragraph: Paragraph) {
+        emitChangeOpen(for: paragraph)
         if inTightList && paragraph.parent is ListItem {
             descendInto(paragraph)
             result += "\n"
@@ -107,9 +116,11 @@ struct UpHTMLVisitor: MarkupWalker {
             descendInto(paragraph)
             result += "</p>\n"
         }
+        emitChangeClose(for: paragraph)
     }
 
     mutating func visitCodeBlock(_ codeBlock: CodeBlock) {
+        emitChangeOpen(for: codeBlock)
         let lang = codeBlock.language.flatMap { $0.isEmpty ? nil : $0 }
         result += "<pre class=\"mud-code\">"
         if let lang {
@@ -129,14 +140,19 @@ struct UpHTMLVisitor: MarkupWalker {
             result += HTMLEscaping.escape(codeBlock.code)
         }
         result += "</code></pre>\n"
+        emitChangeClose(for: codeBlock)
     }
 
     mutating func visitHTMLBlock(_ html: HTMLBlock) {
+        emitChangeOpen(for: html)
         result += html.rawHTML
+        emitChangeClose(for: html)
     }
 
     mutating func visitThematicBreak(_ thematicBreak: ThematicBreak) {
+        emitChangeOpen(for: thematicBreak)
         result += "<hr />\n"
+        emitChangeClose(for: thematicBreak)
     }
 
     // MARK: - Table
@@ -261,6 +277,47 @@ struct UpHTMLVisitor: MarkupWalker {
 
     mutating func visitSoftBreak(_ softBreak: SoftBreak) {
         result += "\n"
+    }
+
+    // MARK: - Change tracking helpers
+
+    /// Emits preceding deletions and opens an `<ins>` wrapper for
+    /// inserted or modified blocks. No-op when `diffContext` is nil.
+    private mutating func emitChangeOpen(for node: Markup) {
+        guard let diffContext else { return }
+        for del in diffContext.precedingDeletions(before: node) {
+            result += "<del class=\"mud-change mud-change-del\""
+            result += " data-change-id=\"\(del.changeID)\">"
+            result += del.html
+            result += "</del>\n"
+        }
+        if let annotation = diffContext.annotation(for: node),
+           let changeID = diffContext.changeID(for: node) {
+            let suffix = annotation == .inserted ? "ins" : "mod"
+            result += "<ins class=\"mud-change mud-change-\(suffix)\""
+            result += " data-change-id=\"\(changeID)\">"
+        }
+    }
+
+    /// Closes an `<ins>` wrapper opened by `emitChangeOpen`.
+    /// No-op when `diffContext` is nil or the node is unchanged.
+    private mutating func emitChangeClose(for node: Markup) {
+        guard let diffContext else { return }
+        if diffContext.annotation(for: node) != nil {
+            result += "</ins>\n"
+        }
+    }
+
+    /// Emits trailing deletions (deleted blocks after the last surviving
+    /// block). Called after the document walk completes.
+    mutating func emitTrailingDeletions() {
+        guard let diffContext else { return }
+        for del in diffContext.trailingDeletions() {
+            result += "<del class=\"mud-change mud-change-del\""
+            result += " data-change-id=\"\(del.changeID)\">"
+            result += del.html
+            result += "</del>\n"
+        }
     }
 
     // MARK: - Alerts

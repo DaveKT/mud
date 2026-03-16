@@ -20,7 +20,11 @@ public enum MudCore {
         upVisitor.baseURL = options.baseURL
         upVisitor.resolveImageSource = resolveImageSource
         upVisitor.alertDetector.doccAlertMode = options.doccAlertMode
+        if let waypoint = options.waypoint {
+            upVisitor.diffContext = DiffContext(old: waypoint, new: parsed)
+        }
         upVisitor.visit(parsed.document)
+        upVisitor.emitTrailingDeletions()
         return upVisitor.result
     }
 

@@ -19,3 +19,16 @@ public struct ParsedMarkdown {
         self.headings = extractor.headings
     }
 }
+
+// MARK: - Sendable + Equatable
+
+// @unchecked because Document wraps a reference-counted RawMarkup tree
+// that lacks Sendable conformance. Safe because ParsedMarkdown is
+// immutable (all let fields) and RawMarkup has no mutation API.
+extension ParsedMarkdown: @unchecked Sendable {}
+
+extension ParsedMarkdown: Equatable {
+    public static func == (lhs: ParsedMarkdown, rhs: ParsedMarkdown) -> Bool {
+        lhs.markdown == rhs.markdown
+    }
+}

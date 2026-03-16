@@ -21,12 +21,18 @@ public struct RenderOptions: Sendable, Equatable {
     public var htmlClasses: Set<String> = []
     public var zoomLevel: Double = 1.0
 
+    // Change tracking
+    public var waypoint: ParsedMarkdown?
+
     public init() {}
 
     /// Identity string covering only content-affecting options.
     /// Display-only fields (htmlClasses, zoomLevel) are excluded because
     /// those can be applied via JS without a full page reload.
     public var contentIdentity: String {
-        "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(extensions.sorted())"
+        let waypointHash = waypoint.map {
+            String($0.markdown.hashValue)
+        } ?? ""
+        return "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(extensions.sorted())\(waypointHash)"
     }
 }
