@@ -267,29 +267,26 @@ the document. Old waypoints are retained for a future waypoint-selector UI.
 - The `contentIdentity` mechanism handles re-renders naturally.
 
 
-### Layer 4: Sidebar UI (App)
+### Layer 4: Sidebar UI (App) — implemented
 
-**`App/SidebarView.swift`** and **`App/ChangesSidebarView.swift`** are already
-implemented. `SidebarView` wraps a segmented Outline/Changes picker with
-`OutlineSidebarView` and `ChangesSidebarView` as panes.
-`DocumentWindowController.setupContent()` already wires `SidebarView` in place
-of the old direct `OutlineSidebarView`.
+**`App/ChangesSidebarView.swift`** — observes `ChangeTracker` directly. Three
+states:
 
-`ChangesSidebarView` currently shows a static "No Changes" empty state. It
-needs to be extended to accept a `ChangeTracker` and display:
+1. **Status bar** — "X changes since HH:MM" with an Accept button. Timestamp
+   formatting: time-only for today, "yesterday", short date+time for older.
+   Accept calls `changeTracker.accept()` (now parameterless — tracker stores
+   `currentParsed` internally).
+2. **Change list** — `List` with selection bound to
+   `changeTracker.selectedChangeID`. `ChangeRow` shows icon
+   (`plus.circle`/green, `minus.circle`/red, `pencil.circle`/blue) and one-line
+   summary. Selection triggers `onSelectChange` callback.
+3. **Empty state** — "No changes since HH:MM" or generic message.
 
-1. **Status line** at the top: "X changes since HH:MM" (or "today at HH:MM",
-   "yesterday", etc.) with an **Accept** button.
+**`App/SidebarView.swift`** — now receives `changeTracker` and
+`onSelectChange`, threading them to `ChangesSidebarView`.
 
-2. **Change list** — each row shows:
-
-   - An icon: `plus.circle` (insertion), `minus.circle` (deletion), or
-     `pencil.circle` (modification), coloured green/red/blue
-   - A one-line summary of the changed text
-   - Tapping a row sets `changeTracker.selectedChangeID` and triggers a
-     scroll-to-change action
-
-3. **Empty state** — when no changes: "No changes since HH:MM".
+**`DocumentWindowController.setupContent()`** — wires `onSelectChange` as a
+placeholder (scroll-to-change deferred to Step 8).
 
 
 ### Layer 5: WebView and JavaScript (App + Resources)
@@ -547,8 +544,9 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
 
 6. **CSS** — change marker styles, theme variable additions.
 
-7. **Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
-   list, status line, Accept button.
+7. ~~**Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
+   list, status line, Accept button.~~ _Done._ (Reordered: built before CSS
+   since the UI was needed to validate the wiring.)
 
 8. **JS + WebView** — `scrollToChange`, `revealChange`, wire to sidebar
    selection.
