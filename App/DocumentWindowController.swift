@@ -64,7 +64,7 @@ class DocumentWindowController: NSWindowController {
         }
         let sidebarHost = NSHostingController(rootView: sidebarView)
 
-        let contentView = DocumentContentView(fileURL: fileURL, state: state, findState: state.find)
+        let contentView = DocumentContentView(fileURL: fileURL, state: state, findState: state.find, changeTracker: state.changeTracker)
         let contentHost = NSHostingController(rootView: contentView)
 
         let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebarHost)

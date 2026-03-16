@@ -20,6 +20,7 @@ class DocumentState: ObservableObject {
     @Published var scrollTarget: ScrollTarget?
     @Published var contentTitle: String?
     let find = FindState()
+    let changeTracker = ChangeTracker()
 
     func toggleMode() {
         mode = mode.toggled()

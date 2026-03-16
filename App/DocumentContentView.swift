@@ -12,6 +12,7 @@ struct DocumentContentView: View {
     let fileURL: URL
     @ObservedObject var state: DocumentState
     @ObservedObject var findState: FindState
+    @ObservedObject var changeTracker: ChangeTracker
     @ObservedObject private var appState = AppState.shared
 
     @State private var content: DocumentContent = .parsed(ParsedMarkdown(""))
@@ -41,6 +42,9 @@ struct DocumentContentView: View {
         opts.extensions = appState.enabledExtensions
         opts.htmlClasses = Set(appState.viewToggles.map(\.className))
         opts.zoomLevel = modeZoomLevel
+        if !changeTracker.changes.isEmpty {
+            opts.waypoint = changeTracker.activeWaypoint
+        }
         return opts
     }
 
@@ -171,6 +175,7 @@ struct DocumentContentView: View {
             content = .parsed(parsed)
             state.outlineHeadings = parsed.headings
             state.contentTitle = parsed.title
+            changeTracker.update(parsed)
         } catch let cocoaError as CocoaError where cocoaError.code == .fileReadNoSuchFile {
             content = .error(ErrorPage.fileNotFound(error: cocoaError))
         } catch {
@@ -188,6 +193,7 @@ struct DocumentContentView: View {
             .appendingPathExtension("html")
         var exportOptions = renderOptions
         exportOptions.standalone = true
+        exportOptions.waypoint = nil
         let exportHTML: String
         if state.mode == .down {
             exportHTML = MudCore.renderDownModeDocument(text,
