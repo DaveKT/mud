@@ -342,40 +342,23 @@ Option 2 is simpler and avoids modifying the existing `ScrollTarget` type.
 `Mud.scrollToChange(id)` / `Mud.revealChange(id)` via JS.
 
 
-### Layer 6: CSS (Resources)
+### Layer 6: CSS (Resources) — implemented
 
-**New file: `Resources/mud-changes.css`** (or additions to `mud.css`)
+**`Resources/mud-changes.css`** — shared between Up and Down modes. Loaded by
+`HTMLTemplate` into both `wrapUp` and `wrapDown` (always included; inert when
+no change-tracking classes are present).
 
-```css
-/* Block-level change markers */
-.mud-change-ins,
-.mud-change-mod {
-    background-color: var(--change-ins-bg);
-    border-left: 3px solid var(--change-ins-border);
-    padding-left: 4px;
-}
-
-.mud-change-del {
-    display: none;
-}
-
-.mud-change-del.mud-change-revealed {
-    display: block;
-    background-color: var(--change-del-bg);
-    border-left: 3px solid var(--change-del-border);
-    padding-left: 4px;
-    opacity: 0.7;
-    text-decoration: line-through;
-}
-
-.mud-change-active {
-    outline: 2px solid var(--change-active-border);
-    outline-offset: 2px;
-}
-```
-
-Theme files gain `--change-*` CSS variables so change colours harmonise with
-each theme.
+- **Color system:** `--change-ins` (green), `--change-del` (red),
+  `--change-mod` (blue) CSS variables with light/dark variants via
+  `prefers-color-scheme`. Uses `color-mix(in srgb, …)` for transparency layers.
+- **Up mode:** `mud-change-ins`/ `mud-change-mod` get left border + background
+  tint. `mud-change-del` hidden by default, revealed via `mud-change-revealed`
+  class (strikethrough, reduced opacity).
+- **Down mode:** `dl-ins`/ `dl-del` classes colour line numbers and tint line
+  content backgrounds. Deleted lines always visible (interleaved inline, not
+  hidden behind sidebar reveal).
+- **Active highlight:** `change-flash` keyframe animation (box-shadow pulse, 2s
+  fade) for both modes, applied via `mud-change-active` class.
 
 
 ## Key design decisions (resolved)
@@ -542,7 +525,9 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    waypoint field on `RenderOptions` . Wire to
    `DocumentContentView.loadFromDisk()` .~~ _Done._
 
-6. **CSS** — change marker styles, theme variable additions.
+6. ~~**CSS** — change marker styles, theme variable additions.~~ _Done._
+   `mud-changes.css` with light/dark variables, Up + Down mode styles, active
+   highlight animation.
 
 7. ~~**Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
    list, status line, Accept button.~~ _Done._ (Reordered: built before CSS
