@@ -148,11 +148,19 @@ struct WebView: NSViewRepresentable {
         if let target = changeScrollTarget,
            context.coordinator.lastChangeScrollTargetID != target.id {
             context.coordinator.lastChangeScrollTargetID = target.id
-            let escaped = target.changeID
-                .replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "'", with: "\\'")
-            webView.evaluateJavaScript("Mud.revealChange('\(escaped)')")
-            webView.evaluateJavaScript("Mud.scrollToChange('\(escaped)')")
+            let idsJSON = "[" + target.changeIDs.map { id in
+                let escaped = id
+                    .replacingOccurrences(of: "\\", with: "\\\\")
+                    .replacingOccurrences(of: "'", with: "\\'")
+                return "'\(escaped)'"
+            }.joined(separator: ",") + "]"
+            webView.evaluateJavaScript("Mud.revealChanges(\(idsJSON))")
+            if let first = target.changeIDs.first {
+                let escaped = first
+                    .replacingOccurrences(of: "\\", with: "\\\\")
+                    .replacingOccurrences(of: "'", with: "\\'")
+                webView.evaluateJavaScript("Mud.scrollToChange('\(escaped)')")
+            }
         }
 
         // Handle print via WKWebView.printOperation(with:)

@@ -222,16 +222,18 @@
     }, 2000);
   }
 
-  function revealChange(id) {
+  function revealChanges(ids) {
     // Hide any previously revealed deletion.
     var revealed = document.querySelectorAll(".mud-change-revealed");
     for (var i = 0; i < revealed.length; i++) {
       revealed[i].classList.remove("mud-change-revealed");
     }
-    // Reveal the targeted deletion (if it is one).
-    var el = document.querySelector('[data-change-id="' + id + '"]');
-    if (el && el.classList.contains("mud-change-del")) {
-      el.classList.add("mud-change-revealed");
+    // Reveal targeted deletions.
+    for (var j = 0; j < ids.length; j++) {
+      var el = document.querySelector('[data-change-id="' + ids[j] + '"]');
+      if (el && el.classList.contains("mud-change-del")) {
+        el.classList.add("mud-change-revealed");
+      }
     }
   }
 
@@ -275,6 +277,6 @@
     scrollToHeading: scrollToHeading,
     scrollToLine: scrollToLine,
     scrollToChange: scrollToChange,
-    revealChange: revealChange
+    revealChanges: revealChanges
   };
 })();

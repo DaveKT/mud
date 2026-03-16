@@ -65,9 +65,9 @@ class DocumentWindowController: NSWindowController {
             onSelectHeading: { [weak self] heading in
                 self?.state.scrollTarget = ScrollTarget(id: UUID(), heading: heading)
             },
-            onSelectChange: { [weak self] changeID in
+            onSelectChange: { [weak self] changeIDs in
                 self?.state.changeScrollTarget = ChangeScrollTarget(
-                    id: UUID(), changeID: changeID)
+                    id: UUID(), changeIDs: changeIDs)
             }
         )
         let sidebarHost = NSHostingController(rootView: sidebarView)

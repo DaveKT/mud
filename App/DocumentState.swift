@@ -11,7 +11,7 @@ struct ScrollTarget: Equatable {
 
 struct ChangeScrollTarget: Equatable {
     let id: UUID
-    let changeID: String
+    let changeIDs: [String]
 }
 
 // MARK: - Document State
