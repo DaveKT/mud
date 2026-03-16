@@ -129,40 +129,38 @@ deletions use the following block's line).
 
 ### Layer 2: Rendering integration (MudCore)
 
-#### Up mode
+#### Up mode — implemented
 
-`UpHTMLVisitor` gains an optional `diffContext: DiffContext?` field.
+`UpHTMLVisitor` has an optional `diffContext: DiffContext?` field. When set,
+`MudCore.renderUpToHTML` creates a `DiffContext(old: waypoint, new: parsed)`
+and assigns it before the walk. After the walk, `emitTrailingDeletions()` is
+called.
 
-Block-level visit methods (`visitParagraph`, `visitHeading`, `visitCodeBlock`,
-`visitBlockQuote`, `visitListItem`, etc.) call two new helper methods at entry
-and exit:
+Two private helpers, `emitChangeOpen(for:)` and `emitChangeClose(for:)`,
+bracket leaf-block visit methods: `visitParagraph`, `visitHeading`,
+`visitCodeBlock`, `visitListItem`, `visitHTMLBlock`, `visitThematicBreak`.
+Container visit methods (`visitBlockQuote`, `visitOrderedList`,
+`visitUnorderedList`, `visitTable`) are not wrapped — their leaf children
+receive markers instead.
 
-```
-emitChangeOpen(for: markup)   // at the top of each visit method
-emitChangeClose(for: markup)  // at the bottom
-```
+`emitChangeOpen`:
 
-These helpers:
+1. Emits **preceding deletions** — pre-rendered HTML wrapped in
+   `<del class="mud-change mud-change-del" data-change-id="…">`. This includes
+   the old version of modified blocks.
+2. For **inserted** or **modified** blocks, opens an `<ins>` wrapper
+   (`mud-change-ins` or `mud-change-mod`).
 
-1. Emit any **preceding deletions** — pre-rendered HTML from deleted blocks,
-   wrapped in `<del class="mud-change mud-change-del" data-change-id="…">`.
-   This includes the old version of modified blocks (see below).
+`emitChangeClose`: closes the `</ins>` if the node was annotated.
 
-2. For **inserted blocks**, wrap the entire block output in
-   `<ins class="mud-change mud-change-ins" data-change-id="…">`.
+Both are no-ops when `diffContext` is nil — the hot path is unchanged.
 
-3. For **modified blocks**, emit the old version as a preceding deletion
-   (hidden by default), then wrap the new version in
-   `<ins class="mud-change mud-change-mod" data-change-id="…">`. The new
-   version renders normally — no inline word-level markers. This is the
-   `git diff` model: modification = delete old + insert new.
+Deleted and modified-old blocks are pre-rendered by `DiffContext` via a
+separate `UpHTMLVisitor` walk (without a `diffContext`, to avoid recursion).
 
-When `diffContext` is nil, these helpers are no-ops — the hot path is
-unchanged.
-
-To render deleted and modified-old blocks for insertion, the diff engine
-renders each block in isolation using a separate `UpHTMLVisitor` walk (without
-a `diffContext`, to avoid recursion).
+**Not yet wrapped:** `visitTableRow` and `visitTableHead` — these are leaf
+blocks per `LeafBlockCollector` but lack change markers in the visitor. To be
+added when table change-tracking is needed.
 
 
 #### Down mode
@@ -190,45 +188,20 @@ Line-level integration:
    insertions. Same visual result as `git diff`.
 
 
-#### RenderOptions change
+#### RenderOptions and ParsedMarkdown changes — implemented
 
-`RenderOptions` gains an optional waypoint field:
+`RenderOptions.waypoint: ParsedMarkdown?` — when set, the render function
+creates a `DiffContext` and injects change markers. When nil (the default),
+rendering is unchanged.
 
-```swift
-struct RenderOptions {
-    // ... existing fields ...
-    var waypoint: ParsedMarkdown?  // old content to diff against; nil = no tracking
-}
-```
+`ParsedMarkdown` gained `@unchecked Sendable` (justified: immutable struct,
+`RawMarkup` has no mutation API) and `Equatable` (by source string comparison).
+Both conformances live in `ParsedMarkdown.swift`.
 
-`RenderOptions` is `Sendable + Equatable`. swift-markdown's `Document` struct
-wraps a reference-counted `RawMarkup` tree which declares no `Sendable`
-conformance, so `ParsedMarkdown` needs explicit conformances:
-
-```swift
-extension ParsedMarkdown: @unchecked Sendable {}
-
-extension ParsedMarkdown: Equatable {
-    public static func == (lhs: ParsedMarkdown, rhs: ParsedMarkdown) -> Bool {
-        lhs.markdown == rhs.markdown
-    }
-}
-```
-
-`@unchecked Sendable` is justified because `ParsedMarkdown` is immutable (all
-`let` fields) and the underlying `RawMarkup` tree has no mutation API.
-`Equatable` by source string comparison is semantically correct — identical
-source always produces identical ASTs.
-
-When `waypoint` is non-nil, the render functions run block matching →
-`DiffContext` using the pre-parsed ASTs from both the current `ParsedMarkdown`
-and the waypoint `ParsedMarkdown`. No re-parsing.
-
-`contentIdentity` includes a waypoint discriminator (hash of
-`waypoint?.markdown`) so content changes when the waypoint changes (e.g.
-Accept). Since theme/zoom changes go through JS (without re-calling the render
-function), the diff is only computed when content actually changes — not on
-every visual update.
+`contentIdentity` includes `String(waypoint.markdown.hashValue)` so content
+changes when the waypoint changes (e.g. Accept). Theme/zoom changes go through
+JS without re-calling the render function, so the diff is only computed when
+content actually changes.
 
 
 #### API changes
@@ -579,8 +552,8 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    _Done._ Implemented in `Core/Sources/Core/Diff/`.
    `MudCore.computeChanges(old:new:)` is the public API.
 
-3. **Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
-   through `renderUpModeDocument`. Verify with snapshot tests.
+3. ~~**Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
+   through `renderUpModeDocument` .~~ _Done._ Table row markers deferred.
 
 4. **Down mode integration** — `DownHTMLVisitor` changes. Similar snapshot
    tests.
