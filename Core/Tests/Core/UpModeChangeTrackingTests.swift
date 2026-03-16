@@ -194,4 +194,50 @@ struct UpModeChangeTrackingTests {
     #expect(html.contains("<ins class=\"mud-change mud-change-ins\""))
     #expect(html.contains("Brand new."))
   }
+
+  // MARK: - Alerts and asides
+
+  @Test func insertedGFMAlertHasChangeMarkers() {
+    let old = "Keep.\n"
+    let new = "Keep.\n\n> [!NOTE]\n> Added alert.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    #expect(html.contains("mud-change"))
+    #expect(html.contains("data-change-id"))
+    #expect(html.contains("Added alert."))
+  }
+
+  @Test func modifiedDocCAsideHasChangeMarkers() {
+    let old = "> Status: Planning\n"
+    let new = "> Status: Underway\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    #expect(html.contains("mud-change-mod"))
+    #expect(html.contains("data-change-id"))
+  }
+
+  @Test func insertedDocCAsideHasChangeMarkers() {
+    let old = "Keep.\n"
+    let new = "Keep.\n\n> Note: New aside.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    #expect(html.contains("mud-change-ins"))
+    #expect(html.contains("data-change-id"))
+    #expect(html.contains("New aside."))
+  }
+
+  @Test func alertChangeMarkerIsInsideBlockquote() {
+    let old = "> Status: Planning\n"
+    let new = "> Status: Underway\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // The <ins> should be inside the <blockquote>, not wrapping it.
+    let bqRange = html.range(of: "blockquote")!
+    let insRange = html.range(of: "mud-change-mod")!
+    #expect(bqRange.lowerBound < insRange.lowerBound)
+  }
 }
