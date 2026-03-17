@@ -34,6 +34,10 @@ struct UpHTMLVisitor: MarkupWalker {
     /// blocks that differ from the waypoint document.
     var diffContext: DiffContext?
 
+    /// Change IDs already emitted by peek-ahead in `visitListItem`,
+    /// preventing double emission in `emitChangeOpen`.
+    private var consumedDeletionIDs: Set<String> = []
+
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
@@ -84,6 +88,22 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitListItem(_ listItem: ListItem) {
+        // Peek ahead: when a deleted list item's deletion lands on the
+        // first child (e.g. a Paragraph inside a complex item with a
+        // nested list), emit it here — before the <li> — so it
+        // becomes a valid sibling rather than nesting inside this item.
+        if let diffContext,
+           let firstChild = listItem.children.first(where: { _ in true }) {
+            for del in diffContext.precedingDeletions(before: firstChild) {
+                if del.wrapperTag != nil {
+                    result += "<li class=\"mud-change mud-change-del\""
+                    result += " data-change-id=\"\(del.changeID)\">"
+                    result += del.html
+                    result += "</li>\n"
+                    consumedDeletionIDs.insert(del.changeID)
+                }
+            }
+        }
         emitChangeOpen(for: listItem)
         if inTightList {
             result += "<li>"
@@ -294,6 +314,9 @@ struct UpHTMLVisitor: MarkupWalker {
     private mutating func emitChangeOpen(for node: Markup) {
         guard let diffContext else { return }
         for del in diffContext.precedingDeletions(before: node) {
+            if consumedDeletionIDs.contains(del.changeID) {
+                continue
+            }
             if let tag = del.wrapperTag, node is ListItem {
                 // Structural wrapper: emit as a sibling element (e.g.
                 // <li>) carrying the deletion class. This keeps the

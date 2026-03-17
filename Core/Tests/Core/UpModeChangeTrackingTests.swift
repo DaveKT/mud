@@ -110,6 +110,22 @@ struct UpModeChangeTrackingTests {
     }
   }
 
+  @Test func deletedItemBeforeComplexItemRendersAsSibling() {
+    // When the surviving item has a nested list, BlockMatcher
+    // decomposes it into paragraph + sub-items. The deletion must
+    // still appear as its own <li>, not inside the next item.
+    let old = "1. First\n2. Second\n3. Third\n   - Sub A\n   - Sub B\n"
+    let new = "1. First\n3. Third\n   - Sub A\n   - Sub B\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    #expect(html.contains("mud-change-del"))
+    #expect(html.contains("Second"))
+    // The deletion must not be inside the <li> that contains "Third".
+    #expect(!html.contains("<del"), "Deleted list item must not use a <del> wrapper")
+  }
+
   // MARK: - Deletions
 
   @Test func deletedParagraphEmittedAsDel() {
