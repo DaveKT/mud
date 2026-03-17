@@ -50,10 +50,12 @@
 
 .mud-change-ins::before {
     background: var(--change-ins-tint);
+    border: 1px solid var(--change-ins);
 }
 
 .mud-change-mod::before {
     background: var(--change-mod-tint);
+    border: 1px solid var(--change-mod);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,6 +85,7 @@
     left: -100vw;
     right: -100vw;
     background: var(--change-del-tint);
+    border: 1px solid var(--change-del);
     mix-blend-mode: multiply;
     pointer-events: none;
 }
@@ -91,6 +94,10 @@
 .mud-change-del.mud-change-revealed::before {
     mix-blend-mode: screen;
 }
+}
+
+ol > li.mud-change-del.mud-change-revealed {
+  display: list-item;
 }
 
 
