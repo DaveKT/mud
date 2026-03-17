@@ -322,6 +322,86 @@ struct BlockMatcherTests {
     #expect(matches[1].isInserted)
   }
 
+  // MARK: - Ordered list renumbering
+
+  @Test func orderedListDeletionDoesNotFalseDiff() {
+    let old = ParsedMarkdown(
+      "1. Apple\n2. Banana\n3. Carrot\n4. Dog\n5. Eggplant\n6. Fava\n"
+    )
+    let new = ParsedMarkdown(
+      "1. Apple\n2. Banana\n3. Carrot\n4. Eggplant\n5. Fava\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count == 5)
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 0)
+  }
+
+  @Test func orderedListInsertionDoesNotFalseDiff() {
+    let old = ParsedMarkdown("1. Alpha\n2. Gamma\n")
+    let new = ParsedMarkdown("1. Alpha\n2. Beta\n3. Gamma\n")
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let inserted = matches.filter { $0.isInserted }
+    let deleted = matches.filter { $0.isDeleted }
+
+    #expect(unchanged.count == 2)
+    #expect(inserted.count == 1)
+    #expect(deleted.count == 0)
+  }
+
+  @Test func orderedListRenumberingWithContentChange() {
+    let old = ParsedMarkdown("1. Apple\n2. Banana\n3. Carrot\n")
+    let new = ParsedMarkdown("1. Apple\n2. Cherry\n")
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count == 1) // Apple
+    #expect(deleted.count == 2)   // Banana, Carrot
+    #expect(inserted.count == 1)  // Cherry
+  }
+
+  @Test func orderedListDigitWidthChange() {
+    // Items 9 and 10 have different marker widths (2 vs 3 chars).
+    // Deleting item 1 renumbers 9→8 and 10→9, crossing the digit
+    // boundary. The column-aware fingerprint should still match.
+    let old = ParsedMarkdown(
+      "1. A\n2. B\n3. C\n4. D\n5. E\n6. F\n7. G\n8. H\n9. I\n10. J\n"
+    )
+    let new = ParsedMarkdown(
+      "1. B\n2. C\n3. D\n4. E\n5. F\n6. G\n7. H\n8. I\n9. J\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count == 9)
+    #expect(deleted.count == 1) // A
+    #expect(inserted.count == 0)
+  }
+
+  @Test func unorderedListUnaffected() {
+    // Sanity check: unordered list items use exact source text as
+    // fingerprint and are not affected by the ordered-list logic.
+    let old = ParsedMarkdown("- Alpha\n- Beta\n")
+    let new = ParsedMarkdown("- Alpha\n- Beta\n")
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    #expect(matches.count == 2)
+    #expect(matches.allSatisfy { $0.isUnchanged })
+  }
+
   @Test func formattingOnlyChangeIsDeletedAndInserted() {
     let old = ParsedMarkdown("Some text.\n")
     let new = ParsedMarkdown("Some **text**.\n")

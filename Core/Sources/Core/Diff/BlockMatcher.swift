@@ -134,6 +134,18 @@ private struct LeafBlockCollector: MarkupWalker {
                 where child is UnorderedList || child is OrderedList {
                 visit(child)
             }
+        } else if listItem.parent is OrderedList {
+            // Ordered list items: fingerprint using the child
+            // paragraph's column-aware source text so that renumbering
+            // (e.g. "5. Foo" → "4. Foo") does not cause a false diff.
+            // The LeafBlock keeps the ListItem as its markup node for
+            // correct annotation keying downstream.
+            var fingerprint = ""
+            for child in listItem.children {
+                fingerprint = extractColumnAwareSourceText(for: child)
+                break
+            }
+            appendBlock(listItem, fingerprint: fingerprint)
         } else {
             appendBlock(listItem)
             // No descending — the list item is the leaf unit for diffing.
@@ -178,6 +190,15 @@ private struct LeafBlockCollector: MarkupWalker {
         ))
     }
 
+    private mutating func appendBlock(_ node: Markup, fingerprint: String) {
+        let sourceText = extractSourceText(for: node)
+        let line = node.range?.lowerBound.line ?? 0
+        blocks.append(LeafBlock(
+            markup: node, fingerprint: fingerprint,
+            sourceLine: line, sourceText: sourceText
+        ))
+    }
+
     /// Extracts the source text for a node using its source range.
     private func extractSourceText(for node: Markup) -> String {
         guard let range = node.range else { return "" }
@@ -189,6 +210,55 @@ private struct LeafBlockCollector: MarkupWalker {
         let clampedEnd = min(endLine, lines.count)
         let slice = lines[(startLine - 1)..<clampedEnd]
         return slice.joined(separator: "\n")
+    }
+
+    /// Extracts the source text for a node respecting column offsets.
+    ///
+    /// Unlike `extractSourceText`, this clips the first line at
+    /// `startColumn` and the last line at `endColumn`, producing text
+    /// that excludes structural prefixes like ordered-list markers.
+    private func extractColumnAwareSourceText(for node: Markup) -> String {
+        guard let range = node.range else { return "" }
+        let startLine = range.lowerBound.line   // 1-based
+        let endLine = range.upperBound.line     // 1-based
+        let startCol = range.lowerBound.column  // 1-based
+        let endCol = range.upperBound.column    // 1-based
+        guard startLine >= 1, endLine >= startLine,
+              startLine <= lines.count else { return "" }
+
+        let clampedEnd = min(endLine, lines.count)
+
+        if startLine == endLine {
+            let line = lines[startLine - 1]
+            let from = line.index(
+                line.startIndex,
+                offsetBy: min(startCol - 1, line.count))
+            let to = line.index(
+                line.startIndex,
+                offsetBy: min(endCol - 1, line.count))
+            return String(line[from..<to])
+        }
+
+        var parts: [Substring] = []
+        // First line: clip from startColumn.
+        let first = lines[startLine - 1]
+        let fromIdx = first.index(
+            first.startIndex,
+            offsetBy: min(startCol - 1, first.count))
+        parts.append(first[fromIdx...])
+        // Middle lines: take in full.
+        for li in startLine..<(clampedEnd - 1) {
+            parts.append(lines[li])
+        }
+        // Last line: clip up to endColumn.
+        if clampedEnd > startLine {
+            let last = lines[clampedEnd - 1]
+            let toIdx = last.index(
+                last.startIndex,
+                offsetBy: min(endCol - 1, last.count))
+            parts.append(last[..<toIdx])
+        }
+        return parts.joined(separator: "\n")
     }
 }
 
