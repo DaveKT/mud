@@ -212,13 +212,21 @@
 
   // -- Change tracking ------------------------------------------------------
 
-  function scrollToChange(id) {
-    var el = document.querySelector('[data-change-id="' + id + '"]');
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("mud-change-active");
+  function scrollToChange(ids) {
+    var els = [];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.querySelector('[data-change-id="' + ids[i] + '"]');
+      if (el) els.push(el);
+    }
+    if (els.length === 0) return;
+    els[0].scrollIntoView({ behavior: "smooth", block: "center" });
+    for (var j = 0; j < els.length; j++) {
+      els[j].classList.add("mud-change-active");
+    }
     setTimeout(function () {
-      el.classList.remove("mud-change-active");
+      for (var k = 0; k < els.length; k++) {
+        els[k].classList.remove("mud-change-active");
+      }
     }, 2000);
   }
 
@@ -228,22 +236,13 @@
     for (var i = 0; i < revealed.length; i++) {
       revealed[i].classList.remove("mud-change-revealed");
     }
-    // Reveal targeted deletions and modification old-versions.
+    // Reveal targeted deletions and switch mix elements to green.
     for (var j = 0; j < ids.length; j++) {
       var el = document.querySelector('[data-change-id="' + ids[j] + '"]');
       if (!el) continue;
-      if (el.classList.contains("mud-change-del")) {
+      if (el.classList.contains("mud-change-del")
+          || el.classList.contains("mud-change-mix")) {
         el.classList.add("mud-change-revealed");
-      }
-      // For modifications, the old-version <del> is the immediately
-      // preceding sibling (emitted by emitChangeOpen before the <ins>).
-      // Walk backwards to reveal all associated deletions.
-      if (el.classList.contains("mud-change-mod")) {
-        var prev = el.previousElementSibling;
-        while (prev && prev.classList.contains("mud-change-del")) {
-          prev.classList.add("mud-change-revealed");
-          prev = prev.previousElementSibling;
-        }
       }
     }
   }

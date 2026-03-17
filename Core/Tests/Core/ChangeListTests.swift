@@ -19,8 +19,10 @@ struct ChangeListTests {
     let changes = MudCore.computeChanges(old: old, new: new)
 
     // 3 blocks, only 1 changed — unchanged blocks produce no entries.
-    #expect(changes.count == 1)
-    #expect(changes[0].type == .modification)
+    // The replacement produces a deletion + insertion.
+    #expect(changes.count == 2)
+    #expect(changes[0].type == .deletion)
+    #expect(changes[1].type == .insertion)
   }
 
   @Test func insertionProducesInsertionChange() {
@@ -41,13 +43,14 @@ struct ChangeListTests {
     #expect(changes[0].type == .deletion)
   }
 
-  @Test func modificationProducesModificationChange() {
+  @Test func replacementProducesDeletionAndInsertion() {
     let old = ParsedMarkdown("Original text.\n")
     let new = ParsedMarkdown("Revised text.\n")
     let changes = MudCore.computeChanges(old: old, new: new)
 
-    #expect(changes.count == 1)
-    #expect(changes[0].type == .modification)
+    #expect(changes.count == 2)
+    #expect(changes[0].type == .deletion)
+    #expect(changes[1].type == .insertion)
   }
 
   // MARK: - IDs
@@ -99,13 +102,14 @@ struct ChangeListTests {
     #expect(changes[0].summary.contains("Deleted paragraph"))
   }
 
-  @Test func modificationSummaryUsesNewContent() {
+  @Test func replacementSummariesCoverBothVersions() {
     let old = ParsedMarkdown("Old version of this text.\n")
     let new = ParsedMarkdown("New version of this text.\n")
     let changes = MudCore.computeChanges(old: old, new: new)
 
-    #expect(changes.count == 1)
-    #expect(changes[0].summary.contains("New version"))
+    #expect(changes.count == 2)
+    #expect(changes[0].summary.contains("Old version"))
+    #expect(changes[1].summary.contains("New version"))
   }
 
   // MARK: - Source lines
@@ -115,9 +119,10 @@ struct ChangeListTests {
     let new = ParsedMarkdown("First.\n\nSecond revised.\n\nThird.\n")
     let changes = MudCore.computeChanges(old: old, new: new)
 
-    #expect(changes.count == 1)
-    // "Second revised." starts on line 3 (after "First.\n\n")
+    // Replacement produces deletion + insertion, both at line 3.
+    #expect(changes.count == 2)
     #expect(changes[0].sourceLine == 3)
+    #expect(changes[1].sourceLine == 3)
   }
 
   @Test func insertionSourceLinePointsToNewBlock() {
@@ -161,11 +166,13 @@ struct ChangeListTests {
     )
     let changes = MudCore.computeChanges(old: old, new: new)
 
-    // Alpha: modified, Gamma: modified, Epsilon: inserted — in that order.
-    #expect(changes.count == 3)
-    #expect(changes[0].type == .modification)
-    #expect(changes[1].type == .modification)
-    #expect(changes[2].type == .insertion)
+    // Alpha: del+ins, Gamma: del+ins, Epsilon: inserted — in that order.
+    #expect(changes.count == 5)
+    #expect(changes[0].type == .deletion)
+    #expect(changes[1].type == .insertion)
+    #expect(changes[2].type == .deletion)
+    #expect(changes[3].type == .insertion)
+    #expect(changes[4].type == .insertion)
 
     // Source lines should be monotonically non-decreasing.
     for i in 1..<changes.count {
@@ -190,10 +197,9 @@ struct ChangeListTests {
     let changes = MudCore.computeChanges(old: old, new: new)
 
     let types = Set(changes.map(\.type))
-    // "Modify this" → "Modified now" is a modification.
-    // "Remove this" → "Brand new" is also a positional modification.
-    // Both should appear; at minimum we have modifications.
-    #expect(!types.isEmpty)
+    // Each replacement produces a deletion + insertion pair.
+    #expect(types.contains(.deletion))
+    #expect(types.contains(.insertion))
     #expect(changes.count >= 2)
   }
 

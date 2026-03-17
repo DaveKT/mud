@@ -3,7 +3,7 @@
 ///
 /// Built from `BlockMatcher.match()` results. Provides two lookups:
 /// - `annotation(forLine:)` — for new-document lines that fall within an
-///   inserted or modified block.
+///   inserted block.
 /// - `deletionGroups` — old-document source lines to interleave into the
 ///   new-document layout.
 struct LineDiffMap {
@@ -15,7 +15,7 @@ struct LineDiffMap {
     }
 }
 
-/// A line in the new document that belongs to an inserted or modified block.
+/// A line in the new document that belongs to an inserted block.
 struct LineAnnotation {
     let changeID: String
 }
@@ -76,19 +76,6 @@ extension LineDiffMap {
                 let id = nextChangeID()
                 if let range = Self.lineRange(for: old) {
                     pendingDeletions.append((range: range, changeID: id))
-                }
-
-            case .modified(let old, let new):
-                let delID = nextChangeID()
-                if let range = Self.lineRange(for: old) {
-                    pendingDeletions.append((range: range, changeID: delID))
-                }
-                if let newRange = Self.lineRange(for: new) {
-                    flushDeletions(beforeNewLine: newRange.lowerBound)
-                    let modID = nextChangeID()
-                    for line in newRange {
-                        annotations[line] = LineAnnotation(changeID: modID)
-                    }
                 }
             }
         }

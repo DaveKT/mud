@@ -17,14 +17,14 @@ struct DiffContextTests {
     #expect(context.annotation(for: leaves[1]) == .inserted)
   }
 
-  @Test func modifiedBlockAnnotatedAsModified() {
+  @Test func replacedBlockAnnotatedAsInserted() {
     let old = ParsedMarkdown("Original.\n")
     let new = ParsedMarkdown("Revised.\n")
     let context = DiffContext(old: old, new: new)
 
     let leaves = leafBlocks(of: new)
     #expect(leaves.count == 1)
-    #expect(context.annotation(for: leaves[0]) == .modified)
+    #expect(context.annotation(for: leaves[0]) == .inserted)
   }
 
   @Test func unchangedBlockReturnsNilAnnotation() {
@@ -55,8 +55,8 @@ struct DiffContextTests {
 
     let leaves = leafBlocks(of: new)
     #expect(leaves.count == 3)
-    #expect(context.annotation(for: leaves[0]) == nil)      // Keep: unchanged
-    #expect(context.annotation(for: leaves[1]) == .modified) // Modified now
+    #expect(context.annotation(for: leaves[0]) == nil)       // Keep: unchanged
+    #expect(context.annotation(for: leaves[1]) == .inserted) // Modified now
     #expect(context.annotation(for: leaves[2]) == .inserted) // Brand new
   }
 
@@ -106,7 +106,7 @@ struct DiffContextTests {
     #expect(deletions.count == 2)
   }
 
-  @Test func modifiedOldVersionAppearsBeforeNewVersion() {
+  @Test func replacedBlockOldVersionAppearsBeforeNewVersion() {
     let old = ParsedMarkdown("Original paragraph.\n")
     let new = ParsedMarkdown("Revised paragraph.\n")
     let context = DiffContext(old: old, new: new)
@@ -114,8 +114,7 @@ struct DiffContextTests {
     let leaves = leafBlocks(of: new)
     #expect(leaves.count == 1)
 
-    // The old version of a modified block is emitted as a preceding
-    // deletion before the new version.
+    // The old version appears as a preceding deletion before the new.
     let deletions = context.precedingDeletions(before: leaves[0])
     #expect(deletions.count == 1)
   }
@@ -172,7 +171,7 @@ struct DiffContextTests {
     #expect(!html.contains("**")) // No raw markdown markers
   }
 
-  @Test func renderedDeletionForModifiedBlockContainsOldHTML() {
+  @Test func renderedDeletionForReplacedBlockContainsOldHTML() {
     let old = ParsedMarkdown("Hello *world*.\n")
     let new = ParsedMarkdown("Goodbye *world*.\n")
     let context = DiffContext(old: old, new: new)

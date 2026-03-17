@@ -18,8 +18,7 @@ enum ChangeList {
             let node = block.markup
 
             let isUnchanged = context.annotation(for: node) == nil
-                && context.precedingDeletions(before: node)
-                    .filter({ !$0.isModificationOld }).isEmpty
+                && context.precedingDeletions(before: node).isEmpty
 
             if isUnchanged {
                 sawUnchangedSinceLastChange = true
@@ -27,11 +26,8 @@ enum ChangeList {
                 continue
             }
 
-            // Emit true deletions that precede this block (skip
-            // modification old-versions — those are part of the
-            // modification entry, not separate sidebar items).
-            for del in context.precedingDeletions(before: node)
-                where !del.isModificationOld {
+            // Emit deletions that precede this block.
+            for del in context.precedingDeletions(before: node) {
                 let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
                 changes.append(DocumentChange(
                     id: del.changeID,
@@ -43,11 +39,17 @@ enum ChangeList {
                 sawUnchangedSinceLastChange = false
             }
 
-            // Emit this block's own change (if any).
-            if let annotation = context.annotation(for: node),
-               let id = context.changeID(for: node) {
-                let type: ChangeType = annotation == .inserted
-                    ? .insertion : .modification
+            // The block itself is unchanged — it breaks the
+            // consecutive run even though it hosted deletions.
+            if context.annotation(for: node) == nil {
+                sawUnchangedSinceLastChange = true
+                lastSurvivingLine = block.sourceLine
+                continue
+            }
+
+            // Emit this block's own change.
+            if let id = context.changeID(for: node) {
+                let type: ChangeType = .insertion
                 let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
                 changes.append(DocumentChange(
                     id: id,
@@ -63,7 +65,7 @@ enum ChangeList {
         }
 
         // Trailing deletions — no following block.
-        for del in context.trailingDeletions() where !del.isModificationOld {
+        for del in context.trailingDeletions() {
             let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
             changes.append(DocumentChange(
                 id: del.changeID,
@@ -97,5 +99,4 @@ public struct DocumentChange: Identifiable, Sendable {
 public enum ChangeType: Sendable, Equatable {
     case insertion
     case deletion
-    case modification
 }

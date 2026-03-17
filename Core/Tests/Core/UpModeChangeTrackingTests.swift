@@ -174,9 +174,9 @@ struct UpModeChangeTrackingTests {
     #expect(delA.lowerBound < survivor.lowerBound)
   }
 
-  // MARK: - Modifications
+  // MARK: - Replacements (del + ins)
 
-  @Test func modifiedParagraphEmitsDelAndIns() {
+  @Test func replacedParagraphEmitsDelAndIns() {
     let old = "Original text.\n"
     let new = "Revised text.\n"
     var opts = RenderOptions()
@@ -184,11 +184,11 @@ struct UpModeChangeTrackingTests {
     let html = MudCore.renderUpToHTML(new, options: opts)
     #expect(html.contains("<del class=\"mud-change mud-change-del\""))
     #expect(html.contains("Original text."))
-    #expect(html.contains("<ins class=\"mud-change mud-change-mod\""))
+    #expect(html.contains("<ins class=\"mud-change mud-change-mix\""))
     #expect(html.contains("Revised text."))
   }
 
-  @Test func modificationOldVersionPrecedesNewVersion() {
+  @Test func replacementOldVersionPrecedesNewVersion() {
     let old = "Original.\n"
     let new = "Changed.\n"
     var opts = RenderOptions()
@@ -232,7 +232,7 @@ struct UpModeChangeTrackingTests {
     let ids = html.matches(of: idPattern).map { String($0.1) }
     let unique = Set(ids)
     #expect(unique.count == ids.count)
-    #expect(unique.count >= 4) // 2 modifications x (del + ins) each
+    #expect(unique.count >= 4) // 2 replacements x (del + ins) each
   }
 
   // MARK: - Edge cases
@@ -270,13 +270,13 @@ struct UpModeChangeTrackingTests {
     #expect(html.contains("Added alert."))
   }
 
-  @Test func modifiedDocCAsideHasChangeMarkers() {
+  @Test func replacedDocCAsideHasChangeMarkers() {
     let old = "> Status: Planning\n"
     let new = "> Status: Underway\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
     let html = MudCore.renderUpToHTML(new, options: opts)
-    #expect(html.contains("mud-change-mod"))
+    #expect(html.contains("mud-change-mix"))
     #expect(html.contains("data-change-id"))
   }
 
@@ -299,7 +299,7 @@ struct UpModeChangeTrackingTests {
     let html = MudCore.renderUpToHTML(new, options: opts)
     // The <ins> should be inside the <blockquote>, not wrapping it.
     let bqRange = html.range(of: "blockquote")!
-    let insRange = html.range(of: "mud-change-mod")!
+    let insRange = html.range(of: "mud-change-mix")!
     #expect(bqRange.lowerBound < insRange.lowerBound)
   }
 }

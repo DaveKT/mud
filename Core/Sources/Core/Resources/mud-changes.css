@@ -4,40 +4,41 @@
 :root {
     --change-ins: #1a7f37;
     --change-del: #cf222e;
-    --change-mod: #0969da;
+    --change-mix: #0969da;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, white);
     --change-del-tint: color-mix(in srgb, var(--change-del) 20%, white);
-    --change-mod-tint: color-mix(in srgb, var(--change-mod) 20%, white);
+    --change-mix-tint: color-mix(in srgb, var(--change-mix) 20%, white);
 }
 
 @media (prefers-color-scheme: dark) {
 :root {
     --change-ins: #3fb950;
     --change-del: #f85149;
-    --change-mod: #58a6ff;
+    --change-mix: #58a6ff;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, black);
     --change-del-tint: color-mix(in srgb, var(--change-del) 20%, black);
-    --change-mod-tint: color-mix(in srgb, var(--change-mod) 20%, black);
+    --change-mix-tint: color-mix(in srgb, var(--change-mix) 20%, black);
 }
 }
 
 
 /* ── Up mode ────────────────────────────────────────────────────── */
 
-/* Full-bleed overlay: a ::before pseudo-element extends far beyond
+/* Full-bleed overlay: a ::after pseudo-element extends far beyond
    the change wrapper and is clipped by overflow-x:hidden on
    .up-mode-output, producing a tint strip that spans the full
    article column width regardless of nesting depth. */
 
 .mud-change-ins,
-.mud-change-mod {
+.mud-change-mix {
     display: block;
     position: relative;
     text-decoration: none;
 }
 
-.mud-change-ins::before,
-.mud-change-mod::before {
+.mud-change-ins::after,
+.mud-change-mix::after,
+.mud-change-del.mud-change-revealed::after {
     content: "";
     position: absolute;
     top: 0;
@@ -46,21 +47,28 @@
     right: -100vw;
     mix-blend-mode: multiply;
     pointer-events: none;
+    border: 1px solid;
 }
 
-.mud-change-ins::before {
+.mud-change-ins::after {
     background: var(--change-ins-tint);
-    border: 1px solid var(--change-ins);
+    color: var(--change-ins);
 }
 
-.mud-change-mod::before {
-    background: var(--change-mod-tint);
-    border: 1px solid var(--change-mod);
+/* Blue by default; switches to green when the group is unfolded. */
+.mud-change-mix::after {
+    background: var(--change-mix-tint);
+    color: var(--change-mix);
+}
+
+.mud-change-mix.mud-change-revealed::after {
+    background: var(--change-ins-tint);
+    color: var(--change-ins);
 }
 
 @media (prefers-color-scheme: dark) {
-.mud-change-ins::before,
-.mud-change-mod::before {
+.mud-change-ins::after,
+.mud-change-mix::after {
     mix-blend-mode: screen;
 }
 }
@@ -77,21 +85,13 @@
     text-decoration-thickness: 1.5px;
 }
 
-.mud-change-del.mud-change-revealed::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -100vw;
-    right: -100vw;
+.mud-change-del.mud-change-revealed::after {
     background: var(--change-del-tint);
-    border: 1px solid var(--change-del);
-    mix-blend-mode: multiply;
-    pointer-events: none;
+    color: var(--change-del);
 }
 
 @media (prefers-color-scheme: dark) {
-.mud-change-del.mud-change-revealed::before {
+.mud-change-del.mud-change-revealed::after {
     mix-blend-mode: screen;
 }
 }
@@ -126,13 +126,21 @@ ol > li.mud-change-del.mud-change-revealed {
 
 /* ── Active highlight (both modes) ──────────────────────────────── */
 
-.mud-change-active,
-.dl.mud-change-active {
-    animation: change-flash 2s ease-out;
+.mud-change-ins.mud-change-active::after,
+.mud-change-mix.mud-change-active::after {
+    animation: change-flash-ins 1s ease-out;
 }
 
-@keyframes change-flash {
-    0%   { box-shadow: 0 0 0 0 transparent; }
-    10%  { box-shadow: 0 0 0 3px color-mix(in srgb, var(--change-mod) 40%, transparent); }
-    100% { box-shadow: 0 0 0 0 transparent; }
+.mud-change-del.mud-change-active::after {
+    animation: change-flash-del 1s ease-out;
+}
+
+@keyframes change-flash-ins {
+  0% { background: currentcolor; }
+  100% { background: var(--change-ins-tint); }
+}
+
+@keyframes change-flash-del {
+  0% { background: currentcolor; }
+  100% { background: var(--change-del-tint); }
 }

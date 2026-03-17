@@ -168,9 +168,10 @@ struct ChangeGroup: Identifiable {
     let id: String
     /// All change IDs in this group.
     let changeIDs: [String]
-    /// The most significant change type in the group.
-    /// Priority: modification > insertion > deletion.
+    /// The primary change type in the group.
     let type: ChangeType
+    /// True when the group contains both insertions and deletions.
+    let isMixed: Bool
     /// Summary text from the first change.
     let summary: String
     /// Number of individual changes in this group.
@@ -202,17 +203,13 @@ struct ChangeGroup: Identifiable {
     private static func makeGroup(
         ids: [String], types: [ChangeType], summary: String
     ) -> ChangeGroup {
-        let type: ChangeType
-        if types.contains(.modification) {
-            type = .modification
-        } else if types.contains(.insertion) {
-            type = .insertion
-        } else {
-            type = .deletion
-        }
+        let hasInsertions = types.contains(.insertion)
+        let hasDeletions = types.contains(.deletion)
+        let isMixed = hasInsertions && hasDeletions
+        let type: ChangeType = hasInsertions ? .insertion : .deletion
         return ChangeGroup(
             id: ids[0], changeIDs: ids, type: type,
-            summary: summary, count: ids.count)
+            isMixed: isMixed, summary: summary, count: ids.count)
     }
 }
 
@@ -244,10 +241,10 @@ private struct ChangeGroupRow: View {
     }
 
     private var iconInfo: (String, Color) {
+        if group.isMixed { return ("pencil.circle", .blue) }
         switch group.type {
-        case .insertion:    return ("plus.circle", .green)
-        case .deletion:     return ("minus.circle", .red)
-        case .modification: return ("pencil.circle", .blue)
+        case .insertion: return ("plus.circle", .green)
+        case .deletion:  return ("minus.circle", .red)
         }
     }
 }

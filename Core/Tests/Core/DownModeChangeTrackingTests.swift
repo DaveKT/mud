@@ -95,9 +95,9 @@ struct DownModeChangeTrackingTests {
     #expect(keepRange.lowerBound < delRange.lowerBound)
   }
 
-  // MARK: - Modifications
+  // MARK: - Replacements (del + ins)
 
-  @Test func modifiedBlockShowsOldAndNewLines() {
+  @Test func replacedBlockShowsOldAndNewLines() {
     let old = "Original text.\n"
     let new = "Revised text.\n"
     var opts = RenderOptions()
@@ -109,7 +109,7 @@ struct DownModeChangeTrackingTests {
     #expect(html.contains("Revised text."))
   }
 
-  @Test func modificationOldLinesPrecedeNewLines() {
+  @Test func replacementOldLinesPrecedeNewLines() {
     let old = "Original.\n"
     let new = "Changed.\n"
     var opts = RenderOptions()

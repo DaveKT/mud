@@ -56,18 +56,6 @@ struct DiffContext {
                 let id = nextChangeID()
                 pendingDeletions.append(Self.renderedDeletion(
                     for: old, changeID: id))
-
-            case .modified(let old, let new):
-                let delID = nextChangeID()
-                pendingDeletions.append(Self.renderedDeletion(
-                    for: old, changeID: delID, isModificationOld: true))
-                flushDeletions(before: new.markup)
-
-                let modID = nextChangeID()
-                if let key = sourceKey(for: new.markup) {
-                    annotations[key] = AnnotationEntry(
-                        annotation: .modified, changeID: modID)
-                }
             }
         }
 
@@ -111,7 +99,6 @@ struct DiffContext {
 /// The type of change for a block in the new document.
 enum BlockAnnotation: Equatable {
     case inserted
-    case modified
 }
 
 // MARK: - Rendered deletion
@@ -124,10 +111,6 @@ struct RenderedDeletion {
     let changeID: String
     /// Plain-text summary of the deleted content (for the sidebar).
     let summary: String
-    /// True when this is the old version of a modified block (not a
-    /// standalone deletion). The rendering layer treats both the same,
-    /// but the sidebar counts a modification as one entry, not two.
-    let isModificationOld: Bool
     /// When non-nil, the deletion must be wrapped in this structural
     /// HTML tag (e.g. `"li"`) instead of the default `<del>`. This
     /// avoids invalid nesting like `<del><li>…</li></del>` inside a
@@ -170,8 +153,7 @@ extension DiffContext {
     /// Builds a `RenderedDeletion` for a leaf block: renders HTML and
     /// extracts a plain-text summary.
     static func renderedDeletion(
-        for block: LeafBlock, changeID: String,
-        isModificationOld: Bool = false
+        for block: LeafBlock, changeID: String
     ) -> RenderedDeletion {
         var visitor = UpHTMLVisitor()
         let isListItem = block.markup is ListItem
@@ -190,7 +172,6 @@ extension DiffContext {
             html: visitor.result,
             changeID: changeID,
             summary: blockSummary(block),
-            isModificationOld: isModificationOld,
             wrapperTag: isListItem ? "li" : nil
         )
     }

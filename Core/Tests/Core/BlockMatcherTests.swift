@@ -95,74 +95,84 @@ struct BlockMatcherTests {
     #expect(matches[2].isUnchanged)
   }
 
-  // MARK: - Modifications
+  // MARK: - Replacements (deleted + inserted)
 
-  @Test func modifiedParagraph() {
+  @Test func replacedParagraph() {
     let old = ParsedMarkdown("Hello world.\n")
     let new = ParsedMarkdown("Hello there.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    #expect(matches.count == 1)
-    #expect(matches[0].isModified)
+    #expect(matches.count == 2)
+    #expect(matches[0].isDeleted)
+    #expect(matches[1].isInserted)
   }
 
-  @Test func modifiedHeading() {
+  @Test func replacedHeading() {
     let old = ParsedMarkdown("# Draft title\n\nBody.\n")
     let new = ParsedMarkdown("# Final title\n\nBody.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    #expect(matches.count == 2)
-    #expect(matches[0].isModified)
-    #expect(matches[1].isUnchanged)
+    #expect(matches.count == 3)
+    #expect(matches[0].isDeleted)
+    #expect(matches[1].isInserted)
+    #expect(matches[2].isUnchanged)
   }
 
-  @Test func modifiedAmongUnchanged() {
+  @Test func replacedAmongUnchanged() {
     let old = ParsedMarkdown("Alpha.\n\nBeta.\n\nGamma.\n")
     let new = ParsedMarkdown("Alpha.\n\nBeta revised.\n\nGamma.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    #expect(matches.count == 3)
+    #expect(matches.count == 4)
     #expect(matches[0].isUnchanged)
-    #expect(matches[1].isModified)
-    #expect(matches[2].isUnchanged)
+    #expect(matches[1].isDeleted)
+    #expect(matches[2].isInserted)
+    #expect(matches[3].isUnchanged)
   }
 
   // MARK: - Mixed changes
 
-  @Test func samePositionReplacementIsModified() {
+  @Test func samePositionReplacementIsDeletedAndInserted() {
     let old = ParsedMarkdown("Keep.\n\nRemove.\n")
     let new = ParsedMarkdown("Keep.\n\nAdded.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    // Positional pairing: old-index 1 removed, new-index 1 inserted
-    // → merged into a single .modified match.
-    #expect(matches.count == 2)
+    // Without modification pairing, old-index 1 is deleted and
+    // new-index 1 is inserted as separate matches.
+    #expect(matches.count == 3)
     #expect(matches[0].isUnchanged)
-    #expect(matches[1].isModified)
+    #expect(matches[1].isDeleted)
+    #expect(matches[2].isInserted)
   }
 
-  @Test func deletionBeforeModification() {
+  @Test func deletionBeforeReplacement() {
     let old = ParsedMarkdown("Alpha.\n\nBeta.\n\nGamma.\n")
     let new = ParsedMarkdown("Beta revised.\n\nGamma.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    // Alpha deleted, Beta modified to "Beta revised", Gamma unchanged.
-    #expect(matches.count == 3)
-    #expect(matches[0].isDeleted)   // Alpha
-    #expect(matches[1].isModified)  // Beta → Beta revised
-    #expect(matches[2].isUnchanged) // Gamma
+    // Alpha and Beta deleted, "Beta revised" inserted, Gamma unchanged.
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+    let unchanged = matches.filter { $0.isUnchanged }
+
+    #expect(deleted.count == 2)   // Alpha, Beta
+    #expect(inserted.count == 1)  // Beta revised
+    #expect(unchanged.count == 1) // Gamma
   }
 
-  @Test func adjacentModifications() {
+  @Test func adjacentReplacements() {
     let old = ParsedMarkdown("Alpha.\n\nBeta.\n\nGamma.\n")
     let new = ParsedMarkdown("Alpha changed.\n\nBeta changed.\n\nGamma.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    // Two consecutive positional pairings, each producing .modified.
-    #expect(matches.count == 3)
-    #expect(matches[0].isModified)
-    #expect(matches[1].isModified)
-    #expect(matches[2].isUnchanged)
+    // Two consecutive delete+insert pairs.
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+    let unchanged = matches.filter { $0.isUnchanged }
+
+    #expect(deleted.count == 2)
+    #expect(inserted.count == 2)
+    #expect(unchanged.count == 1)
   }
 
   @Test func multipleChangesAcrossDocument() {
@@ -175,15 +185,15 @@ struct BlockMatcherTests {
     )
     let matches = BlockMatcher.match(old: old, new: new)
 
-    // Title: modified, First: unchanged, Second→Replaced: modified,
-    // Third: unchanged, New final: inserted
+    // Title: deleted+inserted, First: unchanged, Second: deleted,
+    // Replaced: inserted, Third: unchanged, New final: inserted
     let unchanged = matches.filter { $0.isUnchanged }
-    let modified = matches.filter { $0.isModified }
+    let deleted = matches.filter { $0.isDeleted }
     let inserted = matches.filter { $0.isInserted }
 
     #expect(unchanged.count == 2) // First, Third
-    #expect(modified.count == 2)  // Title, Second→Replaced
-    #expect(inserted.count == 1)  // New final
+    #expect(deleted.count == 2)   // Title, Second
+    #expect(inserted.count == 3)  // Updated title, Replaced, New final
   }
 
   // MARK: - Block types
@@ -193,9 +203,10 @@ struct BlockMatcherTests {
     let new = ParsedMarkdown("Intro.\n\n```swift\nlet x = 2\n```\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    #expect(matches.count == 2)
+    #expect(matches.count == 3)
     #expect(matches[0].isUnchanged) // Intro
-    #expect(matches[1].isModified)  // Code block
+    #expect(matches[1].isDeleted)   // Old code block
+    #expect(matches[2].isInserted)  // New code block
   }
 
   @Test func listItemGranularity() {
@@ -203,13 +214,15 @@ struct BlockMatcherTests {
     let new = ParsedMarkdown("- Alpha\n- Beta revised\n- Gamma\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    // Individual list items are leaf blocks per the plan.
-    // Alpha and Gamma unchanged, Beta modified.
+    // Individual list items are leaf blocks.
+    // Alpha and Gamma unchanged, Beta deleted + "Beta revised" inserted.
     let unchanged = matches.filter { $0.isUnchanged }
-    let modified = matches.filter { $0.isModified }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
 
     #expect(unchanged.count == 2)
-    #expect(modified.count == 1)
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 1)
   }
 
   @Test func addedListItem() {
@@ -232,7 +245,7 @@ struct BlockMatcherTests {
     // Blockquote paragraphs are leaf blocks.
     let unchanged = matches.filter { $0.isUnchanged }
     #expect(unchanged.count >= 1) // At least "First line" unchanged
-    #expect(matches.contains { $0.isModified || $0.isInserted })
+    #expect(matches.contains { $0.isInserted || $0.isDeleted })
   }
 
   @Test func tableRowGranularity() {
@@ -241,12 +254,14 @@ struct BlockMatcherTests {
     let matches = BlockMatcher.match(old: old, new: new)
 
     // Table rows are leaf blocks. Header row and first data row unchanged,
-    // second data row modified.
+    // second data row deleted + inserted.
     let unchanged = matches.filter { $0.isUnchanged }
-    let modified = matches.filter { $0.isModified }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
 
     #expect(unchanged.count >= 1) // At least the unchanged data row
-    #expect(modified.count == 1)  // The changed data row
+    #expect(deleted.count == 1)   // The old data row
+    #expect(inserted.count == 1)  // The changed data row
   }
 
   @Test func nestedListItems() {
@@ -255,12 +270,14 @@ struct BlockMatcherTests {
     let matches = BlockMatcher.match(old: old, new: new)
 
     // Inner list items should be leaf blocks. The outer item and Inner A
-    // are unchanged; Inner B is modified.
+    // are unchanged; Inner B is deleted + "Inner B changed" inserted.
     let unchanged = matches.filter { $0.isUnchanged }
-    let modified = matches.filter { $0.isModified }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
 
     #expect(unchanged.count >= 2) // Outer + Inner A
-    #expect(modified.count == 1)  // Inner B
+    #expect(deleted.count == 1)   // Inner B
+    #expect(inserted.count == 1)  // Inner B changed
   }
 
   // MARK: - Trailing deletions
@@ -295,16 +312,17 @@ struct BlockMatcherTests {
 
   // MARK: - Whitespace and formatting
 
-  @Test func contentAndFormattingChangeIsModification() {
+  @Test func contentAndFormattingChangeIsDeletedAndInserted() {
     let old = ParsedMarkdown("Some plain text.\n")
     let new = ParsedMarkdown("Some **bold** text.\n")
     let matches = BlockMatcher.match(old: old, new: new)
 
-    #expect(matches.count == 1)
-    #expect(matches[0].isModified)
+    #expect(matches.count == 2)
+    #expect(matches[0].isDeleted)
+    #expect(matches[1].isInserted)
   }
 
-  @Test func formattingOnlyChangeIsModification() {
+  @Test func formattingOnlyChangeIsDeletedAndInserted() {
     let old = ParsedMarkdown("Some text.\n")
     let new = ParsedMarkdown("Some **text**.\n")
     let matches = BlockMatcher.match(old: old, new: new)
@@ -312,8 +330,9 @@ struct BlockMatcherTests {
     // Source text fingerprints differ ("Some text." vs "Some **text**."),
     // even though the plain text is identical. Formatting changes are
     // deliberate authorial changes that affect rendered output.
-    #expect(matches.count == 1)
-    #expect(matches[0].isModified)
+    #expect(matches.count == 2)
+    #expect(matches[0].isDeleted)
+    #expect(matches[1].isInserted)
   }
 }
 
@@ -332,11 +351,6 @@ extension BlockMatch {
 
   var isDeleted: Bool {
     if case .deleted = self { return true }
-    return false
-  }
-
-  var isModified: Bool {
-    if case .modified = self { return true }
     return false
   }
 }

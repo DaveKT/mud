@@ -38,6 +38,12 @@ struct UpHTMLVisitor: MarkupWalker {
     /// preventing double emission in `emitChangeOpen`.
     private var consumedDeletionIDs: Set<String> = []
 
+    /// True when the current position is inside a consecutive run of
+    /// changes that includes at least one deletion. Mirrors the
+    /// sidebar's mixed-group logic so that insertions following a
+    /// deletion (with no unchanged block between) render blue.
+    private var inMixedRun = false
+
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
@@ -310,13 +316,18 @@ struct UpHTMLVisitor: MarkupWalker {
     // MARK: - Change tracking helpers
 
     /// Emits preceding deletions and opens an `<ins>` wrapper for
-    /// inserted or modified blocks. No-op when `diffContext` is nil.
+    /// inserted blocks. No-op when `diffContext` is nil.
     private mutating func emitChangeOpen(for node: Markup) {
         guard let diffContext else { return }
+
+        let annotation = diffContext.annotation(for: node)
+        var emittedDels = false
+
         for del in diffContext.precedingDeletions(before: node) {
             if consumedDeletionIDs.contains(del.changeID) {
                 continue
             }
+            emittedDels = true
             if let tag = del.wrapperTag, node is ListItem {
                 // Structural wrapper: emit as a sibling element (e.g.
                 // <li>) carrying the deletion class. This keeps the
@@ -332,9 +343,19 @@ struct UpHTMLVisitor: MarkupWalker {
                 result += "</del>\n"
             }
         }
-        if let annotation = diffContext.annotation(for: node),
+
+        // Track whether we're in a consecutive run containing deletions.
+        // An unchanged block (no annotation) breaks the run; emitted
+        // deletions start or continue one.
+        if annotation == nil {
+            inMixedRun = false
+        } else if emittedDels {
+            inMixedRun = true
+        }
+
+        if let _ = annotation,
            let changeID = diffContext.changeID(for: node) {
-            let suffix = annotation == .inserted ? "ins" : "mod"
+            let suffix = inMixedRun ? "mix" : "ins"
             result += "<ins class=\"mud-change mud-change-\(suffix)\""
             result += " data-change-id=\"\(changeID)\">"
         }

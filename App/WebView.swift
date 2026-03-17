@@ -155,12 +155,7 @@ struct WebView: NSViewRepresentable {
                 return "'\(escaped)'"
             }.joined(separator: ",") + "]"
             webView.evaluateJavaScript("Mud.revealChanges(\(idsJSON))")
-            if let first = target.changeIDs.first {
-                let escaped = first
-                    .replacingOccurrences(of: "\\", with: "\\\\")
-                    .replacingOccurrences(of: "'", with: "\\'")
-                webView.evaluateJavaScript("Mud.scrollToChange('\(escaped)')")
-            }
+            webView.evaluateJavaScript("Mud.scrollToChange(\(idsJSON))")
         }
 
         // Handle print via WKWebView.printOperation(with:)

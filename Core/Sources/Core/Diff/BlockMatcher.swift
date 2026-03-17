@@ -2,11 +2,9 @@ import Markdown
 
 /// Matches leaf blocks between two parsed Markdown documents.
 ///
-/// Two phases:
-/// 1. Fingerprint matching — flatten each AST into leaf blocks, hash
-///    source text, run `CollectionDifference`.
-/// 2. Modification detection — pair removals and insertions at the
-///    same effective position into `.modified` matches.
+/// Flattens each AST into leaf blocks, hashes source text, and runs
+/// `CollectionDifference` to classify blocks as unchanged, inserted,
+/// or deleted.
 enum BlockMatcher {
     /// Compares the leaf blocks of two documents and returns an ordered
     /// list of matches describing how blocks changed.
@@ -45,57 +43,14 @@ enum BlockMatcher {
             }
         }
 
-        // Phase 2: Gap-based modification pairing.
-        //
-        // Between each pair of anchors there's a gap containing some
-        // removals and some insertions. Within each gap, pair removals
-        // with insertions so that excess removals land at the front
-        // (pure deletions) and excess insertions land at the end (pure
-        // insertions). This is achieved by offsetting the longer list:
-        // removals are skipped from the front, insertions are paired
-        // from the front.
-        var modOldForNew: [Int: Int] = [:] // newIndex → oldIndex
-        let boundaries =
-            [(-1, -1)]
-            + anchors.map { ($0.old, $0.new) }
-            + [(oldBlocks.count, newBlocks.count)]
-
-        for i in 0..<(boundaries.count - 1) {
-            let (prevOld, prevNew) = boundaries[i]
-            let (nextOld, nextNew) = boundaries[i + 1]
-
-            let gapRemovals = ((prevOld + 1)..<nextOld)
-                .filter { removedOld.contains($0) }
-            let gapInsertions = ((prevNew + 1)..<nextNew)
-                .filter { insertedNew.contains($0) }
-
-            // Offset removals so excess deletions are at the front.
-            let remOffset = max(0, gapRemovals.count - gapInsertions.count)
-            let pairCount = min(gapRemovals.count, gapInsertions.count)
-            for j in 0..<pairCount {
-                let ri = gapRemovals[remOffset + j]
-                let ii = gapInsertions[j]
-                modOldForNew[ii] = ri
-                removedOld.remove(ri)
-                insertedNew.remove(ii)
-            }
-        }
-
-        // Convert anchors to the lookup dictionary.
-        var unchangedOldForNew: [Int: Int] = [:] // newIndex → oldIndex
-        for anchor in anchors {
-            unchangedOldForNew[anchor.new] = anchor.old
-        }
-
-        // Build the result in new-document order, interleaving deletions
-        // at the correct positions using an old-index cursor.
+        // Build the result in document order, processing each gap
+        // between anchors: deletions first, then insertions.
         return buildResult(
             oldBlocks: oldBlocks,
             newBlocks: newBlocks,
             removedOld: removedOld,
             insertedNew: insertedNew,
-            modOldForNew: modOldForNew,
-            unchangedOldForNew: unchangedOldForNew
+            anchors: anchors
         )
     }
 }
@@ -106,8 +61,6 @@ enum BlockMatcher {
 enum BlockMatch {
     /// Block is unchanged between old and new.
     case unchanged(old: LeafBlock, new: LeafBlock)
-    /// Block was modified — same position, different content.
-    case modified(old: LeafBlock, new: LeafBlock)
     /// Block was inserted in the new document.
     case inserted(new: LeafBlock)
     /// Block was deleted from the old document.
@@ -242,51 +195,45 @@ private struct LeafBlockCollector: MarkupWalker {
 // MARK: - Result builder
 
 private extension BlockMatcher {
-    /// Builds the result array in new-document order, interleaving
-    /// deletions at their correct positions.
-    ///
-    /// Uses an old-index cursor: before emitting each surviving new
-    /// block, drain any deleted old blocks between the previous cursor
-    /// position and the old index of the current block.
+    /// Builds the result array by processing gaps between anchors.
+    /// Within each gap, deletions are emitted before insertions so
+    /// that the old content precedes the new content at each position.
     static func buildResult(
         oldBlocks: [LeafBlock],
         newBlocks: [LeafBlock],
         removedOld: Set<Int>,
         insertedNew: Set<Int>,
-        modOldForNew: [Int: Int],
-        unchangedOldForNew: [Int: Int]
+        anchors: [(old: Int, new: Int)]
     ) -> [BlockMatch] {
         var result: [BlockMatch] = []
-        var oldCursor = 0  // next old index to consider for deletions
 
-        /// Emit `.deleted` for every removed old index in [oldCursor, upTo).
-        func drainDeletions(upTo limit: Int) {
-            while oldCursor < limit {
-                if removedOld.contains(oldCursor) {
-                    result.append(.deleted(old: oldBlocks[oldCursor]))
-                }
-                oldCursor += 1
+        let boundaries =
+            [(-1, -1)]
+            + anchors.map { ($0.old, $0.new) }
+            + [(oldBlocks.count, newBlocks.count)]
+
+        for i in 0..<(boundaries.count - 1) {
+            let (prevOld, prevNew) = boundaries[i]
+            let (nextOld, nextNew) = boundaries[i + 1]
+
+            // Emit deletions in this gap first.
+            for oi in (prevOld + 1)..<nextOld
+                where removedOld.contains(oi) {
+                result.append(.deleted(old: oldBlocks[oi]))
             }
-        }
 
-        for ni in 0..<newBlocks.count {
-            if let oi = modOldForNew[ni] {
-                drainDeletions(upTo: oi)
-                result.append(.modified(
-                    old: oldBlocks[oi], new: newBlocks[ni]))
-                oldCursor = oi + 1
-            } else if insertedNew.contains(ni) {
+            // Then emit insertions.
+            for ni in (prevNew + 1)..<nextNew
+                where insertedNew.contains(ni) {
                 result.append(.inserted(new: newBlocks[ni]))
-            } else if let oi = unchangedOldForNew[ni] {
-                drainDeletions(upTo: oi)
+            }
+
+            // Emit the anchor (skip the terminal sentinel).
+            if i + 1 < boundaries.count - 1 {
                 result.append(.unchanged(
-                    old: oldBlocks[oi], new: newBlocks[ni]))
-                oldCursor = oi + 1
+                    old: oldBlocks[nextOld], new: newBlocks[nextNew]))
             }
         }
-
-        // Trailing deletions — remaining removed old blocks.
-        drainDeletions(upTo: oldBlocks.count)
 
         return result
     }
