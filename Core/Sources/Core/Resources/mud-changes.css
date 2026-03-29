@@ -5,6 +5,8 @@
     --change-ins: #1a7f37;
     --change-del: #cf222e;
     --change-mix: #0969da;
+    --change-ins-ln: #aceebb;
+    --change-del-ln: #ffcecb;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, white);
     --change-del-tint: color-mix(in srgb, var(--change-del) 20%, white);
     --change-mix-tint: color-mix(in srgb, var(--change-mix) 20%, white);
@@ -15,6 +17,8 @@
     --change-ins: #3fb950;
     --change-del: #f85149;
     --change-mix: #58a6ff;
+    --change-ins-ln: #12572f;
+    --change-del-ln: #490400;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, black);
     --change-del-tint: color-mix(in srgb, var(--change-del) 20%, black);
     --change-mix-tint: color-mix(in srgb, var(--change-mix) 20%, black);
@@ -105,19 +109,20 @@ ol > li.mud-change-del.mud-change-revealed {
 
 .dl-ins .ln {
     color: var(--change-ins);
+    background-color: var(--change-ins-ln);
 }
 
 .dl-ins .lc {
-    background: color-mix(in srgb, var(--change-ins) 6%, transparent);
+    background: color-mix(in srgb, var(--change-ins) 10%, transparent);
 }
 
 .dl-del .ln {
     color: var(--change-del);
+    background-color: var(--change-del-ln);
 }
 
 .dl-del .lc {
-    background: color-mix(in srgb, var(--change-del) 6%, transparent);
-    opacity: 0.55;
+    background: color-mix(in srgb, var(--change-del) 10%, transparent);
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--change-del) 40%, transparent);
     text-decoration-thickness: 1.5px;
