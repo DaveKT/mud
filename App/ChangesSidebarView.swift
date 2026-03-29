@@ -176,40 +176,37 @@ struct ChangeGroup: Identifiable {
     let summary: String
     /// Number of individual changes in this group.
     let count: Int
+    /// 1-based group index, matching the overlay badge number.
+    let groupIndex: Int
 
     static func build(from changes: [DocumentChange]) -> [ChangeGroup] {
-        guard let first = changes.first else { return [] }
+        // Group by the pre-computed groupID from DiffContext.
+        // Preserve document order (first occurrence of each groupID).
+        var order: [String] = []
+        var buckets: [String: [DocumentChange]] = [:]
 
-        var groups: [ChangeGroup] = []
-        var ids = [first.id]
-        var types = [first.type]
-        var summary = first.summary
-
-        for change in changes.dropFirst() {
-            if change.isConsecutive {
-                ids.append(change.id)
-                types.append(change.type)
-            } else {
-                groups.append(makeGroup(ids: ids, types: types, summary: summary))
-                ids = [change.id]
-                types = [change.type]
-                summary = change.summary
+        for change in changes {
+            if buckets[change.groupID] == nil {
+                order.append(change.groupID)
             }
+            buckets[change.groupID, default: []].append(change)
         }
-        groups.append(makeGroup(ids: ids, types: types, summary: summary))
-        return groups
-    }
 
-    private static func makeGroup(
-        ids: [String], types: [ChangeType], summary: String
-    ) -> ChangeGroup {
-        let hasInsertions = types.contains(.insertion)
-        let hasDeletions = types.contains(.deletion)
-        let isMixed = hasInsertions && hasDeletions
-        let type: ChangeType = hasInsertions ? .insertion : .deletion
-        return ChangeGroup(
-            id: ids[0], changeIDs: ids, type: type,
-            isMixed: isMixed, summary: summary, count: ids.count)
+        return order.compactMap { gid in
+            guard let members = buckets[gid], let first = members.first
+            else { return nil }
+            let hasIns = members.contains { $0.type == .insertion }
+            let hasDel = members.contains { $0.type == .deletion }
+            return ChangeGroup(
+                id: gid,
+                changeIDs: members.map(\.id),
+                type: hasIns ? .insertion : .deletion,
+                isMixed: hasIns && hasDel,
+                summary: first.summary,
+                count: members.count,
+                groupIndex: first.groupIndex
+            )
+        }
     }
 }
 
@@ -230,21 +227,23 @@ private struct ChangeGroupRow: View {
                 }
             }
         } icon: {
-            groupIcon
+            groupBadge
         }
     }
 
-    private var groupIcon: some View {
-        let (name, color) = iconInfo
-        return Image(systemName: name)
-            .foregroundStyle(color)
+    private var groupBadge: some View {
+        Text("\(group.groupIndex)")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(minWidth: 18, minHeight: 18)
+            .background(badgeColor, in: Circle())
     }
 
-    private var iconInfo: (String, Color) {
-        if group.isMixed { return ("pencil.circle", .blue) }
+    private var badgeColor: Color {
+        if group.isMixed { return .blue }
         switch group.type {
-        case .insertion: return ("plus.circle", .green)
-        case .deletion:  return ("minus.circle", .red)
+        case .insertion: return .green
+        case .deletion:  return .red
         }
     }
 }

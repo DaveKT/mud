@@ -7,9 +7,9 @@
     --change-mix: #0969da;
     --change-ins-ln: #aceebb;
     --change-del-ln: #ffcecb;
-    --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, white);
-    --change-del-tint: color-mix(in srgb, var(--change-del) 20%, white);
-    --change-mix-tint: color-mix(in srgb, var(--change-mix) 20%, white);
+    --change-ins-tint: color-mix(in srgb, var(--change-ins) 10%, white);
+    --change-del-tint: color-mix(in srgb, var(--change-del) 10%, white);
+    --change-mix-tint: color-mix(in srgb, var(--change-mix) 10%, white);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,89 +19,100 @@
     --change-mix: #58a6ff;
     --change-ins-ln: #12572f;
     --change-del-ln: #490400;
-    --change-ins-tint: color-mix(in srgb, var(--change-ins) 20%, black);
-    --change-del-tint: color-mix(in srgb, var(--change-del) 20%, black);
-    --change-mix-tint: color-mix(in srgb, var(--change-mix) 20%, black);
+    --change-ins-tint: color-mix(in srgb, var(--change-ins) 10%, black);
+    --change-del-tint: color-mix(in srgb, var(--change-del) 10%, black);
+    --change-mix-tint: color-mix(in srgb, var(--change-mix) 10%, black);
 }
 }
 
 
-/* ── Up mode ────────────────────────────────────────────────────── */
+/* ── Up mode: overlay positioning ──────────────────────────────── */
 
-/* Full-bleed overlay: a ::after pseudo-element extends far beyond
-   the change wrapper and is clipped by overflow-x:hidden on
-   .up-mode-output, producing a tint strip that spans the full
-   article column width regardless of nesting depth. */
-
-.mud-change-ins,
-.mud-change-mix {
-    display: block;
+.up-mode-output {
     position: relative;
-    text-decoration: none;
 }
 
-.mud-change-ins::after,
-.mud-change-mix::after,
-.mud-change-del.mud-change-revealed::after {
-    content: "";
+/* JS-positioned overlay: one per change group. Sits above content
+   and blends via mix-blend-mode so text remains readable. */
+.mud-overlay {
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -100vw;
-    right: -100vw;
-    mix-blend-mode: multiply;
+    left: 0;
+    right: 0;
     pointer-events: none;
     border: 1px solid;
+    border-left: 0;
+    border-right: 0;
+    mix-blend-mode: multiply;
 }
 
-.mud-change-ins::after {
-    background: var(--change-ins-tint);
-    color: var(--change-ins);
-}
-
-/* Blue by default; switches to green when the group is unfolded. */
-.mud-change-mix::after {
-    background: var(--change-mix-tint);
-    color: var(--change-mix);
-}
-
-.mud-change-mix.mud-change-revealed::after {
-    background: var(--change-ins-tint);
-    color: var(--change-ins);
-}
+.mud-overlay-ins { background: var(--change-ins-tint); color: var(--change-ins); }
+.mud-overlay-mix { background: var(--change-mix-tint); color: var(--change-mix); }
+.mud-overlay-del { background: var(--change-del-tint); color: var(--change-del); }
 
 @media (prefers-color-scheme: dark) {
-.mud-change-ins::after,
-.mud-change-mix::after {
-    mix-blend-mode: screen;
-}
+.mud-overlay { mix-blend-mode: screen; }
 }
 
-.mud-change-del {
-    display: none;
+
+/* ── Up mode: overlay badges ──────────────────────────────────── */
+
+.mud-overlay::before {
+    content: attr(data-group-index);
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    min-width: 1.4em;
+    height: 1.4em;
+    line-height: 1.4em;
+    text-align: center;
+    font-size: 0.7em;
+    font-weight: 600;
+    border-radius: 50%;
+    color: white;
+    pointer-events: none;
 }
+
+.mud-overlay-ins::before { background: var(--change-ins); }
+.mud-overlay-mix::before { background: var(--change-mix); }
+.mud-overlay-del::before { background: var(--change-del); }
+
+
+/* ── Up mode: deletions ───────────────────────────────────────── */
+
+.mud-change-del { display: none; }
 
 .mud-change-del.mud-change-revealed {
-    display: block;
     position: relative;
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--change-del) 50%, transparent);
     text-decoration-thickness: 1.5px;
 }
 
-.mud-change-del.mud-change-revealed::after {
-    background: var(--change-del-tint);
-    color: var(--change-del);
+/* Tag-specific display when revealed */
+p.mud-change-del.mud-change-revealed,
+div.mud-change-del.mud-change-revealed,
+pre.mud-change-del.mud-change-revealed,
+h1.mud-change-del.mud-change-revealed,
+h2.mud-change-del.mud-change-revealed,
+h3.mud-change-del.mud-change-revealed,
+h4.mud-change-del.mud-change-revealed,
+h5.mud-change-del.mud-change-revealed,
+h6.mud-change-del.mud-change-revealed,
+hr.mud-change-del.mud-change-revealed   { display: block; }
+li.mud-change-del.mud-change-revealed   { display: list-item; }
+tr.mud-change-del.mud-change-revealed   { display: table-row; }
+span.mud-change-del.mud-change-revealed { display: inline; }
+
+
+/* ── Up mode: active highlight ────────────────────────────────── */
+
+.mud-overlay.mud-change-active {
+    animation: overlay-flash 1s ease-out forwards;
 }
 
-@media (prefers-color-scheme: dark) {
-.mud-change-del.mud-change-revealed::after {
-    mix-blend-mode: screen;
-}
-}
-
-ol > li.mud-change-del.mud-change-revealed {
-  display: list-item;
+@keyframes overlay-flash {
+    0%   { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 
@@ -126,26 +137,4 @@ ol > li.mud-change-del.mud-change-revealed {
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--change-del) 40%, transparent);
     text-decoration-thickness: 1.5px;
-}
-
-
-/* ── Active highlight (both modes) ──────────────────────────────── */
-
-.mud-change-ins.mud-change-active::after,
-.mud-change-mix.mud-change-active::after {
-    animation: change-flash-ins 1s ease-out;
-}
-
-.mud-change-del.mud-change-active::after {
-    animation: change-flash-del 1s ease-out;
-}
-
-@keyframes change-flash-ins {
-  0% { background: currentcolor; }
-  100% { background: var(--change-ins-tint); }
-}
-
-@keyframes change-flash-del {
-  0% { background: currentcolor; }
-  100% { background: var(--change-del-tint); }
 }

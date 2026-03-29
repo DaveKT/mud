@@ -210,40 +210,231 @@
     }
   }
 
-  // -- Change tracking ------------------------------------------------------
+  // -- Change tracking: overlays --------------------------------------------
+
+  var _overlays = {};  // groupID → overlay element
+
+  function buildOverlays() {
+    var container = document.querySelector(".up-mode-output");
+    if (!container) return;
+
+    // Remove any existing overlays.
+    var old = container.querySelectorAll(".mud-overlay");
+    for (var i = 0; i < old.length; i++) old[i].remove();
+    _overlays = {};
+
+    // Discover groups from data-group-id attributes.
+    var els = container.querySelectorAll("[data-group-id]");
+    var groups = {};  // groupID → { index, hasDel, hasIns }
+    for (var j = 0; j < els.length; j++) {
+      var gid = els[j].dataset.groupId;
+      if (!groups[gid]) {
+        groups[gid] = {
+          index: els[j].dataset.groupIndex || "",
+          hasDel: false,
+          hasIns: false
+        };
+      }
+      if (els[j].classList.contains("mud-change-del")) {
+        groups[gid].hasDel = true;
+      } else {
+        groups[gid].hasIns = true;
+      }
+    }
+
+    // Create one overlay per group.
+    for (var gid in groups) {
+      var g = groups[gid];
+      var typeClass = (g.hasDel && g.hasIns) ? "mud-overlay-mix"
+                    : g.hasIns ? "mud-overlay-ins"
+                    : "mud-overlay-del";
+      var div = document.createElement("div");
+      div.className = "mud-overlay " + typeClass;
+      div.dataset.groupId = gid;
+      div.dataset.groupIndex = g.index;
+      div.setAttribute("aria-hidden", "true");
+      container.appendChild(div);
+      _overlays[gid] = div;
+    }
+
+    positionOverlays();
+  }
+
+  // Sub-overlays: temporary red/green overlays created when a mixed
+  // (blue) group is revealed. Each entry: { overlay, els, groupId }.
+  var _subOverlays = [];
+  // Group IDs whose original overlay is suppressed (replaced by sub-overlays).
+  var _suppressedGroups = {};
+
+  /// Position an overlay element to span from the first to last
+  /// visible element in `els`, relative to `container`.
+  function positionOverlay(overlay, els, containerRect, scrollTop) {
+    var visible = [];
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].offsetParent !== null) visible.push(els[i]);
+    }
+    if (visible.length === 0) {
+      overlay.style.display = "none";
+      return;
+    }
+    var firstRect = visible[0].getBoundingClientRect();
+    var lastRect = visible[visible.length - 1].getBoundingClientRect();
+    overlay.style.display = "";
+    overlay.style.top = (firstRect.top - containerRect.top + scrollTop) + "px";
+    overlay.style.height = (lastRect.bottom - firstRect.top) + "px";
+  }
+
+  function positionOverlays() {
+    var container = document.querySelector(".up-mode-output");
+    if (!container) return;
+    var containerRect = container.getBoundingClientRect();
+    var scrollTop = container.scrollTop;
+
+    for (var gid in _overlays) {
+      if (_suppressedGroups[gid]) continue;
+      var overlay = _overlays[gid];
+      var els = container.querySelectorAll(
+        "[data-group-id='" + gid + "']:not(.mud-overlay)"
+      );
+      positionOverlay(overlay, els, containerRect, scrollTop);
+    }
+
+    for (var i = 0; i < _subOverlays.length; i++) {
+      var sub = _subOverlays[i];
+      positionOverlay(sub.overlay, sub.els, containerRect, scrollTop);
+    }
+  }
+
+  // Build overlays on load; reposition on resize.
+  buildOverlays();
+  var _upContainer = document.querySelector(".up-mode-output");
+  if (_upContainer) {
+    new ResizeObserver(positionOverlays).observe(_upContainer);
+  }
+
+  // -- Change tracking: scroll and reveal -----------------------------------
 
   function scrollToChange(ids) {
-    var els = [];
-    for (var i = 0; i < ids.length; i++) {
-      var el = document.querySelector('[data-change-id="' + ids[i] + '"]');
-      if (el) els.push(el);
+    if (!ids.length) return;
+    var first = document.querySelector(
+      '[data-change-id="' + ids[0] + '"]'
+    );
+    if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // Flash the overlay (or sub-overlays) for the group.
+    var gid = first && first.dataset.groupId;
+    if (!gid) return;
+    var targets = [];
+    if (_overlays[gid] && _overlays[gid].style.display !== "none") {
+      targets.push(_overlays[gid]);
     }
-    if (els.length === 0) return;
-    els[0].scrollIntoView({ behavior: "smooth", block: "center" });
-    for (var j = 0; j < els.length; j++) {
-      els[j].classList.add("mud-change-active");
+    for (var i = 0; i < _subOverlays.length; i++) {
+      if (_subOverlays[i].groupId === gid) targets.push(_subOverlays[i].overlay);
+    }
+    for (var j = 0; j < targets.length; j++) {
+      targets[j].classList.add("mud-change-active");
     }
     setTimeout(function () {
-      for (var k = 0; k < els.length; k++) {
-        els[k].classList.remove("mud-change-active");
+      for (var k = 0; k < targets.length; k++) {
+        targets[k].classList.remove("mud-change-active");
       }
     }, 2000);
   }
 
   function revealChanges(ids) {
-    // Hide any previously revealed deletion.
+    // Clear previous reveals.
     var revealed = document.querySelectorAll(".mud-change-revealed");
     for (var i = 0; i < revealed.length; i++) {
       revealed[i].classList.remove("mud-change-revealed");
     }
-    // Reveal targeted deletions and switch mix elements to green.
+
+    // Remove previous sub-overlays and restore original overlays.
+    for (var i = 0; i < _subOverlays.length; i++) {
+      _subOverlays[i].overlay.remove();
+    }
+    _subOverlays = [];
+    _suppressedGroups = {};
+    for (var gid in _overlays) {
+      _overlays[gid].style.display = "";
+    }
+
+    // Reveal deletions and track affected groups.
+    var revealedGroupIds = {};
     for (var j = 0; j < ids.length; j++) {
-      var el = document.querySelector('[data-change-id="' + ids[j] + '"]');
+      var el = document.querySelector(
+        '[data-change-id="' + ids[j] + '"]'
+      );
       if (!el) continue;
-      if (el.classList.contains("mud-change-del")
-          || el.classList.contains("mud-change-mix")) {
+      if (el.classList.contains("mud-change-del")) {
         el.classList.add("mud-change-revealed");
       }
+      var gid = el.dataset.groupId;
+      if (gid) revealedGroupIds[gid] = true;
+    }
+
+    var container = document.querySelector(".up-mode-output");
+
+    // For mixed groups, replace the blue overlay with per-run
+    // red (del) and green (ins) sub-overlays.
+    for (var gid in revealedGroupIds) {
+      var overlay = _overlays[gid];
+      if (!overlay) continue;
+
+      if (!overlay.classList.contains("mud-overlay-mix")) {
+        // Pure ins or del group — just reposition.
+        overlay.classList.add("mud-change-revealed");
+        continue;
+      }
+
+      // Hide the blue overlay immediately and suppress repositioning.
+      overlay.style.display = "none";
+      _suppressedGroups[gid] = true;
+
+      // Walk group elements in DOM order, split into consecutive
+      // runs of the same type (del vs ins).
+      var els = container.querySelectorAll(
+        "[data-group-id='" + gid + "']:not(.mud-overlay)"
+      );
+      var runs = [];
+      var cur = null;
+      for (var k = 0; k < els.length; k++) {
+        var type = els[k].classList.contains("mud-change-del") ? "del" : "ins";
+        if (cur && cur.type === type) {
+          cur.els.push(els[k]);
+        } else {
+          cur = { type: type, els: [els[k]] };
+          runs.push(cur);
+        }
+      }
+
+      // Create a sub-overlay for each run, starting invisible.
+      for (var r = 0; r < runs.length; r++) {
+        var run = runs[r];
+        var typeClass = run.type === "del"
+          ? "mud-overlay-del" : "mud-overlay-ins";
+        var div = document.createElement("div");
+        div.className = "mud-overlay " + typeClass;
+        div.dataset.groupId = gid;
+        div.dataset.groupIndex = overlay.dataset.groupIndex;
+        div.style.opacity = "0";
+        div.setAttribute("aria-hidden", "true");
+        container.appendChild(div);
+        _subOverlays.push({
+          overlay: div, els: run.els, groupId: gid
+        });
+      }
+    }
+
+    positionOverlays();
+
+    // Fade in sub-overlays on the next frame (after positioning and
+    // the browser has applied opacity:0).
+    if (_subOverlays.length > 0) {
+      requestAnimationFrame(function () {
+        for (var i = 0; i < _subOverlays.length; i++) {
+          _subOverlays[i].overlay.style.opacity = "";
+        }
+      });
     }
   }
 
