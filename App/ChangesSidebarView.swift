@@ -36,12 +36,16 @@ struct ChangesSidebarView: View {
                     .tag(group.id)
             }
             .listStyle(.sidebar)
+            .background(DeselectMonitor(selection: $selectedGroupID))
             .onChange(of: selectedGroupID) { _, newValue in
-                guard let id = newValue,
-                      let group = groups.first(where: { $0.id == id })
-                else { return }
-                changeTracker.selectedChangeID = group.changeIDs.first
-                onSelectChange(group.changeIDs)
+                if let id = newValue,
+                   let group = groups.first(where: { $0.id == id }) {
+                    changeTracker.selectedChangeID = group.changeIDs.first
+                    onSelectChange(group.changeIDs)
+                } else {
+                    changeTracker.selectedChangeID = nil
+                    onSelectChange([])
+                }
             }
         }
     }
@@ -172,12 +176,19 @@ struct ChangeGroup: Identifiable {
     let type: ChangeType
     /// True when the group contains both insertions and deletions.
     let isMixed: Bool
-    /// Summary text from the first change.
-    let summary: String
-    /// Number of individual changes in this group.
-    let count: Int
     /// 1-based group index, matching the overlay badge number.
     let groupIndex: Int
+    /// Per-change summaries and types, for multi-line display.
+    let members: [MemberInfo]
+
+    /// Number of individual changes in this group.
+    var count: Int { members.count }
+
+    /// A single change within a group.
+    struct MemberInfo {
+        let type: ChangeType
+        let summary: String
+    }
 
     static func build(from changes: [DocumentChange]) -> [ChangeGroup] {
         // Group by the pre-computed groupID from DiffContext.
@@ -202,9 +213,10 @@ struct ChangeGroup: Identifiable {
                 changeIDs: members.map(\.id),
                 type: hasIns ? .insertion : .deletion,
                 isMixed: hasIns && hasDel,
-                summary: first.summary,
-                count: members.count,
-                groupIndex: first.groupIndex
+                groupIndex: first.groupIndex,
+                members: members.map {
+                    MemberInfo(type: $0.type, summary: $0.summary)
+                }
             )
         }
     }
@@ -216,19 +228,101 @@ private struct ChangeGroupRow: View {
     let group: ChangeGroup
 
     var body: some View {
-        Label {
-            HStack(spacing: 4) {
-                Text(group.summary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                if group.count > 1 {
-                    Text("(\(group.count))")
-                        .foregroundStyle(.secondary)
+        HStack(alignment: .top, spacing: 6) {
+            groupBadge
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(
+                    Array(displayLines.enumerated()), id: \.offset
+                ) { _, line in
+                    lineView(line)
                 }
             }
-        } icon: {
-            groupBadge
         }
+    }
+
+    // MARK: - Display lines
+
+    /// A line in the condensed preview: either a member's summary
+    /// or a "and N more" overflow note.
+    private enum DisplayLine {
+        case member(ChangeGroup.MemberInfo)
+        case overflow(count: Int, type: ChangeType)
+    }
+
+    /// Condenses members into display lines, capping each
+    /// consecutive run of the same type at 2 lines (3 if that
+    /// would leave exactly 1 overflowed).
+    private var displayLines: [DisplayLine] {
+        var lines: [DisplayLine] = []
+        var i = 0
+        let members = group.members
+        while i < members.count {
+            // Find the end of this consecutive run of the same type.
+            let runType = members[i].type
+            var runEnd = i + 1
+            while runEnd < members.count
+                    && members[runEnd].type == runType {
+                runEnd += 1
+            }
+            let runLength = runEnd - i
+
+            if runLength <= 3 {
+                // Show all members in the run.
+                for j in i..<runEnd {
+                    lines.append(.member(members[j]))
+                }
+            } else {
+                // Show first 2, then overflow summary.
+                lines.append(.member(members[i]))
+                lines.append(.member(members[i + 1]))
+                lines.append(.overflow(
+                    count: runLength - 2, type: runType))
+            }
+            i = runEnd
+        }
+        return lines
+    }
+
+    // MARK: - Line views
+
+    @ViewBuilder
+    private func lineView(_ line: DisplayLine) -> some View {
+        switch line {
+        case .member(let member):
+            memberLine(member)
+        case .overflow(let count, let type):
+            overflowLine(count: count, type: type)
+        }
+    }
+
+    private func memberLine(_ member: ChangeGroup.MemberInfo) -> some View {
+        HStack(spacing: 3) {
+            Text(member.type == .insertion ? "+" : "−")
+                .fontWeight(.bold)
+                .foregroundStyle(
+                    member.type == .insertion ? .green : .red
+                )
+                .frame(width: 10, alignment: .center)
+            Text(member.summary.isEmpty ? "—" : member.summary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundStyle(.secondary)
+        }
+        .font(.callout)
+    }
+
+    private func overflowLine(
+        count: Int, type: ChangeType
+    ) -> some View {
+        let noun = type == .insertion
+            ? (count == 1 ? "insertion" : "insertions")
+            : (count == 1 ? "deletion" : "deletions")
+        return Text("and \(count) more \(noun)")
+            .font(.callout)
+            .italic()
+            .foregroundStyle(.tertiary)
+            .padding(.leading, 13)
     }
 
     private var groupBadge: some View {

@@ -33,6 +33,10 @@ struct OutlineSidebarView: View {
                     }
                 }
                 .listStyle(.sidebar)
+                .background(DeselectMonitor(
+                    selection: $selection,
+                    guardValue: AnyHashable(expandedIDs)
+                ))
                 .onAppear {
                     expandedIDs = collectParentIDs(tree)
                 }

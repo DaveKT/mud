@@ -273,10 +273,22 @@ extension DiffContext {
     }
 
     /// Extracts a plain-text summary (~60 chars) from a leaf block.
+    ///
+    /// Strips markdown syntax (list markers, code fences, emphasis) so the
+    /// sidebar shows clean, readable text.
     static func blockSummary(_ block: LeafBlock) -> String {
         let raw: String
         if let inline = block.markup as? (any InlineContainer) {
             raw = inline.plainText
+        } else if let codeBlock = block.markup as? CodeBlock {
+            raw = codeBlock.code
+                .split(separator: "\n", maxSplits: 1,
+                       omittingEmptySubsequences: false)
+                .first.map(String.init) ?? ""
+        } else if let listItem = block.markup as? ListItem,
+                  let para = listItem.children
+                      .first(where: { $0 is Paragraph }) as? Paragraph {
+            raw = para.plainText
         } else {
             raw = block.sourceText
         }
