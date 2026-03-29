@@ -163,12 +163,11 @@ private struct LeafBlockCollector: MarkupWalker {
     }
 
     mutating func visitTableHead(_ head: Table.Head) {
-        // Table head is a row-like structure.
-        appendBlock(head)
+        appendBlock(head, fingerprint: normalizedTableRow(head))
     }
 
     mutating func visitTableRow(_ row: Table.Row) {
-        appendBlock(row)
+        appendBlock(row, fingerprint: normalizedTableRow(row))
     }
 
     mutating func visitThematicBreak(_ thematicBreak: ThematicBreak) {
@@ -210,6 +209,17 @@ private struct LeafBlockCollector: MarkupWalker {
         let clampedEnd = min(endLine, lines.count)
         let slice = lines[(startLine - 1)..<clampedEnd]
         return slice.joined(separator: "\n")
+    }
+
+    /// Normalizes a table row's source text for fingerprinting by
+    /// collapsing runs of whitespace to a single space.  GFM table
+    /// cells are often padded to align pipes visually; this padding
+    /// is cosmetic and should not trigger a diff.
+    private func normalizedTableRow(_ node: Markup) -> String {
+        let raw = extractSourceText(for: node)
+        return raw.replacingOccurrences(
+            of: "\\s+", with: " ",
+            options: .regularExpression)
     }
 
     /// Extracts the source text for a node respecting column offsets.
