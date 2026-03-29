@@ -38,6 +38,10 @@ struct UpHTMLVisitor: MarkupWalker {
     /// preventing double emission in `emitPrecedingDeletions`.
     private var consumedDeletionIDs: Set<String> = []
 
+    /// Non-`<tr>` deletions encountered inside a table body, deferred
+    /// until after `</table>` to avoid invalid HTML.
+    private var deferredDeletions: [RenderedDeletion] = []
+
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
@@ -207,10 +211,47 @@ struct UpHTMLVisitor: MarkupWalker {
 
     mutating func visitTable(_ table: Table) {
         tableColumnAlignments = table.columnAlignments
+
+        // Emit preceding deletions BEFORE opening <table> so they don't
+        // become invalid children of the table element.  <tr> deletions
+        // (from a fully-replaced table) are wrapped in their own table;
+        // other block-level deletions are emitted directly.
+        if let diffContext,
+           let head = table.children.first(where: { $0 is Table.Head }) {
+            let deletions = diffContext.precedingDeletions(before: head)
+            if !deletions.isEmpty {
+                var trDeletions: [RenderedDeletion] = []
+                for del in deletions {
+                    if del.tag == "tr" {
+                        trDeletions.append(del)
+                    } else {
+                        emitDeletion(del)
+                        consumedDeletionIDs.insert(del.changeID)
+                    }
+                }
+                if !trDeletions.isEmpty {
+                    result += "<table>\n<tbody>\n"
+                    for del in trDeletions {
+                        emitDeletion(del)
+                        consumedDeletionIDs.insert(del.changeID)
+                    }
+                    result += "</tbody>\n</table>\n"
+                }
+            }
+        }
+
         result += "<table>\n"
         descendInto(table)
         result += "</table>\n"
         tableColumnAlignments = []
+
+        // Emit non-<tr> deletions that were deferred from inside
+        // the table body (e.g. a paragraph deleted after a table
+        // whose deletion is attached to the last body row).
+        for del in deferredDeletions {
+            emitDeletion(del)
+        }
+        deferredDeletions.removeAll()
     }
 
     mutating func visitTableHead(_ tableHead: Table.Head) {
@@ -405,7 +446,9 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     /// Walks the table body's rows, emitting preceding deleted rows
-    /// as `<tr>` siblings inside `<tbody>`.
+    /// as `<tr>` siblings inside `<tbody>`.  Non-`<tr>` deletions
+    /// (e.g. a paragraph that followed the old table) are deferred
+    /// to `deferredDeletions` so they emit after `</table>`.
     private mutating func emitTableBodyDeletions(in tableBody: Table.Body) {
         guard let diffContext else {
             descendInto(tableBody)
@@ -417,7 +460,11 @@ struct UpHTMLVisitor: MarkupWalker {
                 continue
             }
             for del in diffContext.precedingDeletions(before: row) {
-                emitDeletion(del)
+                if del.tag == "tr" {
+                    emitDeletion(del)
+                } else {
+                    deferredDeletions.append(del)
+                }
                 consumedDeletionIDs.insert(del.changeID)
             }
             visitTableRow(row)
