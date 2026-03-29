@@ -30,39 +30,30 @@ struct UpHTMLVisitor: MarkupWalker {
 
     var alertDetector = AlertDetector()
 
-    /// When non-nil, change markers (`<ins>`/`<del>`) are emitted for
-    /// blocks that differ from the waypoint document.
+    /// When non-nil, change attributes are emitted on native elements
+    /// for blocks that differ from the waypoint document.
     var diffContext: DiffContext?
 
     /// Change IDs already emitted by peek-ahead in `visitListItem`,
-    /// preventing double emission in `emitChangeOpen`.
+    /// preventing double emission in `emitPrecedingDeletions`.
     private var consumedDeletionIDs: Set<String> = []
-
-    /// True when the current position is inside a consecutive run of
-    /// changes that includes at least one deletion. Mirrors the
-    /// sidebar's mixed-group logic so that insertions following a
-    /// deletion (with no unchanged block between) render blue.
-    private var inMixedRun = false
 
     // MARK: - Block containers
 
     mutating func visitBlockQuote(_ blockQuote: BlockQuote) {
-        // Alerts bypass visitParagraph, so check the first child
-        // paragraph for change annotations and emit markers around
-        // the entire alert.
         let innerParagraph = blockQuote.children.first(where: { $0 is Paragraph })
         if let (category, title) = alertDetector.detectGFMAlert(blockQuote) {
-            emitAlertOpen(category)
-            if let p = innerParagraph { emitChangeOpen(for: p) }
+            let attrs = innerParagraph.flatMap { changeAttributes(for: $0) }
+                ?? .empty
+            emitAlertOpen(category, attrs: attrs)
             emitAlertTitle(category, title)
             emitGFMAlertContent(blockQuote, category: category)
-            if let p = innerParagraph { emitChangeClose(for: p) }
             result += "</blockquote>\n"
         } else if let (category, title, content) = alertDetector.detectDocCAlert(blockQuote) {
-            emitAlertOpen(category)
-            if let p = innerParagraph { emitChangeOpen(for: p) }
+            let attrs = innerParagraph.flatMap { changeAttributes(for: $0) }
+                ?? .empty
+            emitAlertOpen(category, attrs: attrs)
             emitDocCAlertTitleAndContent(category, title, content)
-            if let p = innerParagraph { emitChangeClose(for: p) }
             result += "</blockquote>\n"
         } else {
             result += "<blockquote>\n"
@@ -101,20 +92,17 @@ struct UpHTMLVisitor: MarkupWalker {
         if let diffContext,
            let firstChild = listItem.children.first(where: { _ in true }) {
             for del in diffContext.precedingDeletions(before: firstChild) {
-                if del.wrapperTag != nil {
-                    result += "<li class=\"mud-change mud-change-del\""
-                    result += " data-change-id=\"\(del.changeID)\">"
-                    result += del.html
-                    result += "</li>\n"
+                if del.tag == "li" {
+                    emitDeletion(del)
                     consumedDeletionIDs.insert(del.changeID)
                 }
             }
         }
-        emitChangeOpen(for: listItem)
+        let attrs = changeAttributes(for: listItem)
         if inTightList {
-            result += "<li>"
+            result += "<li\(attrs?.asString ?? "")>"
         } else {
-            result += "<li>\n"
+            result += "<li\(attrs?.asString ?? "")>\n"
         }
         if let checkbox = listItem.checkbox {
             result += "<input type=\"checkbox\" disabled=\"\""
@@ -125,68 +113,94 @@ struct UpHTMLVisitor: MarkupWalker {
         }
         descendInto(listItem)
         result += "</li>\n"
-        emitChangeClose(for: listItem)
     }
 
     // MARK: - Block leaves
 
     mutating func visitHeading(_ heading: Heading) {
-        emitChangeOpen(for: heading)
+        let attrs = changeAttributes(for: heading)
         let level = heading.level
         let slug = slugTracker.slug(for: heading.plainText)
-        result += "<h\(level) id=\"\(slug)\">"
+        result += "<h\(level) id=\"\(slug)\"\(attrs?.asString ?? "")>"
         descendInto(heading)
         result += "</h\(level)>\n"
-        emitChangeClose(for: heading)
     }
 
     mutating func visitParagraph(_ paragraph: Paragraph) {
-        emitChangeOpen(for: paragraph)
+        let attrs = changeAttributes(for: paragraph)
         if inTightList && paragraph.parent is ListItem {
-            descendInto(paragraph)
-            result += "\n"
+            if attrs != nil {
+                result += "<span\(attrs!.asString)>"
+                descendInto(paragraph)
+                result += "</span>\n"
+            } else {
+                descendInto(paragraph)
+                result += "\n"
+            }
         } else {
-            result += "<p>"
+            result += "<p\(attrs?.asString ?? "")>"
             descendInto(paragraph)
             result += "</p>\n"
         }
-        emitChangeClose(for: paragraph)
     }
 
     mutating func visitCodeBlock(_ codeBlock: CodeBlock) {
-        emitChangeOpen(for: codeBlock)
+        let attrs = changeAttributes(for: codeBlock)
+        let classAttr: String
+        if let attrs {
+            classAttr = "mud-code \(attrs.classes)"
+        } else {
+            classAttr = "mud-code"
+        }
+        result += "<pre class=\"\(classAttr)\"\(attrs?.dataAttrs ?? "")>"
+        result += Self.codeBlockInnerHTML(codeBlock)
+        result += "</pre>\n"
+    }
+
+    /// Renders the inner HTML of a code block (`<code>` with optional
+    /// language header and syntax highlighting). Shared by
+    /// `visitCodeBlock` and `DiffContext.renderedDeletion`.
+    static func codeBlockInnerHTML(_ codeBlock: CodeBlock) -> String {
         let lang = codeBlock.language.flatMap { $0.isEmpty ? nil : $0 }
-        result += "<pre class=\"mud-code\">"
+        var html = ""
         if let lang {
             let escaped = HTMLEscaping.escape(lang)
-            result += "<div class=\"code-header\">"
-            result += "<span class=\"code-language\">\(escaped)</span>"
-            result += "</div>"
-            result += "<code class=\"language-\(escaped)\">"
+            html += "<div class=\"code-header\">"
+            html += "<span class=\"code-language\">\(escaped)</span>"
+            html += "</div>"
+            html += "<code class=\"language-\(escaped)\">"
         } else {
-            result += "<code>"
+            html += "<code>"
         }
         if let highlighted = CodeHighlighter.highlight(
             codeBlock.code, language: lang
         ) {
-            result += highlighted
+            html += highlighted
         } else {
-            result += HTMLEscaping.escape(codeBlock.code)
+            html += HTMLEscaping.escape(codeBlock.code)
         }
-        result += "</code></pre>\n"
-        emitChangeClose(for: codeBlock)
+        html += "</code>"
+        return html
     }
 
     mutating func visitHTMLBlock(_ html: HTMLBlock) {
-        emitChangeOpen(for: html)
-        result += html.rawHTML
-        emitChangeClose(for: html)
+        let attrs = changeAttributes(for: html)
+        if attrs != nil {
+            result += "<div\(attrs!.asString)>"
+            result += html.rawHTML
+            result += "</div>\n"
+        } else {
+            result += html.rawHTML
+        }
     }
 
     mutating func visitThematicBreak(_ thematicBreak: ThematicBreak) {
-        emitChangeOpen(for: thematicBreak)
-        result += "<hr />\n"
-        emitChangeClose(for: thematicBreak)
+        let attrs = changeAttributes(for: thematicBreak)
+        if attrs != nil {
+            result += "<div\(attrs!.asString)><hr /></div>\n"
+        } else {
+            result += "<hr />\n"
+        }
     }
 
     // MARK: - Table
@@ -202,7 +216,8 @@ struct UpHTMLVisitor: MarkupWalker {
     mutating func visitTableHead(_ tableHead: Table.Head) {
         inTableHead = true
         currentCellColumn = 0
-        result += "<thead>\n<tr>\n"
+        let attrs = changeAttributes(for: tableHead)
+        result += "<thead>\n<tr\(attrs?.asString ?? "")>\n"
         descendInto(tableHead)
         result += "</tr>\n</thead>\n"
         inTableHead = false
@@ -211,13 +226,14 @@ struct UpHTMLVisitor: MarkupWalker {
     mutating func visitTableBody(_ tableBody: Table.Body) {
         guard tableBody.childCount > 0 else { return }
         result += "<tbody>\n"
-        descendInto(tableBody)
+        emitTableBodyDeletions(in: tableBody)
         result += "</tbody>\n"
     }
 
     mutating func visitTableRow(_ tableRow: Table.Row) {
         currentCellColumn = 0
-        result += "<tr>\n"
+        let attrs = changeAttributes(for: tableRow)
+        result += "<tr\(attrs?.asString ?? "")>\n"
         descendInto(tableRow)
         result += "</tr>\n"
     }
@@ -315,70 +331,96 @@ struct UpHTMLVisitor: MarkupWalker {
 
     // MARK: - Change tracking helpers
 
-    /// Emits preceding deletions and opens an `<ins>` wrapper for
-    /// inserted blocks. No-op when `diffContext` is nil.
-    private mutating func emitChangeOpen(for node: Markup) {
+    /// Attribute bundle for a changed element.
+    struct ChangeAttrs {
+        let classes: String   // "mud-change-ins" or "mud-change-del"
+        let dataAttrs: String // ' data-change-id="..." data-group-id="..."'
+
+        /// Full attribute string for interpolation into an opening tag.
+        var asString: String {
+            " class=\"\(classes)\"\(dataAttrs)"
+        }
+
+        static let empty = ChangeAttrs(classes: "", dataAttrs: "")
+    }
+
+    /// Returns change attributes for a block node, emitting preceding
+    /// deletions as a side effect. Returns `nil` for unchanged nodes.
+    private mutating func changeAttributes(for node: Markup) -> ChangeAttrs? {
+        guard let diffContext else { return nil }
+
+        // Emit preceding deletions as native elements.
+        emitPrecedingDeletions(before: node)
+
+        guard let annotation = diffContext.annotation(for: node),
+              let changeID = diffContext.changeID(for: node) else {
+            return nil
+        }
+
+        _ = annotation // always .inserted
+        let info = diffContext.groupInfo(for: changeID)
+        var dataAttrs = " data-change-id=\"\(changeID)\""
+        if let info {
+            dataAttrs += " data-group-id=\"\(info.groupID)\""
+            if info.groupPos == .first || info.groupPos == .sole {
+                dataAttrs += " data-group-index=\"\(info.groupIndex)\""
+            }
+        }
+        return ChangeAttrs(classes: "mud-change-ins", dataAttrs: dataAttrs)
+    }
+
+    /// Emits preceding deletions as native HTML elements.
+    private mutating func emitPrecedingDeletions(before node: Markup) {
         guard let diffContext else { return }
-
-        let annotation = diffContext.annotation(for: node)
-        var emittedDels = false
-
         for del in diffContext.precedingDeletions(before: node) {
-            if consumedDeletionIDs.contains(del.changeID) {
-                continue
-            }
-            emittedDels = true
-            if let tag = del.wrapperTag, node is ListItem {
-                // Structural wrapper: emit as a sibling element (e.g.
-                // <li>) carrying the deletion class. This keeps the
-                // HTML valid — <del> cannot wrap <li> inside a list.
-                result += "<\(tag) class=\"mud-change mud-change-del\""
-                result += " data-change-id=\"\(del.changeID)\">"
-                result += del.html
-                result += "</\(tag)>\n"
-            } else {
-                result += "<del class=\"mud-change mud-change-del\""
-                result += " data-change-id=\"\(del.changeID)\">"
-                result += del.html
-                result += "</del>\n"
-            }
-        }
-
-        // Track whether we're in a consecutive run containing deletions.
-        // An unchanged block (no annotation) breaks the run; emitted
-        // deletions start or continue one.
-        if annotation == nil {
-            inMixedRun = false
-        } else if emittedDels {
-            inMixedRun = true
-        }
-
-        if let _ = annotation,
-           let changeID = diffContext.changeID(for: node) {
-            let suffix = inMixedRun ? "mix" : "ins"
-            result += "<ins class=\"mud-change mud-change-\(suffix)\""
-            result += " data-change-id=\"\(changeID)\">"
+            if consumedDeletionIDs.contains(del.changeID) { continue }
+            emitDeletion(del)
         }
     }
 
-    /// Closes an `<ins>` wrapper opened by `emitChangeOpen`.
-    /// No-op when `diffContext` is nil or the node is unchanged.
-    private mutating func emitChangeClose(for node: Markup) {
-        guard let diffContext else { return }
-        if diffContext.annotation(for: node) != nil {
-            result += "</ins>\n"
-        }
-    }
-
-    /// Emits trailing deletions (deleted blocks after the last surviving
-    /// block). Called after the document walk completes.
+    /// Emits trailing deletions (after the last surviving block).
     mutating func emitTrailingDeletions() {
         guard let diffContext else { return }
         for del in diffContext.trailingDeletions() {
-            result += "<del class=\"mud-change mud-change-del\""
-            result += " data-change-id=\"\(del.changeID)\">"
-            result += del.html
-            result += "</del>\n"
+            emitDeletion(del)
+        }
+    }
+
+    /// Emits a single deletion as a native HTML element with change
+    /// attributes.
+    private mutating func emitDeletion(_ del: RenderedDeletion) {
+        let info = diffContext?.groupInfo(for: del.changeID)
+        var attrs = " class=\"mud-change-del\" data-change-id=\"\(del.changeID)\""
+        if let info {
+            attrs += " data-group-id=\"\(info.groupID)\""
+            if info.groupPos == .first || info.groupPos == .sole {
+                attrs += " data-group-index=\"\(info.groupIndex)\""
+            }
+        }
+        if del.tag == "hr" {
+            result += "<hr\(attrs) />\n"
+        } else {
+            result += "<\(del.tag)\(attrs)>\(del.html)</\(del.tag)>\n"
+        }
+    }
+
+    /// Walks the table body's rows, emitting preceding deleted rows
+    /// as `<tr>` siblings inside `<tbody>`.
+    private mutating func emitTableBodyDeletions(in tableBody: Table.Body) {
+        guard let diffContext else {
+            descendInto(tableBody)
+            return
+        }
+        for child in tableBody.children {
+            guard let row = child as? Table.Row else {
+                visit(child)
+                continue
+            }
+            for del in diffContext.precedingDeletions(before: row) {
+                emitDeletion(del)
+                consumedDeletionIDs.insert(del.changeID)
+            }
+            visitTableRow(row)
         }
     }
 
@@ -431,9 +473,17 @@ struct UpHTMLVisitor: MarkupWalker {
         for child in children.dropFirst() { visit(child) }
     }
 
-    /// Emits the opening `<blockquote>` tag with alert CSS classes.
-    private mutating func emitAlertOpen(_ category: AlertCategory) {
-        result += "<blockquote class=\"alert \(category.cssClass)\">\n"
+    /// Emits the opening `<blockquote>` tag with alert CSS classes
+    /// and optional change attributes.
+    private mutating func emitAlertOpen(
+        _ category: AlertCategory, attrs: ChangeAttrs = .empty
+    ) {
+        if attrs.classes.isEmpty {
+            result += "<blockquote class=\"alert \(category.cssClass)\">\n"
+        } else {
+            result += "<blockquote class=\"alert \(category.cssClass)"
+            result += " \(attrs.classes)\"\(attrs.dataAttrs)>\n"
+        }
     }
 
     /// Emits the alert title paragraph with icon and text.

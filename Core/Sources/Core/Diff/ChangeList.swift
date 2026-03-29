@@ -29,12 +29,15 @@ enum ChangeList {
             // Emit deletions that precede this block.
             for del in context.precedingDeletions(before: node) {
                 let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
+                let info = context.groupInfo(for: del.changeID)
                 changes.append(DocumentChange(
                     id: del.changeID,
                     type: .deletion,
                     summary: del.summary,
                     sourceLine: block.sourceLine,
-                    isConsecutive: consecutive
+                    isConsecutive: consecutive,
+                    groupID: info?.groupID ?? "",
+                    groupIndex: info?.groupIndex ?? 0
                 ))
                 sawUnchangedSinceLastChange = false
             }
@@ -51,12 +54,15 @@ enum ChangeList {
             if let id = context.changeID(for: node) {
                 let type: ChangeType = .insertion
                 let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
+                let info = context.groupInfo(for: id)
                 changes.append(DocumentChange(
                     id: id,
                     type: type,
                     summary: DiffContext.blockSummary(block),
                     sourceLine: block.sourceLine,
-                    isConsecutive: consecutive
+                    isConsecutive: consecutive,
+                    groupID: info?.groupID ?? "",
+                    groupIndex: info?.groupIndex ?? 0
                 ))
                 sawUnchangedSinceLastChange = false
             }
@@ -67,12 +73,15 @@ enum ChangeList {
         // Trailing deletions — no following block.
         for del in context.trailingDeletions() {
             let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
+            let info = context.groupInfo(for: del.changeID)
             changes.append(DocumentChange(
                 id: del.changeID,
                 type: .deletion,
                 summary: del.summary,
                 sourceLine: lastSurvivingLine,
-                isConsecutive: consecutive
+                isConsecutive: consecutive,
+                groupID: info?.groupID ?? "",
+                groupIndex: info?.groupIndex ?? 0
             ))
             sawUnchangedSinceLastChange = false
         }
@@ -93,6 +102,10 @@ public struct DocumentChange: Identifiable, Sendable {
     /// with no unchanged block between them. Always false for the first
     /// change. Used by the sidebar to group consecutive changes.
     public let isConsecutive: Bool
+    /// The group this change belongs to (e.g. "group-1").
+    public let groupID: String
+    /// 1-based group index, used for badge numbering.
+    public let groupIndex: Int
 }
 
 /// The type of a document change.

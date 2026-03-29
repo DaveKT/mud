@@ -203,6 +203,49 @@ struct ChangeListTests {
     #expect(changes.count >= 2)
   }
 
+  // MARK: - Group fields
+
+  @Test func changesCarryGroupID() {
+    let old = ParsedMarkdown("Before.\n")
+    let new = ParsedMarkdown("After.\n")
+    let changes = MudCore.computeChanges(old: old, new: new)
+
+    #expect(changes.allSatisfy { !$0.groupID.isEmpty })
+  }
+
+  @Test func changesCarryGroupIndex() {
+    let old = ParsedMarkdown("Before.\n")
+    let new = ParsedMarkdown("After.\n")
+    let changes = MudCore.computeChanges(old: old, new: new)
+
+    #expect(changes.allSatisfy { $0.groupIndex >= 1 })
+  }
+
+  @Test func consecutiveChangesShareGroupID() {
+    let old = ParsedMarkdown("Alpha.\n\nBeta.\n")
+    let new = ParsedMarkdown("Alpha changed.\n\nBeta changed.\n")
+    let changes = MudCore.computeChanges(old: old, new: new)
+
+    // All four changes (2 del + 2 ins) are consecutive — one group.
+    let groupIDs = Set(changes.map(\.groupID))
+    #expect(groupIDs.count == 1)
+    #expect(changes[0].groupIndex == 1)
+  }
+
+  @Test func nonConsecutiveChangesGetDifferentGroupIDs() {
+    let old = ParsedMarkdown("Alpha.\n\nKeep.\n\nGamma.\n")
+    let new = ParsedMarkdown("Alpha changed.\n\nKeep.\n\nGamma changed.\n")
+    let changes = MudCore.computeChanges(old: old, new: new)
+
+    // Two separate groups, split by "Keep."
+    let groupIDs = Set(changes.map(\.groupID))
+    #expect(groupIDs.count == 2)
+
+    // Group indices should be 1 and 2.
+    let indices = Set(changes.map(\.groupIndex))
+    #expect(indices == [1, 2])
+  }
+
   // MARK: - Empty documents
 
   @Test func bothEmptyProduceNoChanges() {

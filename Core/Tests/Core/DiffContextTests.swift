@@ -217,6 +217,169 @@ struct DiffContextTests {
     #expect(context.changeID(for: leaves[0]) == nil)
   }
 
+  // MARK: - Group info
+
+  @Test func singleInsertionHasSoleGroup() {
+    let old = ParsedMarkdown("First.\n")
+    let new = ParsedMarkdown("First.\n\nAdded.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let id = context.changeID(for: leaves[1])!
+    let info = context.groupInfo(for: id)
+    #expect(info != nil)
+    #expect(info!.groupPos == .sole)
+    #expect(info!.groupIndex == 1)
+    #expect(!info!.isMixed)
+  }
+
+  @Test func singleDeletionHasSoleGroup() {
+    let old = ParsedMarkdown("Keep.\n\nRemoved.\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let deletions = context.trailingDeletions()
+    #expect(deletions.count == 1)
+    let info = context.groupInfo(for: deletions[0].changeID)
+    #expect(info != nil)
+    #expect(info!.groupPos == .sole)
+    #expect(!info!.isMixed)
+  }
+
+  @Test func replacementFormsMixedGroup() {
+    let old = ParsedMarkdown("Original.\n")
+    let new = ParsedMarkdown("Revised.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let insID = context.changeID(for: leaves[0])!
+    let delID = context.precedingDeletions(before: leaves[0])[0].changeID
+
+    let insInfo = context.groupInfo(for: insID)!
+    let delInfo = context.groupInfo(for: delID)!
+
+    // Same group.
+    #expect(insInfo.groupID == delInfo.groupID)
+    #expect(insInfo.isMixed)
+    #expect(delInfo.isMixed)
+  }
+
+  @Test func consecutiveInsertionsShareGroup() {
+    let old = ParsedMarkdown("Keep.\n")
+    let new = ParsedMarkdown("Keep.\n\nAdded A.\n\nAdded B.\n\nAdded C.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let idA = context.changeID(for: leaves[1])!
+    let idB = context.changeID(for: leaves[2])!
+    let idC = context.changeID(for: leaves[3])!
+
+    let infoA = context.groupInfo(for: idA)!
+    let infoB = context.groupInfo(for: idB)!
+    let infoC = context.groupInfo(for: idC)!
+
+    // All in the same group.
+    #expect(infoA.groupID == infoB.groupID)
+    #expect(infoB.groupID == infoC.groupID)
+
+    // Positions.
+    #expect(infoA.groupPos == .first)
+    #expect(infoB.groupPos == .middle)
+    #expect(infoC.groupPos == .last)
+  }
+
+  @Test func unchangedBlockBreaksGroups() {
+    let old = ParsedMarkdown("First.\n\nMiddle.\n\nLast.\n")
+    let new = ParsedMarkdown("First changed.\n\nMiddle.\n\nLast changed.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let id1 = context.changeID(for: leaves[0])!
+    let id3 = context.changeID(for: leaves[2])!
+
+    let info1 = context.groupInfo(for: id1)!
+    let info3 = context.groupInfo(for: id3)!
+
+    // Different groups because "Middle." is unchanged.
+    #expect(info1.groupID != info3.groupID)
+    #expect(info1.groupIndex == 1)
+    #expect(info3.groupIndex == 2)
+  }
+
+  @Test func groupInfoReturnsNilForUnknownID() {
+    let md = "Paragraph.\n"
+    let context = DiffContext(old: ParsedMarkdown(md), new: ParsedMarkdown(md))
+    #expect(context.groupInfo(for: "nonexistent") == nil)
+  }
+
+  // MARK: - Rendered deletion tag
+
+  @Test func deletedParagraphHasPTag() {
+    let old = ParsedMarkdown("Keep.\n\nRemoved.\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let deletions = context.trailingDeletions()
+    #expect(deletions.count == 1)
+    #expect(deletions[0].tag == "p")
+  }
+
+  @Test func deletedListItemHasLiTag() {
+    let old = ParsedMarkdown("- Alpha\n- Beta\n")
+    let new = ParsedMarkdown("- Alpha\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    // "Beta" deletion appears as trailing (after the last leaf).
+    let trailing = context.trailingDeletions()
+    #expect(trailing.count == 1)
+    #expect(trailing[0].tag == "li")
+  }
+
+  @Test func deletedHeadingHasHTag() {
+    let old = ParsedMarkdown("# Title\n\nKeep.\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let deletions = context.precedingDeletions(before: leaves[0])
+    #expect(deletions.count == 1)
+    #expect(deletions[0].tag == "h1")
+  }
+
+  @Test func deletedCodeBlockHasPreTag() {
+    let old = ParsedMarkdown("Keep.\n\n```\ncode\n```\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let trailing = context.trailingDeletions()
+    #expect(trailing.count == 1)
+    #expect(trailing[0].tag == "pre")
+  }
+
+  @Test func deletedThematicBreakHasHrTag() {
+    let old = ParsedMarkdown("Keep.\n\n---\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let trailing = context.trailingDeletions()
+    #expect(trailing.count == 1)
+    #expect(trailing[0].tag == "hr")
+  }
+
+  @Test func deletedParagraphHTMLIsInnerOnly() {
+    // The html field should contain inner content without a <p> wrapper,
+    // since the rendering layer will emit the <p> with change attributes.
+    let old = ParsedMarkdown("Keep.\n\n**Bold deleted.**\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let deletions = context.trailingDeletions()
+    #expect(deletions.count == 1)
+    #expect(deletions[0].html.contains("<strong>Bold deleted.</strong>"))
+    #expect(!deletions[0].html.contains("<p>"))
+  }
+
   // MARK: - All content deleted
 
   @Test func allDeletedSurfacesAsTrailingDeletions() {

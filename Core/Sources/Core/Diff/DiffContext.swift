@@ -9,6 +9,7 @@ struct DiffContext {
     private let annotations: [SourceKey: AnnotationEntry]
     private let precedingDeletionMap: [SourceKey: [RenderedDeletion]]
     private let _trailingDeletions: [RenderedDeletion]
+    private let _groupMap: [String: GroupInfo]
 
     /// Creates a diff context by matching blocks between old and new documents.
     init(old: ParsedMarkdown, new: ParsedMarkdown) {
@@ -39,10 +40,20 @@ struct DiffContext {
             pendingDeletions.removeAll()
         }
 
+        // Track change IDs in document order for the grouping pass.
+        struct ChangeEntry {
+            let changeID: String
+            let isDeletion: Bool
+            let isConsecutive: Bool
+        }
+        var changeEntries: [ChangeEntry] = []
+        var lastWasChange = false
+
         for match in matches {
             switch match {
             case .unchanged(_, let new):
                 flushDeletions(before: new.markup)
+                lastWasChange = false
 
             case .inserted(let new):
                 flushDeletions(before: new.markup)
@@ -51,19 +62,68 @@ struct DiffContext {
                     annotations[key] = AnnotationEntry(
                         annotation: .inserted, changeID: id)
                 }
+                changeEntries.append(ChangeEntry(
+                    changeID: id, isDeletion: false,
+                    isConsecutive: lastWasChange))
+                lastWasChange = true
 
             case .deleted(let old):
                 let id = nextChangeID()
                 pendingDeletions.append(Self.renderedDeletion(
                     for: old, changeID: id))
+                changeEntries.append(ChangeEntry(
+                    changeID: id, isDeletion: true,
+                    isConsecutive: lastWasChange))
+                lastWasChange = true
             }
         }
 
         trailing = pendingDeletions
 
+        // Grouping pass: break change entries into groups at
+        // non-consecutive boundaries.
+        var groupMap: [String: GroupInfo] = [:]
+        var groupCounter = 0
+        var currentGroup: [ChangeEntry] = []
+
+        func finalizeGroup() {
+            guard !currentGroup.isEmpty else { return }
+            groupCounter += 1
+            let groupID = "group-\(groupCounter)"
+            let hasDel = currentGroup.contains { $0.isDeletion }
+            let hasIns = currentGroup.contains { !$0.isDeletion }
+            let isMixed = hasDel && hasIns
+            let count = currentGroup.count
+            for (i, entry) in currentGroup.enumerated() {
+                let pos: GroupPos
+                if count == 1 {
+                    pos = .sole
+                } else if i == 0 {
+                    pos = .first
+                } else if i == count - 1 {
+                    pos = .last
+                } else {
+                    pos = .middle
+                }
+                groupMap[entry.changeID] = GroupInfo(
+                    groupID: groupID, groupPos: pos,
+                    groupIndex: groupCounter, isMixed: isMixed)
+            }
+            currentGroup.removeAll()
+        }
+
+        for entry in changeEntries {
+            if !entry.isConsecutive && !currentGroup.isEmpty {
+                finalizeGroup()
+            }
+            currentGroup.append(entry)
+        }
+        finalizeGroup()
+
         self.annotations = annotations
         self.precedingDeletionMap = precedingMap
         self._trailingDeletions = trailing
+        self._groupMap = groupMap
     }
 
     // MARK: - Public API
@@ -92,6 +152,11 @@ struct DiffContext {
     func trailingDeletions() -> [RenderedDeletion] {
         _trailingDeletions
     }
+
+    /// Returns group info for a change ID, or `nil` if unknown.
+    func groupInfo(for changeID: String) -> GroupInfo? {
+        _groupMap[changeID]
+    }
 }
 
 // MARK: - Block annotation
@@ -101,22 +166,37 @@ enum BlockAnnotation: Equatable {
     case inserted
 }
 
+// MARK: - Group info
+
+/// Position of a change within its group.
+enum GroupPos: String {
+    case first, middle, last, sole
+}
+
+/// Describes a change's membership in a consecutive group.
+struct GroupInfo {
+    /// The group identifier (e.g. "group-1").
+    let groupID: String
+    /// Position within the group.
+    let groupPos: GroupPos
+    /// 1-based group index, used for badge numbers.
+    let groupIndex: Int
+    /// True when the group contains both deletions and insertions.
+    let isMixed: Bool
+}
+
 // MARK: - Rendered deletion
 
 /// A pre-rendered deleted block, ready for injection into the HTML output.
 struct RenderedDeletion {
-    /// The HTML content of the deleted block.
+    /// The inner HTML content of the deleted block (no outer tag).
     let html: String
     /// The change ID matching the sidebar entry.
     let changeID: String
     /// Plain-text summary of the deleted content (for the sidebar).
     let summary: String
-    /// When non-nil, the deletion must be wrapped in this structural
-    /// HTML tag (e.g. `"li"`) instead of the default `<del>`. This
-    /// avoids invalid nesting like `<del><li>…</li></del>` inside a
-    /// list. The `html` field contains only the inner content (no
-    /// wrapper tag).
-    let wrapperTag: String?
+    /// The native HTML tag for this block (e.g. "p", "li", "tr", "pre").
+    let tag: String
 }
 
 // MARK: - Source key
@@ -150,29 +230,45 @@ private struct AnnotationEntry {
 // MARK: - Block rendering
 
 extension DiffContext {
-    /// Builds a `RenderedDeletion` for a leaf block: renders HTML and
-    /// extracts a plain-text summary.
+    /// The native HTML tag for a leaf block.
+    static func tagForBlock(_ markup: Markup) -> String {
+        switch markup {
+        case let h as Heading:             return "h\(h.level)"
+        case is Paragraph:                 return "p"
+        case is CodeBlock:                 return "pre"
+        case is ListItem:                  return "li"
+        case is Table.Head, is Table.Row:  return "tr"
+        case is ThematicBreak:             return "hr"
+        default:                           return "div"
+        }
+    }
+
+    /// Builds a `RenderedDeletion` for a leaf block: renders inner HTML
+    /// and extracts a plain-text summary. The `tag` field records the
+    /// native element type; `html` contains only inner content.
     static func renderedDeletion(
         for block: LeafBlock, changeID: String
     ) -> RenderedDeletion {
-        var visitor = UpHTMLVisitor()
-        let isListItem = block.markup is ListItem
-        if isListItem {
-            // Render only the children so the HTML contains inner
-            // content without a <li> wrapper. The rendering layer
-            // wraps this in a <li> carrying the deletion class,
-            // avoiding invalid <del><li>…</li></del> nesting.
-            for child in block.markup.children {
-                visitor.visit(child)
-            }
-        } else {
-            visitor.visit(block.markup)
+        let markup = block.markup
+        let tag = tagForBlock(markup)
+        let html: String
+
+        switch markup {
+        case let cb as CodeBlock:
+            html = UpHTMLVisitor.codeBlockInnerHTML(cb)
+        case is ThematicBreak:
+            html = ""
+        case let hb as HTMLBlock:
+            html = hb.rawHTML
+        default:
+            var visitor = UpHTMLVisitor()
+            for child in markup.children { visitor.visit(child) }
+            html = visitor.result
         }
+
         return RenderedDeletion(
-            html: visitor.result,
-            changeID: changeID,
-            summary: blockSummary(block),
-            wrapperTag: isListItem ? "li" : nil
+            html: html, changeID: changeID,
+            summary: blockSummary(block), tag: tag
         )
     }
 
@@ -195,4 +291,3 @@ extension DiffContext {
         return String(prefix) + "…"
     }
 }
-
