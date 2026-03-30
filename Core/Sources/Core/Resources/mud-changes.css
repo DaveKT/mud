@@ -82,27 +82,12 @@
 .mud-change-del { display: none; }
 
 .mud-change-del.mud-change-revealed {
+    display: revert;
     position: relative;
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--change-del) 50%, transparent);
     text-decoration-thickness: 1.5px;
 }
-
-/* Tag-specific display when revealed */
-p.mud-change-del.mud-change-revealed,
-div.mud-change-del.mud-change-revealed,
-pre.mud-change-del.mud-change-revealed,
-blockquote.mud-change-del.mud-change-revealed,
-h1.mud-change-del.mud-change-revealed,
-h2.mud-change-del.mud-change-revealed,
-h3.mud-change-del.mud-change-revealed,
-h4.mud-change-del.mud-change-revealed,
-h5.mud-change-del.mud-change-revealed,
-h6.mud-change-del.mud-change-revealed,
-hr.mud-change-del.mud-change-revealed   { display: block; }
-li.mud-change-del.mud-change-revealed   { display: list-item; }
-tr.mud-change-del.mud-change-revealed   { display: table-row; }
-span.mud-change-del.mud-change-revealed { display: inline; }
 
 
 /* ── Up mode: active highlight ────────────────────────────────── */
@@ -154,13 +139,13 @@ span.mud-change-del.mud-change-revealed { display: inline; }
 
 [data-change-id] ins {
     text-decoration: none;
-    background: color-mix(in srgb, var(--change-ins) 50%, transparent);
+    background: color-mix(in srgb, var(--change-ins) 20%, transparent);
 }
 
 [data-change-id] del {
     text-decoration: line-through;
     text-decoration-color: var(--change-del);
-    background: color-mix(in srgb, var(--change-del) 50%, transparent);
+    background: color-mix(in srgb, var(--change-del) 20%, transparent);
 }
 
 /* When a mixed group is revealed (red + green side by side), hide
