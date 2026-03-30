@@ -25,7 +25,9 @@ emphasis) are not highlighted at the word level.
 BlockMatcher's `buildResult` emits deletions before insertions within each gap.
 Use this ordering to pair them positionally: the i-th deletion in a gap pairs
 with the i-th insertion. Unpaired blocks (more deletions than insertions or
-vice versa) remain unpaired.
+vice versa) remain unpaired. This relies on `buildResult`'s stable
+deletion-before-insertion ordering within each gap — document this as a
+contract if not already explicit.
 
 Add a `pairMap: [String: String]` to DiffContext, mapping each insertion's
 change ID to its paired deletion's change ID (and vice versa). Computed during
@@ -87,7 +89,8 @@ enum WordDiff {
 
 Tokenization splits on whitespace boundaries, preserving whitespace in the
 tokens (e.g., `"hello "` and `"world"`) so that reconstructing the text from
-spans is lossless.
+spans is lossless. Runs of multiple consecutive whitespace characters attach to
+the preceding token (same as single spaces).
 
 The diff operates on the plain text extracted from each block's inline content.
 It does not see or operate on formatting — formatting is handled separately
@@ -126,6 +129,13 @@ The span list is flat — it represents the full inline content in document
 order, with each span tagged as unchanged/inserted/deleted. Formatting
 boundaries are not encoded in the spans; they're handled by the renderer
 walking the AST in parallel with the span list.
+
+Key invariant: each Text leaf node's content is a contiguous subsequence of the
+flat span list. The renderer's `wordSpanCursor` advances through spans as it
+visits each Text node, so spans never straddle a formatting boundary. This is
+guaranteed by the `hasMatchingStructure` gate — if both trees have the same
+inline structure, each corresponding pair of Text nodes covers the same
+position range in the span list.
 
 
 ## Step 4: Up mode rendering
@@ -194,6 +204,9 @@ a complete inline diff.
 
 ## Step 5: Down mode rendering
 
+> Deferred — implement Steps 1–4, 6, and 7 first. Down mode word-level diffs
+> can be added as a follow-up once Up mode is working and validated.
+
 **File:** `Core/Sources/Core/Rendering/DownHTMLVisitor.swift`
 
 Down mode renders syntax-highlighted source lines. When a line falls within a
@@ -232,6 +245,19 @@ block-level changes:
     border-radius: 2px;
 }
 ```
+
+
+## Scope and bail-outs
+
+**Block types.** Pairing applies only to leaf paragraph blocks. Compound blocks
+(list items, blockquotes, tables) are not paired — they will fail
+`hasMatchingStructure` and fall back to block-level highlighting. This is
+acceptable for the initial implementation.
+
+**Large diffs.** If a paired block exceeds a word-count threshold (e.g., both
+old and new exceed 200 words and more than 80% of words differ), skip
+word-level diffing for that pair and fall back to block-level. This prevents
+unhelpful walls of red/blue in near-total rewrites.
 
 
 ## Step 7: Tests
