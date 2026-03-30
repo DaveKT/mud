@@ -517,19 +517,116 @@ struct DiffContextTests {
       "Paired deletion should carry word spans")
   }
 
-  @Test func pairedReplacementWithDivergentStructureHasNilWordSpans() {
-    // Old has plain text, new has bold — different inline structure.
+  @Test func formattingOnlyChangeHasNilWordSpans() {
+    // Same words, different formatting → no word-level markers.
     let old = ParsedMarkdown("Hello world.\n")
     let new = ParsedMarkdown("Hello **world**.\n")
     let context = DiffContext(old: old, new: new)
 
     let leaves = leafBlocks(of: new)
     #expect(context.wordSpans(for: leaves[0]) == nil,
-      "Divergent structure should fall back to block-level")
+      "Formatting-only change should fall back to block-level")
 
     let deletions = context.precedingDeletions(before: leaves[0])
     if !deletions.isEmpty {
       #expect(deletions[0].wordSpans == nil)
+    }
+  }
+
+  @Test func wordChangedWithFormattingAddedCarriesWordSpans() {
+    // Word changed AND formatting added → word spans present.
+    let old = ParsedMarkdown("The quick brown fox.\n")
+    let new = ParsedMarkdown("The *slow* brown fox.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let spans = context.wordSpans(for: leaves[0])
+    #expect(spans != nil, "Word change with formatting change should carry word spans")
+    if let spans {
+      let hasDeleted = spans.contains(where: \.isDeleted)
+      let hasInserted = spans.contains(where: \.isInserted)
+      #expect(hasDeleted)
+      #expect(hasInserted)
+    }
+
+    let deletions = context.precedingDeletions(before: leaves[0])
+    #expect(deletions[0].wordSpans != nil)
+  }
+
+  @Test func wordChangedWithFormattingRemovedCarriesWordSpans() {
+    // Word changed AND formatting removed → word spans present.
+    let old = ParsedMarkdown("The **quick** brown fox.\n")
+    let new = ParsedMarkdown("The slow brown fox.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let spans = context.wordSpans(for: leaves[0])
+    #expect(spans != nil, "Word change with formatting removed should carry word spans")
+    if let spans {
+      let hasDeleted = spans.contains(where: \.isDeleted)
+      let hasInserted = spans.contains(where: \.isInserted)
+      #expect(hasDeleted)
+      #expect(hasInserted)
+    }
+  }
+
+  @Test func wordChangedWithFormattingShiftedCarriesWordSpans() {
+    // Words changed AND formatting shifted to different words.
+    let old = ParsedMarkdown("The **quick brown** fox.\n")
+    let new = ParsedMarkdown("The *slow* brown dog.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let spans = context.wordSpans(for: leaves[0])
+    #expect(spans != nil, "Word change with shifted formatting should carry word spans")
+    if let spans {
+      let hasDeleted = spans.contains(where: \.isDeleted)
+      let hasInserted = spans.contains(where: \.isInserted)
+      #expect(hasDeleted)
+      #expect(hasInserted)
+    }
+  }
+
+  @Test func inlineCodeAddedWithWordChangeCarriesWordSpans() {
+    let old = ParsedMarkdown("Call foo now.\n")
+    let new = ParsedMarkdown("Call `bar` now.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let spans = context.wordSpans(for: leaves[0])
+    #expect(spans != nil, "Word change with inline code added should carry word spans")
+    if let spans {
+      let hasDeleted = spans.contains(where: \.isDeleted)
+      let hasInserted = spans.contains(where: \.isInserted)
+      #expect(hasDeleted)
+      #expect(hasInserted)
+    }
+  }
+
+  @Test func linkAddedWithoutWordChangeHasNilWordSpans() {
+    // Same words, link added → formatting-only change.
+    let old = ParsedMarkdown("Read the guide.\n")
+    let new = ParsedMarkdown("Read the [guide](https://example.com).\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    #expect(context.wordSpans(for: leaves[0]) == nil,
+      "Link-only change with same words should fall back to block-level")
+  }
+
+  @Test func linkAddedWithWordChangeCarriesWordSpans() {
+    let old = ParsedMarkdown("Read the old guide.\n")
+    let new = ParsedMarkdown("Read the [new guide](https://example.com).\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let spans = context.wordSpans(for: leaves[0])
+    #expect(spans != nil, "Word change with link added should carry word spans")
+    if let spans {
+      let hasDeleted = spans.contains(where: \.isDeleted)
+      let hasInserted = spans.contains(where: \.isInserted)
+      #expect(hasDeleted)
+      #expect(hasInserted)
     }
   }
 

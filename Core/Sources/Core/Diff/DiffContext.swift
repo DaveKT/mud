@@ -63,14 +63,11 @@ struct DiffContext {
                 pairMap[del.changeID] = ins.changeID
                 pairMap[ins.changeID] = del.changeID
 
-                guard WordDiff.hasMatchingStructure(
-                    del.block.markup, ins.block.markup
-                ) else { continue }
-
                 let spans = WordDiff.diff(
                     old: WordDiff.inlineText(of: del.block.markup),
                     new: WordDiff.inlineText(of: ins.block.markup))
-                if !spans.isEmpty {
+                let hasWordChanges = spans.contains { !$0.isUnchanged }
+                if hasWordChanges {
                     wordSpanMap[del.changeID] = spans
                     wordSpanMap[ins.changeID] = spans
                 }

@@ -407,20 +407,91 @@ struct UpModeChangeTrackingTests {
     }
   }
 
-  @Test func formattedTextDifferentStructureFallsBackToBlockLevel() {
+  @Test func formattingOnlyChangeFallsBackToBlockLevel() {
+    // Same words, different formatting → block-level only.
+    let old = "Hello **bold** world.\n"
+    let new = "Hello *bold* world.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(!block.contains("<ins>"),
+        "Formatting-only change should not produce inline word markers")
+      #expect(!block.contains("<del>"),
+        "Formatting-only change should not produce inline word markers")
+    }
+  }
+
+  @Test func wordChangedWithDivergentFormattingShowsInlineMarkers() {
+    // Word changed AND formatting diverges → word-level markers present.
     let old = "Hello **bold** world.\n"
     let new = "Hello *italic* world.\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
     let html = MudCore.renderUpToHTML(new, options: opts)
-    // Divergent structure → no inline word markers.
     let insBlock = extractBlock(html, class: "mud-change-ins")
     #expect(insBlock != nil)
     if let block = insBlock {
-      #expect(!block.contains("<ins>"),
-        "Divergent structure should not produce inline word markers")
-      #expect(!block.contains("<del>"),
-        "Divergent structure should not produce inline word markers")
+      #expect(block.contains("<del>"), "Word change with formatting change should show <del>")
+      #expect(block.contains("<ins>"), "Word change with formatting change should show <ins>")
+      #expect(block.contains("bold"))
+      #expect(block.contains("italic"))
+    }
+  }
+
+  @Test func redBlockWithDivergentFormattingShowsDelOnly() {
+    let old = "Hello **bold** world.\n"
+    let new = "Hello *italic* world.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let delBlock = extractBlock(html, class: "mud-change-del")
+    #expect(delBlock != nil)
+    if let block = delBlock {
+      #expect(block.contains("<del>"), "Red block should show deleted word")
+      #expect(block.contains("bold"))
+      #expect(!block.contains("<ins>"), "Red block must not contain <ins>")
+      #expect(!block.contains("italic"),
+        "Red block must not contain the inserted word")
+    }
+  }
+
+  @Test func blueBlockWithFormattingAddedShowsMarkersInNewFormatting() {
+    // Old: plain text. New: word changed and wrapped in emphasis.
+    let old = "The quick fox.\n"
+    let new = "The *slow* fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<em>"), "New formatting should be present")
+      #expect(block.contains("<ins>"), "Inserted word should be marked")
+      #expect(block.contains("<del>"), "Deleted word should be shown")
+      #expect(block.contains("slow"))
+      #expect(block.contains("quick"))
+    }
+  }
+
+  @Test func redBlockWithFormattingAddedPreservesOldFormatting() {
+    // Old: plain text. New: word changed and wrapped in emphasis.
+    // Red block walks old AST → should have no <em>.
+    let old = "The quick fox.\n"
+    let new = "The *slow* fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let delBlock = extractBlock(html, class: "mud-change-del")
+    #expect(delBlock != nil)
+    if let block = delBlock {
+      #expect(!block.contains("<em>"),
+        "Red block uses old AST, which has no emphasis")
+      #expect(block.contains("<del>"))
+      #expect(block.contains("quick"))
+      #expect(!block.contains("<ins>"))
     }
   }
 

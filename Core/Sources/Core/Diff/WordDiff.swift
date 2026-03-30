@@ -208,62 +208,6 @@ enum WordDiff {
         }
     }
 
-    /// Returns true if two markup nodes have the same inline formatting
-    /// structure (ignoring text content).
-    ///
-    /// Compares only the sequence and nesting of formatting containers
-    /// (Strong, Emphasis, InlineCode, Link, etc.). Text, SoftBreak,
-    /// and LineBreak nodes are ignored — they carry content, not
-    /// structure. If the formatting structure diverges, returns false
-    /// and the caller falls back to block-level highlighting.
-    static func hasMatchingStructure(
-        _ old: Markup, _ new: Markup
-    ) -> Bool {
-        let oldFormatting = old.children.compactMap(formattingTag)
-        let newFormatting = new.children.compactMap(formattingTag)
-        guard oldFormatting.count == newFormatting.count else {
-            return false
-        }
-        for (o, n) in zip(oldFormatting, newFormatting) {
-            guard o.tag == n.tag else { return false }
-            // InlineCode is a leaf — no children to compare.
-            if o.tag != .inlineCode,
-               !hasMatchingStructure(o.node, n.node) {
-                return false
-            }
-        }
-        return true
-    }
-
-    /// Inline formatting types that constitute "structure" for the
-    /// purpose of word-level diff compatibility.
-    private enum FormattingTag: Equatable {
-        case strong, emphasis, strikethrough, inlineCode, link, image
-    }
-
-    private struct TaggedNode {
-        let tag: FormattingTag
-        let node: Markup
-    }
-
-    /// Returns a `TaggedNode` if the node is a formatting container,
-    /// or `nil` for content nodes (Text, SoftBreak, LineBreak).
-    private static func formattingTag(
-        _ node: Markup
-    ) -> TaggedNode? {
-        let tag: FormattingTag
-        switch node {
-        case is Strong:        tag = .strong
-        case is Emphasis:      tag = .emphasis
-        case is Strikethrough: tag = .strikethrough
-        case is InlineCode:    tag = .inlineCode
-        case is Link:          tag = .link
-        case is Image:         tag = .image
-        default:               return nil
-        }
-        return TaggedNode(tag: tag, node: node)
-    }
-
     // MARK: - Inline text extraction
 
     /// Extracts the inline text content of a markup node, matching

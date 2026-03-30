@@ -152,63 +152,6 @@ struct WordDiffTests {
     }
   }
 
-  // MARK: - Structure comparison
-
-  @Test func sameStructurePlainText() {
-    let old = ParsedMarkdown("Hello world.\n")
-    let new = ParsedMarkdown("Goodbye world.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
-
-  @Test func sameStructureWithEmphasis() {
-    let old = ParsedMarkdown("Hello *beautiful* world.\n")
-    let new = ParsedMarkdown("Goodbye *wonderful* world.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
-
-  @Test func sameStructureNestedFormatting() {
-    let old = ParsedMarkdown("Hello **bold *and italic*** end.\n")
-    let new = ParsedMarkdown("Goodbye **changed *stuff here*** end.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
-
-  @Test func sameStructureWithInlineCode() {
-    let old = ParsedMarkdown("Call `foo()` now.\n")
-    let new = ParsedMarkdown("Call `bar()` now.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
-
-  @Test func differentNesting() {
-    let old = ParsedMarkdown("Hello **bold** world.\n")
-    let new = ParsedMarkdown("Hello *italic* world.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(!WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
-
-  @Test func extraNodeInNew() {
-    let old = ParsedMarkdown("Hello world.\n")
-    let new = ParsedMarkdown("Hello **bold** world.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(!WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
-
-  @Test func sameStructureDifferentText() {
-    let old = ParsedMarkdown("Alpha **beta** gamma.\n")
-    let new = ParsedMarkdown("One **two** three.\n")
-    let oldPara = old.document.child(at: 0)!
-    let newPara = new.document.child(at: 0)!
-    #expect(WordDiff.hasMatchingStructure(oldPara, newPara))
-  }
 }
 
 // MARK: - Test helpers
