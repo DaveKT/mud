@@ -147,3 +147,24 @@ span.mud-change-del.mud-change-revealed { display: inline; }
     text-decoration-color: color-mix(in srgb, var(--change-del) 40%, transparent);
     text-decoration-thickness: 1.5px;
 }
+
+
+/* ── Word-level inline markers ─────────────────────────────────── */
+
+[data-change-id] ins {
+    text-decoration: none;
+    background: color-mix(in srgb, var(--change-ins) 50%, transparent);
+}
+
+[data-change-id] del {
+    text-decoration: line-through;
+    text-decoration-color: var(--change-del);
+    background: color-mix(in srgb, var(--change-del) 50%, transparent);
+}
+
+/* When a mixed group is revealed (red + green side by side), hide
+   inline <del> context words in the insertion block — the full
+   deletion is visible in its own block. */
+.mud-change-ins.mud-change-revealed del {
+    display: none;
+}

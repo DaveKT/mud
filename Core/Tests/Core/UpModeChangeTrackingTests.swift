@@ -173,22 +173,6 @@ struct UpModeChangeTrackingTests {
 
   // MARK: - Replacements (del + ins as native elements)
 
-  @Test func replacedParagraphEmitsNativeDelAndIns() {
-    let old = "Original text.\n"
-    let new = "Revised text.\n"
-    var opts = RenderOptions()
-    opts.waypoint = ParsedMarkdown(old)
-    let html = MudCore.renderUpToHTML(new, options: opts)
-    // Deletion as native <p>.
-    #expect(html.contains("<p class=\"mud-change-del\""))
-    #expect(html.contains("Original text."))
-    // Insertion as native <p> — no mud-change-mix on content elements.
-    #expect(html.contains("<p class=\"mud-change-ins\""))
-    #expect(html.contains("Revised text."))
-    #expect(!html.contains("<ins"), "Must not use <ins> wrappers")
-    #expect(!html.contains("<del"), "Must not use <del> wrappers")
-  }
-
   @Test func replacementOldVersionPrecedesNewVersion() {
     let old = "Original.\n"
     let new = "Changed.\n"
@@ -365,6 +349,151 @@ struct UpModeChangeTrackingTests {
     #expect(!html.contains("<ins"), "Must not use <ins> wrappers")
   }
 
+  // MARK: - Word-level diffs in blue block (paired insertion)
+
+  @Test func singleWordChangedShowsInlineMarkers() {
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // The blue block (insertion) should contain inline <del> and <ins>.
+    #expect(html.contains("<del>"))
+    #expect(html.contains("<ins>"))
+    #expect(html.contains("quick"))
+    #expect(html.contains("slow"))
+  }
+
+  @Test func wordAddedShowsInsOnly() {
+    let old = "The fox.\n"
+    let new = "The brown fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<ins>"))
+      #expect(block.contains("brown"))
+    }
+  }
+
+  @Test func wordRemovedShowsDelOnly() {
+    let old = "The brown fox.\n"
+    let new = "The fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<del>"))
+      #expect(block.contains("brown"))
+    }
+  }
+
+  @Test func formattedTextSameStructureShowsInlineMarkers() {
+    let old = "Hello **beautiful** world.\n"
+    let new = "Hello **wonderful** world.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // <ins>/<del> should nest inside <strong> correctly.
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<strong>"))
+      #expect(block.contains("<del>") || block.contains("<ins>"))
+    }
+  }
+
+  @Test func formattedTextDifferentStructureFallsBackToBlockLevel() {
+    let old = "Hello **bold** world.\n"
+    let new = "Hello *italic* world.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // Divergent structure → no inline word markers.
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(!block.contains("<ins>"),
+        "Divergent structure should not produce inline word markers")
+      #expect(!block.contains("<del>"),
+        "Divergent structure should not produce inline word markers")
+    }
+  }
+
+  @Test func multiLineParagraphWordChangePreservesFullText() {
+    // SoftBreaks contribute a space to plainText; the word span cursor
+    // must account for it or the final characters get truncated.
+    let old = "The quick brown\nfox jumps over.\n"
+    let new = "The slow brown\nfox jumps over.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<ins>"))
+      #expect(block.contains("slow"))
+      // The full text after the SoftBreak must survive intact.
+      #expect(block.contains("over."), "Text after SoftBreak must not be truncated")
+    }
+  }
+
+  // MARK: - Word-level diffs in red block (paired deletion)
+
+  @Test func redBlockShowsDeletedWordsOnly() {
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let delBlock = extractBlock(html, class: "mud-change-del")
+    #expect(delBlock != nil)
+    if let block = delBlock {
+      #expect(block.contains("<del>"))
+      #expect(block.contains("quick"))
+      // Red block must NOT contain <ins> — inserted words are skipped.
+      #expect(!block.contains("<ins>"),
+        "Red block must not show inserted words")
+    }
+  }
+
+  @Test func redBlockWordAddedInNewHasNoMarkers() {
+    // When a word is added in new, the old text has nothing to mark.
+    let old = "The fox.\n"
+    let new = "The brown fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let delBlock = extractBlock(html, class: "mud-change-del")
+    #expect(delBlock != nil)
+    if let block = delBlock {
+      #expect(!block.contains("brown"),
+        "Added word should not appear in the deletion block")
+    }
+  }
+
+  // MARK: - Green block (pure insertion, no word-level markers)
+
+  @Test func greenBlockHasNoWordLevelMarkers() {
+    let old = "Keep.\n"
+    let new = "Keep.\n\nBrand new paragraph.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // The pure insertion should have no inline <ins> or <del>.
+    let insBlocks = extractAllBlocks(html, class: "mud-change-ins")
+    for block in insBlocks where block.contains("Brand new") {
+      #expect(!block.contains("<ins>"),
+        "Pure insertion should not have word-level markers")
+      #expect(!block.contains("<del>"),
+        "Pure insertion should not have word-level markers")
+    }
+  }
+
   // MARK: - Alerts and asides
 
   @Test func insertedGFMAlertHasChangeAttributes() {
@@ -411,4 +540,46 @@ struct UpModeChangeTrackingTests {
     let pattern = /blockquote class="[^"]*mud-change-ins/
     #expect(html.contains(pattern))
   }
+}
+
+// MARK: - Test helpers
+
+/// Extracts the first HTML block with the given class from rendered output.
+private func extractBlock(_ html: String, class className: String) -> String? {
+  // Find the tag containing this class, then extract to its closing tag.
+  guard let classRange = html.range(of: className) else { return nil }
+  // Walk backward to find the opening '<'.
+  var start = classRange.lowerBound
+  while start > html.startIndex && html[html.index(before: start)] != "<" {
+    start = html.index(before: start)
+  }
+  if start > html.startIndex {
+    start = html.index(before: start) // include the '<'
+  }
+  // Find the tag name.
+  let afterOpen = html.index(after: start) // skip '<'
+  let tagEnd = html[afterOpen...].firstIndex(where: { $0 == " " || $0 == ">" })
+      ?? html.endIndex
+  let tagName = String(html[afterOpen..<tagEnd])
+  // Find the matching close tag.
+  let closeTag = "</\(tagName)>"
+  guard let closeRange = html.range(of: closeTag, range: classRange.upperBound..<html.endIndex)
+  else { return nil }
+  return String(html[start..<closeRange.upperBound])
+}
+
+/// Extracts all HTML blocks with the given class from rendered output.
+private func extractAllBlocks(_ html: String, class className: String) -> [String] {
+  var results: [String] = []
+  var searchStart = html.startIndex
+  while searchStart < html.endIndex {
+    let remaining = html[searchStart...]
+    guard let classRange = remaining.range(of: className) else { break }
+    if let block = extractBlock(
+        String(html[searchStart...]), class: className) {
+      results.append(block)
+    }
+    searchStart = classRange.upperBound
+  }
+  return results
 }

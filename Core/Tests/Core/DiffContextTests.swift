@@ -329,7 +329,6 @@ struct DiffContextTests {
     let new = ParsedMarkdown("- Alpha\n")
     let context = DiffContext(old: old, new: new)
 
-    let leaves = leafBlocks(of: new)
     // "Beta" deletion appears as trailing (after the last leaf).
     let trailing = context.trailingDeletions()
     #expect(trailing.count == 1)
@@ -378,6 +377,178 @@ struct DiffContextTests {
     #expect(deletions.count == 1)
     #expect(deletions[0].html.contains("<strong>Bold deleted.</strong>"))
     #expect(!deletions[0].html.contains("<p>"))
+  }
+
+  // MARK: - Block pairing
+
+  @Test func singleReplacementIsPaired() {
+    let old = ParsedMarkdown("Original paragraph.\n")
+    let new = ParsedMarkdown("Revised paragraph.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let insID = context.changeID(for: leaves[0])!
+    let delID = context.precedingDeletions(before: leaves[0])[0].changeID
+
+    #expect(context.pairedChangeID(for: insID) == delID)
+    #expect(context.pairedChangeID(for: delID) == insID)
+  }
+
+  @Test func twoReplacementsInOneGapPairPositionally() {
+    let old = ParsedMarkdown("Keep.\n\nFirst old.\n\nSecond old.\n\nEnd.\n")
+    let new = ParsedMarkdown("Keep.\n\nFirst new.\n\nSecond new.\n\nEnd.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    // leaves[0] = Keep, leaves[1] = First new, leaves[2] = Second new, leaves[3] = End
+
+    let ins1 = context.changeID(for: leaves[1])!
+    let ins2 = context.changeID(for: leaves[2])!
+
+    let dels1 = context.precedingDeletions(before: leaves[1])
+    let dels2 = context.precedingDeletions(before: leaves[2])
+
+    // First deletion pairs with first insertion, second with second.
+    if !dels1.isEmpty {
+      #expect(context.pairedChangeID(for: ins1) == dels1[0].changeID)
+      #expect(context.pairedChangeID(for: dels1[0].changeID) == ins1)
+    }
+    if !dels2.isEmpty {
+      #expect(context.pairedChangeID(for: ins2) == dels2[0].changeID)
+    }
+  }
+
+  @Test func moreDeletionsThanInsertionsLeavesExcessUnpaired() {
+    // Three paragraphs deleted, one inserted → only one pair.
+    let old = ParsedMarkdown("Alpha.\n\nBeta.\n\nGamma.\n")
+    let new = ParsedMarkdown("New.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let insID = context.changeID(for: leaves[0])!
+
+    // The first deletion should be paired; the other two are unpaired.
+    let pairedDel = context.pairedChangeID(for: insID)
+    #expect(pairedDel != nil)
+
+    // Collect all deletion IDs.
+    let preceding = context.precedingDeletions(before: leaves[0])
+    let trailing = context.trailingDeletions()
+    let allDelIDs = (preceding + trailing).map(\.changeID)
+
+    // Exactly one deletion is paired.
+    let pairedCount = allDelIDs.filter {
+      context.pairedChangeID(for: $0) != nil
+    }.count
+    #expect(pairedCount == 1)
+  }
+
+  @Test func moreInsertionsThanDeletionsLeavesExcessUnpaired() {
+    let old = ParsedMarkdown("Old.\n")
+    let new = ParsedMarkdown("New A.\n\nNew B.\n\nNew C.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let ids = leaves.compactMap { context.changeID(for: $0) }
+
+    // Only the first insertion should be paired.
+    let pairedCount = ids.filter {
+      context.pairedChangeID(for: $0) != nil
+    }.count
+    #expect(pairedCount == 1)
+  }
+
+  @Test func pureDeletionIsUnpaired() {
+    let old = ParsedMarkdown("Keep.\n\nRemoved.\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let delID = context.trailingDeletions()[0].changeID
+    #expect(context.pairedChangeID(for: delID) == nil)
+  }
+
+  @Test func pureInsertionIsUnpaired() {
+    let old = ParsedMarkdown("Keep.\n")
+    let new = ParsedMarkdown("Keep.\n\nAdded.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let insID = context.changeID(for: leaves[1])!
+    #expect(context.pairedChangeID(for: insID) == nil)
+  }
+
+  @Test func separateGapsPairIndependently() {
+    // Two separate replacement gaps, each with one del+ins pair.
+    let old = ParsedMarkdown("Alpha.\n\nKeep.\n\nGamma.\n")
+    let new = ParsedMarkdown("Alpha new.\n\nKeep.\n\nGamma new.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let id1 = context.changeID(for: leaves[0])!
+    let id3 = context.changeID(for: leaves[2])!
+
+    // Each insertion should be paired with the deletion in its own gap.
+    let pair1 = context.pairedChangeID(for: id1)
+    let pair3 = context.pairedChangeID(for: id3)
+    #expect(pair1 != nil)
+    #expect(pair3 != nil)
+    #expect(pair1 != pair3)
+  }
+
+  // MARK: - Word spans on paired blocks
+
+  @Test func pairedReplacementWithMatchingStructureCarriesWordSpans() {
+    let old = ParsedMarkdown("The quick fox.\n")
+    let new = ParsedMarkdown("The slow fox.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    let insSpans = context.wordSpans(for: leaves[0])
+    #expect(insSpans != nil, "Paired insertion should carry word spans")
+    if let insSpans {
+      let hasDeleted = insSpans.contains(where: \.isDeleted)
+      let hasInserted = insSpans.contains(where: \.isInserted)
+      #expect(hasDeleted)
+      #expect(hasInserted)
+    }
+
+    let deletions = context.precedingDeletions(before: leaves[0])
+    #expect(deletions[0].wordSpans != nil,
+      "Paired deletion should carry word spans")
+  }
+
+  @Test func pairedReplacementWithDivergentStructureHasNilWordSpans() {
+    // Old has plain text, new has bold — different inline structure.
+    let old = ParsedMarkdown("Hello world.\n")
+    let new = ParsedMarkdown("Hello **world**.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    #expect(context.wordSpans(for: leaves[0]) == nil,
+      "Divergent structure should fall back to block-level")
+
+    let deletions = context.precedingDeletions(before: leaves[0])
+    if !deletions.isEmpty {
+      #expect(deletions[0].wordSpans == nil)
+    }
+  }
+
+  @Test func unpairedInsertionHasNilWordSpans() {
+    let old = ParsedMarkdown("Keep.\n")
+    let new = ParsedMarkdown("Keep.\n\nAdded.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let leaves = leafBlocks(of: new)
+    #expect(context.wordSpans(for: leaves[1]) == nil)
+  }
+
+  @Test func unpairedDeletionHasNilWordSpans() {
+    let old = ParsedMarkdown("Keep.\n\nRemoved.\n")
+    let new = ParsedMarkdown("Keep.\n")
+    let context = DiffContext(old: old, new: new)
+
+    let deletions = context.trailingDeletions()
+    #expect(deletions[0].wordSpans == nil)
   }
 
   // MARK: - All content deleted

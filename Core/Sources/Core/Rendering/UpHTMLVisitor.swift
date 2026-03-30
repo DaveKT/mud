@@ -125,13 +125,16 @@ struct UpHTMLVisitor: MarkupWalker {
         let attrs = changeAttributes(for: heading)
         let level = heading.level
         let slug = slugTracker.slug(for: heading.plainText)
+        activateWordSpans(for: heading)
         result += "<h\(level) id=\"\(slug)\"\(attrs?.asString ?? "")>"
         descendInto(heading)
         result += "</h\(level)>\n"
+        deactivateWordSpans()
     }
 
     mutating func visitParagraph(_ paragraph: Paragraph) {
         let attrs = changeAttributes(for: paragraph)
+        activateWordSpans(for: paragraph)
         if inTightList && paragraph.parent is ListItem {
             if attrs != nil {
                 result += "<span\(attrs!.asString)>"
@@ -146,6 +149,7 @@ struct UpHTMLVisitor: MarkupWalker {
             descendInto(paragraph)
             result += "</p>\n"
         }
+        deactivateWordSpans()
     }
 
     mutating func visitCodeBlock(_ codeBlock: CodeBlock) {
@@ -347,14 +351,22 @@ struct UpHTMLVisitor: MarkupWalker {
     // MARK: - Inline leaves
 
     mutating func visitText(_ text: Text) {
-        result += HTMLEscaping.escape(
-            EmojiShortcodes.replaceShortcodes(in: text.string)
-        )
+        if wordSpans != nil {
+            consumeWordSpans(charCount: text.string.count)
+        } else {
+            result += HTMLEscaping.escape(
+                EmojiShortcodes.replaceShortcodes(in: text.string)
+            )
+        }
     }
 
     mutating func visitInlineCode(_ inlineCode: InlineCode) {
         result += "<code>"
-        result += HTMLEscaping.escape(inlineCode.code)
+        if wordSpans != nil {
+            consumeWordSpans(charCount: inlineCode.code.count)
+        } else {
+            result += HTMLEscaping.escape(inlineCode.code)
+        }
         result += "</code>"
     }
 
@@ -363,10 +375,12 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitLineBreak(_ lineBreak: LineBreak) {
+        if wordSpans != nil { skipWordSpanChars(1) }
         result += "<br />\n"
     }
 
     mutating func visitSoftBreak(_ softBreak: SoftBreak) {
+        if wordSpans != nil { skipWordSpanChars(1) }
         result += "\n"
     }
 
@@ -612,6 +626,176 @@ struct UpHTMLVisitor: MarkupWalker {
             result += "</p>\n"
         }
         for block in remainingBlocks { visit(block) }
+    }
+
+    // MARK: - Word-level diff rendering
+
+    /// Role determines how word spans are emitted.
+    enum WordSpanRole {
+        /// Blue block (paired insertion): unchanged as-is, inserted in
+        /// `<ins>`, deleted in `<del>`.
+        case insertion
+        /// Red block (paired deletion): unchanged as-is, deleted in
+        /// `<del>`, inserted spans are skipped.
+        case deletion
+    }
+
+    /// Active word spans for the current block, or `nil`.
+    private var wordSpans: [WordSpan]?
+    private var wordSpanCursor = 0
+    private var wordSpanRole: WordSpanRole = .insertion
+
+    /// Activates word-span rendering if the block has word spans.
+    private mutating func activateWordSpans(for node: Markup) {
+        if let spans = diffContext?.wordSpans(for: node), !spans.isEmpty {
+            wordSpans = spans
+            wordSpanCursor = 0
+            wordSpanRole = .insertion
+        }
+    }
+
+    /// Flushes trailing non-consuming spans and clears word-span state.
+    private mutating func deactivateWordSpans() {
+        guard wordSpans != nil else { return }
+        flushNonConsumingWordSpans()
+        wordSpans = nil
+    }
+
+    /// Advances the word span cursor by `count` characters without
+    /// emitting output. Used for SoftBreak and LineBreak, whose
+    /// plainText contribution (a space or newline) is already
+    /// represented by the break's own HTML rendering.
+    private mutating func skipWordSpanChars(_ count: Int) {
+        guard wordSpans != nil else { return }
+        var remaining = count
+        while remaining > 0 && wordSpanCursor < wordSpans!.count {
+            let span = wordSpans![wordSpanCursor]
+            // Non-consuming spans still need handling.
+            switch (span, wordSpanRole) {
+            case (.deleted(let text), .insertion):
+                result += "<del>\(escapeSpanText(text))</del>"
+                wordSpanCursor += 1
+                continue
+            case (.inserted, .deletion):
+                wordSpanCursor += 1
+                continue
+            default:
+                break
+            }
+            let text = span.text
+            if text.count <= remaining {
+                wordSpanCursor += 1
+                remaining -= text.count
+            } else {
+                wordSpans![wordSpanCursor] =
+                    rebuildSpan(String(text.dropFirst(remaining)), like: span)
+                remaining = 0
+            }
+        }
+    }
+
+    /// Consumes word spans for a text node with the given character count.
+    ///
+    /// Non-consuming spans (deleted in blue mode, inserted in red mode)
+    /// are emitted or skipped eagerly. Consuming spans are matched
+    /// against the text node's character length; if a span is larger
+    /// than the remaining length, it is split and the remainder stays
+    /// at the cursor for the next text node.
+    private mutating func consumeWordSpans(charCount: Int) {
+        guard wordSpans != nil else { return }
+        var remaining = charCount
+
+        while wordSpanCursor < wordSpans!.count {
+            let span = wordSpans![wordSpanCursor]
+
+            // Non-consuming: deleted in blue, inserted in red.
+            switch (span, wordSpanRole) {
+            case (.deleted(let text), .insertion):
+                result += "<del>\(escapeSpanText(text))</del>"
+                wordSpanCursor += 1
+                continue
+            case (.inserted, .deletion):
+                wordSpanCursor += 1
+                continue
+            default:
+                break
+            }
+
+            guard remaining > 0 else { return }
+
+            let text = span.text
+            if text.count <= remaining {
+                emitSpan(span)
+                wordSpanCursor += 1
+                remaining -= text.count
+            } else {
+                // Split: emit consumed portion, keep remainder at cursor.
+                let consumed = String(text.prefix(remaining))
+                let rest = String(text.dropFirst(remaining))
+                emitSpanText(consumed, like: span)
+                wordSpans![wordSpanCursor] = rebuildSpan(rest, like: span)
+                return
+            }
+        }
+    }
+
+    /// Emits any remaining non-consuming spans after the last text node.
+    private mutating func flushNonConsumingWordSpans() {
+        guard let spans = wordSpans else { return }
+        while wordSpanCursor < spans.count {
+            switch (spans[wordSpanCursor], wordSpanRole) {
+            case (.deleted(let text), .insertion):
+                result += "<del>\(escapeSpanText(text))</del>"
+                wordSpanCursor += 1
+            case (.inserted, .deletion):
+                wordSpanCursor += 1
+            default:
+                return
+            }
+        }
+    }
+
+    private mutating func emitSpan(_ span: WordSpan) {
+        emitSpanText(span.text, like: span)
+    }
+
+    private mutating func emitSpanText(_ text: String, like span: WordSpan) {
+        let escaped = escapeSpanText(text)
+        switch span {
+        case .unchanged: result += escaped
+        case .inserted:  result += "<ins>\(escaped)</ins>"
+        case .deleted:   result += "<del>\(escaped)</del>"
+        }
+    }
+
+    private func rebuildSpan(
+        _ text: String, like span: WordSpan
+    ) -> WordSpan {
+        switch span {
+        case .unchanged: return .unchanged(text)
+        case .inserted:  return .inserted(text)
+        case .deleted:   return .deleted(text)
+        }
+    }
+
+    private func escapeSpanText(_ text: String) -> String {
+        HTMLEscaping.escape(EmojiShortcodes.replaceShortcodes(in: text))
+    }
+
+    /// Renders a markup node's inner HTML using word spans.
+    ///
+    /// Used by `DiffContext` to re-render deletion HTML with word-level
+    /// `<del>` markers for the red block.
+    static func renderWithWordSpans(
+        _ markup: Markup, spans: [WordSpan], role: WordSpanRole
+    ) -> String {
+        var visitor = UpHTMLVisitor()
+        visitor.wordSpans = spans
+        visitor.wordSpanCursor = 0
+        visitor.wordSpanRole = role
+        for child in markup.children { visitor.visit(child) }
+        visitor.flushNonConsumingWordSpans()
+        return visitor.result
     }
 
     /// A list is loose if any blank lines appear between consecutive

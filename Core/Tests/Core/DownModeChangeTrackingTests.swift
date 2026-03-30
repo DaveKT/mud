@@ -158,6 +158,55 @@ struct DownModeChangeTrackingTests {
     #expect(html.contains("Heading"))
   }
 
+  // MARK: - Word-level diffs (deferred — Down mode Step 5)
+
+  @Test(.disabled("Down mode word-level diffs deferred"))
+  func wordChangedInPairedBlockShowsInlineMarkers() {
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // Insertion line should contain inline <ins> and <del>.
+    #expect(html.contains("<ins>"))
+    #expect(html.contains("<del>"))
+    #expect(html.contains("slow"))
+    #expect(html.contains("quick"))
+  }
+
+  @Test(.disabled("Down mode word-level diffs deferred"))
+  func deletionLineInPairedBlockShowsDelOnly() {
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // Find the deleted line — it should have <del> but no <ins>.
+    let delLines = html.components(separatedBy: "\n")
+      .filter { $0.contains("dl-del") }
+    for line in delLines {
+      #expect(!line.contains("<ins>"),
+        "Deletion line must not contain <ins>")
+    }
+  }
+
+  @Test(.disabled("Down mode word-level diffs deferred"))
+  func unpairedInsertionHasNoInlineMarkers() {
+    let old = "Keep.\n"
+    let new = "Keep.\n\nAdded.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insLines = html.components(separatedBy: "\n")
+      .filter { $0.contains("dl-ins") }
+    for line in insLines {
+      #expect(!line.contains("<ins>"),
+        "Unpaired insertion should not have word-level markers")
+      #expect(!line.contains("<del>"),
+        "Unpaired insertion should not have word-level markers")
+    }
+  }
+
   // MARK: - Edge cases
 
   @Test func allContentDeleted() {

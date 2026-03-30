@@ -10,6 +10,7 @@ struct DiffContext {
     private let precedingDeletionMap: [SourceKey: [RenderedDeletion]]
     private let _trailingDeletions: [RenderedDeletion]
     private let _groupMap: [String: GroupInfo]
+    private let _pairMap: [String: String]
 
     /// Creates a diff context by matching blocks between old and new documents.
     init(old: ParsedMarkdown, new: ParsedMarkdown) {
@@ -49,10 +50,60 @@ struct DiffContext {
         var changeEntries: [ChangeEntry] = []
         var lastWasChange = false
 
+        // Track deletions and insertions per gap for positional pairing.
+        // Within each gap, buildResult emits all deletions before all
+        // insertions. The i-th deletion pairs with the i-th insertion.
+        struct GapBlock {
+            let changeID: String
+            let block: LeafBlock
+        }
+        var gapDeletions: [GapBlock] = []
+        var gapInsertions: [GapBlock] = []
+        var pairMap: [String: String] = [:]
+        var wordSpanMap: [String: [WordSpan]] = [:]
+        var wordSpanDeletionHTML: [String: String] = [:]
+
+        /// Pair deletions with insertions in the current gap and compute
+        /// word spans for pairs with matching inline structure.
+        func processGap() {
+            for (del, ins) in zip(gapDeletions, gapInsertions) {
+                pairMap[del.changeID] = ins.changeID
+                pairMap[ins.changeID] = del.changeID
+
+                // Compute word spans for pairs with compatible structure.
+                guard WordDiff.hasMatchingStructure(
+                    del.block.markup, ins.block.markup
+                ) else { continue }
+
+                guard let oldInline = del.block.markup
+                        as? (any InlineContainer),
+                      let newInline = ins.block.markup
+                        as? (any InlineContainer)
+                else { continue }
+
+                let result = WordDiff.diff(
+                    old: oldInline.plainText,
+                    new: newInline.plainText)
+                if !result.forNew.isEmpty {
+                    wordSpanMap[del.changeID] = result.forOld
+                    wordSpanMap[ins.changeID] = result.forNew
+                    // Re-render the deletion with word-level markers
+                    // for the red block (using old-side spans).
+                    wordSpanDeletionHTML[del.changeID] =
+                        UpHTMLVisitor.renderWithWordSpans(
+                            del.block.markup, spans: result.forOld,
+                            role: .deletion)
+                }
+            }
+            gapDeletions.removeAll()
+            gapInsertions.removeAll()
+        }
+
         for match in matches {
             switch match {
             case .unchanged(_, let new):
                 flushDeletions(before: new.markup)
+                processGap()
                 lastWasChange = false
 
             case .inserted(let new):
@@ -62,6 +113,8 @@ struct DiffContext {
                     annotations[key] = AnnotationEntry(
                         annotation: .inserted, changeID: id)
                 }
+                gapInsertions.append(GapBlock(
+                    changeID: id, block: new))
                 changeEntries.append(ChangeEntry(
                     changeID: id, isDeletion: false,
                     isConsecutive: lastWasChange))
@@ -71,6 +124,8 @@ struct DiffContext {
                 let id = nextChangeID()
                 pendingDeletions.append(Self.renderedDeletion(
                     for: old, changeID: id))
+                gapDeletions.append(GapBlock(
+                    changeID: id, block: old))
                 changeEntries.append(ChangeEntry(
                     changeID: id, isDeletion: true,
                     isConsecutive: lastWasChange))
@@ -79,6 +134,38 @@ struct DiffContext {
         }
 
         trailing = pendingDeletions
+        processGap()
+
+        // Attach word spans to paired annotations and deletions.
+        if !wordSpanMap.isEmpty {
+            for (key, entry) in annotations
+                where wordSpanMap[entry.changeID] != nil {
+                annotations[key] = AnnotationEntry(
+                    annotation: entry.annotation,
+                    changeID: entry.changeID,
+                    wordSpans: wordSpanMap[entry.changeID])
+            }
+
+            func applyWordSpans(
+                _ deletions: [RenderedDeletion]
+            ) -> [RenderedDeletion] {
+                deletions.map { del in
+                    guard let spans = wordSpanMap[del.changeID]
+                    else { return del }
+                    return RenderedDeletion(
+                        html: wordSpanDeletionHTML[del.changeID]
+                            ?? del.html,
+                        changeID: del.changeID,
+                        summary: del.summary, tag: del.tag,
+                        wordSpans: spans)
+                }
+            }
+
+            for (key, deletions) in precedingMap {
+                precedingMap[key] = applyWordSpans(deletions)
+            }
+            trailing = applyWordSpans(trailing)
+        }
 
         // Grouping pass: break change entries into groups at
         // non-consecutive boundaries.
@@ -124,6 +211,7 @@ struct DiffContext {
         self.precedingDeletionMap = precedingMap
         self._trailingDeletions = trailing
         self._groupMap = groupMap
+        self._pairMap = pairMap
     }
 
     // MARK: - Public API
@@ -156,6 +244,19 @@ struct DiffContext {
     /// Returns group info for a change ID, or `nil` if unknown.
     func groupInfo(for changeID: String) -> GroupInfo? {
         _groupMap[changeID]
+    }
+
+    /// Returns the change ID of the block paired with the given change ID
+    /// (deletion ↔ insertion), or `nil` if the block is unpaired.
+    func pairedChangeID(for changeID: String) -> String? {
+        _pairMap[changeID]
+    }
+
+    /// Returns word-level diff spans for a block in the new AST,
+    /// or `nil` if the block is unpaired or has divergent structure.
+    func wordSpans(for node: Markup) -> [WordSpan]? {
+        guard let key = sourceKey(for: node) else { return nil }
+        return annotations[key]?.wordSpans
     }
 }
 
@@ -197,6 +298,20 @@ struct RenderedDeletion {
     let summary: String
     /// The native HTML tag for this block (e.g. "p", "li", "tr", "pre").
     let tag: String
+    /// Word-level diff spans when this deletion is paired with an insertion.
+    /// `nil` when unpaired or when inline structure diverges.
+    let wordSpans: [WordSpan]?
+
+    init(
+        html: String, changeID: String, summary: String, tag: String,
+        wordSpans: [WordSpan]? = nil
+    ) {
+        self.html = html
+        self.changeID = changeID
+        self.summary = summary
+        self.tag = tag
+        self.wordSpans = wordSpans
+    }
 }
 
 // MARK: - Source key
@@ -225,6 +340,16 @@ private func sourceKey(for node: Markup) -> SourceKey? {
 private struct AnnotationEntry {
     let annotation: BlockAnnotation
     let changeID: String
+    let wordSpans: [WordSpan]?
+
+    init(
+        annotation: BlockAnnotation, changeID: String,
+        wordSpans: [WordSpan]? = nil
+    ) {
+        self.annotation = annotation
+        self.changeID = changeID
+        self.wordSpans = wordSpans
+    }
 }
 
 // MARK: - Block rendering

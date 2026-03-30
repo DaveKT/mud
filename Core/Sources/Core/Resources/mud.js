@@ -385,7 +385,8 @@
         '[data-change-id="' + ids[j] + '"]'
       );
       if (!el) continue;
-      if (el.classList.contains("mud-change-del")) {
+      if (el.classList.contains("mud-change-del")
+          || el.classList.contains("mud-change-ins")) {
         el.classList.add("mud-change-revealed");
       }
       var gid = el.dataset.groupId;
