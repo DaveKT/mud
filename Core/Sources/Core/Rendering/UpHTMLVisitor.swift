@@ -57,7 +57,10 @@ struct UpHTMLVisitor: MarkupWalker {
             let attrs = innerParagraph.flatMap { changeAttributes(for: $0) }
                 ?? .empty
             emitAlertOpen(category, attrs: attrs)
+            activateAlertWordSpans(
+                for: innerParagraph, content: content)
             emitDocCAlertTitleAndContent(category, title, content)
+            deactivateWordSpans()
             result += "</blockquote>\n"
         } else {
             result += "<blockquote>\n"
@@ -682,6 +685,69 @@ struct UpHTMLVisitor: MarkupWalker {
         }
     }
 
+    /// Activates word spans for a DocC aside's inner paragraph,
+    /// advancing the cursor past the tag prefix that the Aside parser
+    /// strips (e.g. "Status: ") so spans align with the rendered
+    /// content.
+    private mutating func activateAlertWordSpans(
+        for paragraph: Markup?, content: [BlockMarkup]
+    ) {
+        guard let para = paragraph else { return }
+        activateWordSpans(for: para)
+        guard wordSpans != nil else { return }
+        skipAlertPrefix(originalParagraph: para, content: content)
+    }
+
+    /// Computes and silently skips the tag prefix that the Aside
+    /// parser strips, leaving the cursor aligned with the content.
+    private mutating func skipAlertPrefix(
+        originalParagraph: Markup, content: [BlockMarkup]
+    ) {
+        let fullLen = WordDiff.inlineText(of: originalParagraph).count
+        let contentLen: Int
+        if let first = content.first {
+            contentLen = WordDiff.inlineText(of: first).count
+        } else {
+            contentLen = 0
+        }
+        let prefixLen = fullLen - contentLen
+        if prefixLen > 0 {
+            advancePrefixSpans(charCount: prefixLen)
+        }
+    }
+
+    /// Advances the cursor past `charCount` consuming characters
+    /// without emitting anything. Non-consuming spans within the
+    /// prefix are silently skipped. Used to skip the tag prefix in
+    /// aside rendering so non-consuming spans (deleted/inserted
+    /// words) don't appear before the alert title.
+    private mutating func advancePrefixSpans(charCount: Int) {
+        guard wordSpans != nil else { return }
+        var remaining = charCount
+        while wordSpanCursor < wordSpans!.count && remaining > 0 {
+            let span = wordSpans![wordSpanCursor]
+
+            // Non-consuming spans in the prefix: skip silently.
+            switch (span, wordSpanRole) {
+            case (.deleted, .insertion), (.inserted, .deletion):
+                wordSpanCursor += 1
+                continue
+            default:
+                break
+            }
+
+            let text = span.text
+            if text.count <= remaining {
+                wordSpanCursor += 1
+                remaining -= text.count
+            } else {
+                wordSpans![wordSpanCursor] = span.withText(
+                    String(text.dropFirst(remaining)))
+                remaining = 0
+            }
+        }
+    }
+
     /// Activates word-span rendering if the block has word spans.
     private mutating func activateWordSpans(for node: Markup) {
         if let spans = diffContext?.wordSpans(for: node), !spans.isEmpty {
@@ -800,9 +866,11 @@ struct UpHTMLVisitor: MarkupWalker {
 
     /// Renders the inner HTML of a blockquote alert for deletion
     /// rendering. Returns the inner HTML and alert category, or nil
-    /// if the blockquote is not a recognized alert.
+    /// if the blockquote is not a recognized alert. When `wordSpans`
+    /// is provided, renders with word-level `<del>` markers.
     static func renderAlertInnerHTML(
-        _ blockQuote: BlockQuote
+        _ blockQuote: BlockQuote,
+        wordSpans: [WordSpan]? = nil
     ) -> (html: String, category: AlertCategory)? {
         let detector = AlertDetector()
 
@@ -816,7 +884,17 @@ struct UpHTMLVisitor: MarkupWalker {
         if let (category, title, content) =
             detector.detectDocCAlert(blockQuote) {
             var visitor = UpHTMLVisitor()
+            if let spans = wordSpans, !spans.isEmpty,
+               let para = blockQuote.children
+                   .first(where: { $0 is Paragraph }) {
+                visitor.wordSpans = spans
+                visitor.wordSpanCursor = 0
+                visitor.wordSpanRole = .deletion
+                visitor.skipAlertPrefix(
+                    originalParagraph: para, content: content)
+            }
             visitor.emitDocCAlertTitleAndContent(category, title, content)
+            visitor.deactivateWordSpans()
             return (visitor.result, category)
         }
 
@@ -835,8 +913,7 @@ struct UpHTMLVisitor: MarkupWalker {
         visitor.wordSpanCursor = 0
         visitor.wordSpanRole = role
         for child in markup.children { visitor.visit(child) }
-        visitor.flushNonConsumingWordSpans()
-        visitor.closeInlineTag()
+        visitor.deactivateWordSpans()
         return visitor.result
     }
 

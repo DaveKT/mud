@@ -366,10 +366,12 @@ extension DiffContext {
         // render the deletion as a full alert with proper styling.
         if let blockQuote = markup.parent as? BlockQuote,
            let (alertHTML, category) =
-               UpHTMLVisitor.renderAlertInnerHTML(blockQuote) {
+               UpHTMLVisitor.renderAlertInnerHTML(
+                   blockQuote, wordSpans: wordSpans) {
             return RenderedDeletion(
                 html: alertHTML, changeID: changeID,
                 summary: blockSummary(block), tag: "blockquote",
+                wordSpans: wordSpans,
                 extraClasses: "alert \(category.cssClass)")
         }
 

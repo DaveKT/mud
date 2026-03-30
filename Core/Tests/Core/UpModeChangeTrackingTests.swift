@@ -736,6 +736,36 @@ struct UpModeChangeTrackingTests {
     #expect(html.contains("Planning"))
   }
 
+  @Test func replacedAsideShowsWordLevelDiffInInsertedBlock() {
+    let old = "> Status: Planning\n"
+    let new = "> Status: Underway\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // The inserted aside should show inline word-level markers.
+    let insPattern = /blockquote class="[^"]*mud-change-ins/
+    #expect(html.contains(insPattern))
+    #expect(html.contains("<del>"), "Blue block should show deleted word")
+    #expect(html.contains("<ins>"), "Blue block should show inserted word")
+    #expect(html.contains("Planning"))
+    #expect(html.contains("Underway"))
+  }
+
+  @Test func replacedAsideShowsWordLevelDiffInDeletedBlock() {
+    let old = "> Status: Planning\n"
+    let new = "> Status: Underway\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let delBlock = extractBlock(html, class: "mud-change-del")
+    #expect(delBlock != nil)
+    if let block = delBlock {
+      #expect(block.contains("<del>"), "Red block should mark deleted word")
+      #expect(block.contains("Planning"))
+      #expect(!block.contains("<ins>"), "Red block must not show inserted word")
+    }
+  }
+
   @Test func deletedGFMAlertRenderedAsAlert() {
     let old = "> [!NOTE]\n> Important info.\n\nKeep.\n"
     let new = "Keep.\n"
