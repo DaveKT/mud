@@ -234,6 +234,100 @@ block-level changes:
 ```
 
 
+## Step 7: Tests
+
+### WordDiffTests (new file)
+
+**File:** `Core/Tests/Core/WordDiffTests.swift`
+
+Core algorithm tests:
+
+- **Identical strings** → all unchanged spans
+- **Single word changed** → unchanged + deleted + inserted + unchanged
+- **Word added at end** → unchanged + inserted
+- **Word removed from middle** → unchanged + deleted + unchanged
+- **Multiple changes** → interleaved unchanged/deleted/inserted spans
+- **Completely different** → all deleted + all inserted
+- **Empty old** → all inserted
+- **Empty new** → all deleted
+- **Both empty** → no spans
+- **Whitespace preservation** → trailing spaces stay attached to tokens,
+  round-trip through spans reproduces original text
+
+Structure comparison tests:
+
+- **Same structure** → `hasMatchingStructure` returns true (plain text, nested
+  emphasis/strong, inline code)
+- **Different nesting** → returns false (e.g., old has `**bold**`, new has
+  `*italic*`)
+- **Extra node in new** → returns false
+- **Same structure, different text** → returns true
+
+
+### DiffContextTests additions
+
+**File:** `Core/Tests/Core/DiffContextTests.swift`
+
+Block pairing tests:
+
+- **Single replacement** → deletion and insertion are paired (`pairedChangeID`
+  returns the counterpart)
+- **Two replacements in one gap** → first deletion pairs with first insertion,
+  second with second
+- **More deletions than insertions** → excess deletions are unpaired
+- **More insertions than deletions** → excess insertions are unpaired
+- **Pure deletion (no insertion)** → unpaired
+- **Pure insertion (no deletion)** → unpaired
+- **Separate gaps** → pairing is per-gap, not cross-gap
+
+Word span integration tests:
+
+- **Paired replacement with matching structure** → both `RenderedDeletion` and
+  `AnnotationEntry` carry non-nil `wordSpans`
+- **Paired replacement with divergent structure** → `wordSpans` is nil on both
+  (fallback to block-level)
+- **Unpaired insertion** → `wordSpans` is nil
+- **Unpaired deletion** → `wordSpans` is nil
+
+
+### UpModeChangeTrackingTests additions
+
+**File:** `Core/Tests/Core/UpModeChangeTrackingTests.swift`
+
+Blue block (paired insertion) rendering:
+
+- **Single word changed** → `<p>` contains `<del>old</del><ins>new</ins>`,
+  unchanged words are plain text
+- **Word added** → `<p>` contains `<ins>added</ins>`, no `<del>`
+- **Word removed** → `<p>` contains `<del>removed</del>`, no `<ins>`
+- **Formatted text, same structure** → `<ins>`/ `<del>` nest inside `<strong>`/
+  `<em>` correctly
+- **Formatted text, different structure** → no inline `<ins>`/ `<del>`, falls
+  back to block-level
+
+Red block (paired deletion) rendering:
+
+- **Single word changed** → `<p>` contains `<del>old</del>`, does NOT contain
+  `<ins>`
+- **Word added in new** → deletion block has no markers (the added word doesn't
+  appear in the old text)
+
+Green block (pure insertion):
+
+- **No word-level markers** → `<p>` does not contain `<ins>` or `<del>` inline
+  elements
+
+
+### DownModeChangeTrackingTests additions
+
+**File:** `Core/Tests/Core/DownModeChangeTrackingTests.swift`
+
+- **Word changed in paired block** → insertion line contains `<ins>` and
+  `<del>` inline
+- **Deletion line in paired block** → contains `<del>` only, no `<ins>`
+- **Unpaired insertion** → no inline `<ins>`/ `<del>`
+
+
 ## Files to modify
 
 | File                                                | Change                                   |
@@ -243,13 +337,17 @@ block-level changes:
 | `Core/Sources/Core/Rendering/UpHTMLVisitor.swift`   | Word-span-aware inline rendering         |
 | `Core/Sources/Core/Rendering/DownHTMLVisitor.swift` | Word-level markers in syntax lines       |
 | `Core/Sources/Core/Resources/mud-changes.css`       | Inline ins/del styles                    |
+| `Core/Tests/Core/WordDiffTests.swift`               | New: algorithm and structure tests       |
+| `Core/Tests/Core/DiffContextTests.swift`            | Pairing and word span integration tests  |
+| `Core/Tests/Core/UpModeChangeTrackingTests.swift`   | Blue/red/green block rendering tests     |
+| `Core/Tests/Core/DownModeChangeTrackingTests.swift` | Down mode word-level marker tests        |
 
 
 ## Verification
 
-1. `swift test` — all existing tests pass
-2. Change one word in a paragraph — inline `<del>`/ `<ins>` markers around the
-   changed word, rest of paragraph unmarked
+1. `swift test` — all tests pass
+2. Change one word in a paragraph — blue block shows inline `<del>`/ `<ins>`,
+   red block shows `<del>` only
 3. Change multiple words — each changed word independently marked
 4. Add/remove a sentence — word-level markers for added/removed words
 5. Change formatting only (bold a word) — falls back to block-level
