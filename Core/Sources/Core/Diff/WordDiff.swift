@@ -100,23 +100,26 @@ enum WordDiff {
                 .filter { insertedNew.contains($0) }
             let hasAnchor = i + 1 < boundaries.count - 1
 
-            // Deleted words (with old-side separators). Strip the
-            // last separator when followed by an anchor — it
-            // represents the space before the anchor, which is
-            // unchanged and emitted once after the gap.
+            // For substitution gaps (both del and ins), strip the
+            // last separator from each group — it represents the
+            // space before the anchor, emitted once as unchanged.
+            // For pure del or pure ins, keep separators on the words
+            // — the previous anchor's separator already provides the
+            // space before this gap.
+            let isSubstitution = !delIndices.isEmpty && !insIndices.isEmpty
+
             for (j, oi) in delIndices.enumerated() {
                 let isLast = j == delIndices.count - 1
-                if isLast && hasAnchor {
+                if isLast && hasAnchor && isSubstitution {
                     result.append(.deleted(oldParts[oi].word))
                 } else {
                     result += emitWord(oldParts[oi], as: .deleted)
                 }
             }
 
-            // Inserted words (same treatment for last separator).
             for (j, ni) in insIndices.enumerated() {
                 let isLast = j == insIndices.count - 1
-                if isLast && hasAnchor {
+                if isLast && hasAnchor && isSubstitution {
                     result.append(.inserted(newParts[ni].word))
                 } else {
                     result += emitWord(newParts[ni], as: .inserted)
@@ -124,19 +127,14 @@ enum WordDiff {
             }
 
             if hasAnchor {
-                // Emit the transition separator (space before the
-                // anchor) as unchanged. Prefer the new side; fall
-                // back to old when there are only deletions.
-                let sep: String
-                if let ni = insIndices.last {
-                    sep = newParts[ni].separator
-                } else if let oi = delIndices.last {
-                    sep = oldParts[oi].separator
-                } else {
-                    sep = ""
-                }
-                if !sep.isEmpty {
-                    result.append(.unchanged(sep))
+                // Emit the transition separator as unchanged only
+                // for substitution gaps. For pure del/ins the
+                // preceding anchor separator covers it.
+                if isSubstitution, let ni = insIndices.last {
+                    let sep = newParts[ni].separator
+                    if !sep.isEmpty {
+                        result.append(.unchanged(sep))
+                    }
                 }
 
                 result += emitWord(newParts[nextNew], as: .unchanged)

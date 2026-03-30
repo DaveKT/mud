@@ -27,6 +27,7 @@ struct WordDiffTests {
 
   @Test func wordAddedInMiddle() {
     let spans = WordDiff.diff(old: "the fox", new: "the brown fox")
+    // Pure insertion: separator stays with the inserted word.
     #expect(spans == [
       .unchanged("the"), .unchanged(" "),
       .inserted("brown"), .inserted(" "),
@@ -36,6 +37,7 @@ struct WordDiffTests {
 
   @Test func wordRemovedFromMiddle() {
     let spans = WordDiff.diff(old: "the brown fox", new: "the fox")
+    // Pure deletion: separator stays with the deleted word.
     #expect(spans == [
       .unchanged("the"), .unchanged(" "),
       .deleted("brown"), .deleted(" "),

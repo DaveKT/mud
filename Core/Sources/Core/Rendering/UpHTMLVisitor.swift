@@ -353,6 +353,7 @@ struct UpHTMLVisitor: MarkupWalker {
     mutating func visitText(_ text: Text) {
         if wordSpans != nil {
             advanceWordSpans(charCount: text.string.count, emit: true)
+            closeInlineTag()
         } else {
             result += HTMLEscaping.escape(
                 EmojiShortcodes.replaceShortcodes(in: text.string)
@@ -361,9 +362,11 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitInlineCode(_ inlineCode: InlineCode) {
+        if wordSpans != nil { closeInlineTag() }
         result += "<code>"
         if wordSpans != nil {
             advanceWordSpans(charCount: inlineCode.code.count, emit: true)
+            closeInlineTag()
         } else {
             result += HTMLEscaping.escape(inlineCode.code)
         }
@@ -375,12 +378,18 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitLineBreak(_ lineBreak: LineBreak) {
-        if wordSpans != nil { advanceWordSpans(charCount: 1, emit: false) }
+        if wordSpans != nil {
+            advanceWordSpans(charCount: 1, emit: false)
+            closeInlineTag()
+        }
         result += "<br />\n"
     }
 
     mutating func visitSoftBreak(_ softBreak: SoftBreak) {
-        if wordSpans != nil { advanceWordSpans(charCount: 1, emit: false) }
+        if wordSpans != nil {
+            advanceWordSpans(charCount: 1, emit: false)
+            closeInlineTag()
+        }
         result += "\n"
     }
 
@@ -645,6 +654,30 @@ struct UpHTMLVisitor: MarkupWalker {
     private var wordSpanCursor = 0
     private var wordSpanRole: WordSpanRole = .insertion
 
+    /// Currently open inline tag (`<del>` or `<ins>`). Consecutive
+    /// spans of the same type share a single tag, producing cleaner
+    /// HTML (e.g., `<del>quick brown</del>` instead of
+    /// `<del>quick</del><del> </del><del>brown</del>`).
+    private var openInlineTag: InlineTag?
+
+    private enum InlineTag {
+        case del, ins
+
+        var open: String {
+            switch self {
+            case .del: return "<del>"
+            case .ins: return "<ins>"
+            }
+        }
+
+        var close: String {
+            switch self {
+            case .del: return "</del>"
+            case .ins: return "</ins>"
+            }
+        }
+    }
+
     /// Activates word-span rendering if the block has word spans.
     private mutating func activateWordSpans(for node: Markup) {
         if let spans = diffContext?.wordSpans(for: node), !spans.isEmpty {
@@ -658,6 +691,7 @@ struct UpHTMLVisitor: MarkupWalker {
     private mutating func deactivateWordSpans() {
         guard wordSpans != nil else { return }
         flushNonConsumingWordSpans()
+        closeInlineTag()
         wordSpans = nil
     }
 
@@ -669,7 +703,7 @@ struct UpHTMLVisitor: MarkupWalker {
     /// silently — the break's own HTML handles the visual whitespace.
     ///
     /// Non-consuming spans (deleted in blue mode, inserted in red mode)
-    /// are always handled eagerly: emitted as `<del>` or skipped.
+    /// are always handled eagerly: emitted or skipped.
     /// If a consuming span is larger than the remaining character count,
     /// it is split and the remainder stays at the cursor.
     private mutating func advanceWordSpans(
@@ -684,7 +718,8 @@ struct UpHTMLVisitor: MarkupWalker {
             // Non-consuming: deleted in blue, inserted in red.
             switch (span, wordSpanRole) {
             case (.deleted(let text), .insertion):
-                result += "<del>\(escapeSpanText(text))</del>"
+                setInlineTag(.del)
+                result += escapeSpanText(text)
                 wordSpanCursor += 1
                 continue
             case (.inserted, .deletion):
@@ -717,7 +752,8 @@ struct UpHTMLVisitor: MarkupWalker {
         while wordSpanCursor < spans.count {
             switch (spans[wordSpanCursor], wordSpanRole) {
             case (.deleted(let text), .insertion):
-                result += "<del>\(escapeSpanText(text))</del>"
+                setInlineTag(.del)
+                result += escapeSpanText(text)
                 wordSpanCursor += 1
             case (.inserted, .deletion):
                 wordSpanCursor += 1
@@ -727,13 +763,31 @@ struct UpHTMLVisitor: MarkupWalker {
         }
     }
 
-    private mutating func emitSpan(_ span: WordSpan) {
-        let escaped = escapeSpanText(span.text)
-        switch span {
-        case .unchanged: result += escaped
-        case .inserted:  result += "<ins>\(escaped)</ins>"
-        case .deleted:   result += "<del>\(escaped)</del>"
+    /// Sets the currently open inline tag, closing the previous one
+    /// if needed. Consecutive same-type spans share a single tag.
+    private mutating func setInlineTag(_ tag: InlineTag?) {
+        guard tag != openInlineTag else { return }
+        closeInlineTag()
+        if let tag {
+            result += tag.open
+            openInlineTag = tag
         }
+    }
+
+    private mutating func closeInlineTag() {
+        if let tag = openInlineTag {
+            result += tag.close
+            openInlineTag = nil
+        }
+    }
+
+    private mutating func emitSpan(_ span: WordSpan) {
+        switch span {
+        case .unchanged: setInlineTag(nil)
+        case .inserted:  setInlineTag(.ins)
+        case .deleted:   setInlineTag(.del)
+        }
+        result += escapeSpanText(span.text)
     }
 
     private func escapeSpanText(_ text: String) -> String {
@@ -753,6 +807,7 @@ struct UpHTMLVisitor: MarkupWalker {
         visitor.wordSpanRole = role
         for child in markup.children { visitor.visit(child) }
         visitor.flushNonConsumingWordSpans()
+        visitor.closeInlineTag()
         return visitor.result
     }
 
