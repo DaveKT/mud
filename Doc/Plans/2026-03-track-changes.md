@@ -99,8 +99,11 @@ paragraphs, thematic breaks, HTML blocks. Nested lists are handled specially —
 the item's own paragraph becomes a leaf, then inner list items become separate
 leaves. Each block carries its source text as the fingerprint (not plain text —
 formatting-only changes like `text` → `**text**` are detected).
-`CollectionDifference` on the fingerprint arrays identifies unchanged,
-inserted, and removed blocks.
+`extractSourceText` strips trailing blank lines before fingerprinting, because
+cmark-gfm extends the last list item's AST range to include them — without
+trimming, the same item would produce different fingerprints depending on
+whether it is the last item in its list. `CollectionDifference` on the
+fingerprint arrays identifies unchanged, inserted, and removed blocks.
 
 Output is a `[BlockMatch]` list: `.unchanged(old, new)`, `.inserted(new)`, or
 `.deleted(old)`. Each `LeafBlock` carries the AST node, source text,
@@ -162,8 +165,10 @@ spans are `.unchanged`) skip word-level highlighting and fall back to
 block-level.
 
 **`LineDiffMap.swift`** — bridges block-level diff data to line-level rendering
-for Down mode. Built from `BlockMatcher.match()` results, maps block source
-ranges to line ranges:
+for Down mode. Built from `BlockMatcher.match()` results. Accumulates full gaps
+(consecutive deletions and insertions between unchanged anchors) before
+finalizing, so it can pair adjacent deletions with insertions and run
+`WordDiff` on raw source text.
 
 - `annotation(forLine:) -> LineAnnotation?` — returns a `LineAnnotation`
   (carrying `changeID`) for new-document lines within an inserted block.
@@ -171,6 +176,10 @@ ranges to line ranges:
 - `deletionGroups: [DeletionGroup]` — old-document line ranges to interleave,
   each with `beforeNewLine` (position), `oldLineRange`, and `changeID`.
   Trailing deletions use `Int.max`.
+- `wordData(for changeID:) -> BlockWordData?` — word-level diff spans for
+  paired blocks, keyed by change ID. `BlockWordData` carries the spans, the
+  block's source text, whether it is an insertion or deletion, and its start
+  line.
 
 
 ### Layer 2: Rendering integration (MudCore) — implemented
@@ -239,6 +248,15 @@ HTML structure — CSS classes on existing `<div class="dl">` rows:
 Deleted lines get `md-*` syntax-highlight spans (the old markdown is
 highlighted via `DownHTMLVisitor` and rendered line content is extracted). Line
 numbers show an en dash (`–`) for deleted lines.
+
+**Word-level markers:** Paired blocks get inline `<ins>` and `<del>` tags
+within the syntax-highlighted line content. `LineDiffMap` computes
+`BlockWordData` for each paired change ID;
+`DownHTMLVisitor.wordMarkers(from: forLine:)` maps word spans to character
+ranges within individual source lines. `injectMarkers(into:markers:)`
+post-processes the syntax-highlighted HTML, inserting tags at source-character
+boundaries while preserving highlight spans and HTML entities. Insertion lines
+show `<ins>` markers; deletion lines show `<del>` markers.
 
 
 #### RenderOptions and ParsedMarkdown changes
