@@ -207,7 +207,13 @@ private struct LeafBlockCollector: MarkupWalker {
               startLine <= lines.count else { return "" }
 
         let clampedEnd = min(endLine, lines.count)
-        let slice = lines[(startLine - 1)..<clampedEnd]
+        var slice = lines[(startLine - 1)..<clampedEnd]
+        // cmark-gfm extends the last list item's range to include
+        // trailing blank lines.  Strip them so fingerprints stay
+        // stable regardless of what follows the block.
+        while let last = slice.last, last.allSatisfy(\.isWhitespace) {
+            slice = slice.dropLast()
+        }
         return slice.joined(separator: "\n")
     }
 

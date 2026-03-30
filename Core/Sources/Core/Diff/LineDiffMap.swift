@@ -142,9 +142,17 @@ extension LineDiffMap {
         self.wordDataMap = wordData
     }
 
-    /// Derives the 1-based line range from a leaf block's AST source range.
+    /// Derives the 1-based line range from a leaf block's source text.
+    ///
+    /// Uses `sourceLine` and `sourceText` (which has trailing blank
+    /// lines stripped) rather than the raw AST range, because
+    /// cmark-gfm extends the last list item's range to include
+    /// trailing blank lines.
     private static func lineRange(for block: LeafBlock) -> ClosedRange<Int>? {
-        guard let range = block.markup.range else { return nil }
-        return range.lowerBound.line...range.upperBound.line
+        guard block.markup.range != nil else { return nil }
+        let lineCount = block.sourceText.split(
+            separator: "\n", omittingEmptySubsequences: false).count
+        guard lineCount > 0 else { return nil }
+        return block.sourceLine...(block.sourceLine + lineCount - 1)
     }
 }

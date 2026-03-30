@@ -402,6 +402,118 @@ struct BlockMatcherTests {
     #expect(matches.allSatisfy { $0.isUnchanged })
   }
 
+  @Test func addedListItemDoesNotInvalidatePredecessor() {
+    // When a new item is appended to a list, the existing last item
+    // must still match as unchanged — even though it was previously
+    // the last item and is now a middle item.  Regression: if
+    // extractSourceText includes content from the following line (due
+    // to upperBound wrapping to the next line), the fingerprint of
+    // the last item changes when its successor changes.
+    let old = ParsedMarkdown(
+      "- First item with\n  a continuation.\n"
+      + "- Second item with\n  a continuation.\n")
+    let new = ParsedMarkdown(
+      "- First item with\n  a continuation.\n"
+      + "- Second item with\n  a continuation.\n"
+      + "- Third item.\n")
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let inserted = matches.filter { $0.isInserted }
+    let deleted = matches.filter { $0.isDeleted }
+
+    #expect(unchanged.count == 2,
+      "Both existing items should match as unchanged")
+    #expect(inserted.count == 1,
+      "Only the new third item should be inserted")
+    #expect(deleted.count == 0,
+      "No items should be deleted")
+  }
+
+  @Test func appendedItemAfterParagraphChangePreservesMatch() {
+    // Reproduces a real scenario: a paragraph before the list changes,
+    // and a new item is appended.  The two surviving items must still
+    // match as unchanged.
+    let old = ParsedMarkdown("""
+      Description paragraph with old wording.
+
+      - `first` \u{2014} first item with
+        a continuation line.
+      - `second` \u{2014} second item with
+        a continuation line.
+
+
+      ### Next section
+      """.replacingOccurrences(of: "      ", with: ""))
+    let new = ParsedMarkdown("""
+      Description paragraph with new wording.
+
+      - `first` \u{2014} first item with
+        a continuation line.
+      - `second` \u{2014} second item with
+        a continuation line.
+      - `third` \u{2014} third item with
+        a continuation line.
+
+
+      ### Next section
+      """.replacingOccurrences(of: "      ", with: ""))
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let inserted = matches.filter { $0.isInserted }
+    let deleted = matches.filter { $0.isDeleted }
+
+    // Paragraph: deleted(old) + inserted(new). Heading: unchanged.
+    // List items: first + second unchanged, third inserted.
+    #expect(deleted.count == 1,
+      "Only the old paragraph should be deleted")
+    #expect(inserted.count == 2,
+      "Only the new paragraph and third item should be inserted")
+    #expect(unchanged.count == 3,
+      "First item, second item, and heading should be unchanged")
+  }
+
+  @Test func lastListItemFingerprintStable() {
+    // cmark-gfm extends the last list item's range to include
+    // trailing blank lines.  The fingerprint must not include them,
+    // otherwise the same item produces different fingerprints
+    // depending on what follows it.
+    let old = ParsedMarkdown("""
+      Description paragraph.
+
+      - `first` \u{2014} first item with
+        a continuation line.
+      - `second` \u{2014} second item with
+        a continuation line.
+
+
+      ### Next section
+      """.replacingOccurrences(of: "      ", with: ""))
+    let new = ParsedMarkdown("""
+      Description paragraph.
+
+      - `first` \u{2014} first item with
+        a continuation line.
+      - `second` \u{2014} second item with
+        a continuation line.
+      - `third` \u{2014} third item.
+
+
+      ### Next section
+      """.replacingOccurrences(of: "      ", with: ""))
+
+    let oldBlocks = BlockMatcher.collectLeafBlocks(from: old)
+    let newBlocks = BlockMatcher.collectLeafBlocks(from: new)
+
+    let oldSecond = oldBlocks.first { $0.fingerprint.contains("second") }
+    let newSecond = newBlocks.first { $0.fingerprint.contains("second") }
+    #expect(oldSecond != nil)
+    #expect(newSecond != nil)
+    #expect(oldSecond?.fingerprint == newSecond?.fingerprint,
+      "Identical item must have same fingerprint regardless of position")
+  }
+
   @Test func formattingOnlyChangeIsDeletedAndInserted() {
     let old = ParsedMarkdown("Some text.\n")
     let new = ParsedMarkdown("Some **text**.\n")
