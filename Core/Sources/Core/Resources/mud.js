@@ -277,11 +277,12 @@
       overlay.style.display = "none";
       return;
     }
+    var zoom = parseFloat(document.documentElement.style.zoom) || 1;
     var firstRect = visible[0].getBoundingClientRect();
     var lastRect = visible[visible.length - 1].getBoundingClientRect();
     overlay.style.display = "";
-    overlay.style.top = (firstRect.top - containerRect.top + scrollTop) + "px";
-    overlay.style.height = (lastRect.bottom - firstRect.top) + "px";
+    overlay.style.top = ((firstRect.top - containerRect.top) / zoom + scrollTop) + "px";
+    overlay.style.height = ((lastRect.bottom - firstRect.top) / zoom) + "px";
   }
 
   function positionOverlays() {
