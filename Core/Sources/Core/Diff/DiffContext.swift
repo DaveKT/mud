@@ -395,8 +395,8 @@ extension DiffContext {
     /// sidebar shows clean, readable text.
     static func blockSummary(_ block: LeafBlock) -> String {
         let raw: String
-        if let inline = block.markup as? (any InlineContainer) {
-            raw = inline.plainText
+        if block.markup is Paragraph || block.markup is Heading {
+            raw = WordDiff.inlineText(of: block.markup)
         } else if let codeBlock = block.markup as? CodeBlock {
             raw = codeBlock.code
                 .split(separator: "\n", maxSplits: 1,
@@ -405,7 +405,7 @@ extension DiffContext {
         } else if let listItem = block.markup as? ListItem,
                   let para = listItem.children
                       .first(where: { $0 is Paragraph }) as? Paragraph {
-            raw = para.plainText
+            raw = WordDiff.inlineText(of: para)
         } else {
             raw = block.sourceText
         }
