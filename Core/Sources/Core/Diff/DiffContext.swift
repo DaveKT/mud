@@ -28,19 +28,6 @@ struct DiffContext {
             return "change-\(changeCounter)"
         }
 
-        // Collect deletions and modifications in document order so we can
-        // attach them to the correct following block.
-        var pendingDeletions: [RenderedDeletion] = []
-
-        /// Flush accumulated deletions into the preceding-deletion map
-        /// for the given new-document node.
-        func flushDeletions(before node: Markup) {
-            guard !pendingDeletions.isEmpty,
-                  let key = sourceKey(for: node) else { return }
-            precedingMap[key] = pendingDeletions
-            pendingDeletions.removeAll()
-        }
-
         // Track change IDs in document order for the grouping pass.
         struct ChangeEntry {
             let changeID: String
@@ -53,24 +40,29 @@ struct DiffContext {
         // Track deletions and insertions per gap for positional pairing.
         // Within each gap, buildResult emits all deletions before all
         // insertions. The i-th deletion pairs with the i-th insertion.
-        struct GapBlock {
+        // Track deletions and insertions per gap for positional
+        // pairing. Within each gap, buildResult emits all deletions
+        // before all insertions. The i-th deletion pairs with the
+        // i-th insertion.
+        struct PendingBlock {
             let changeID: String
             let block: LeafBlock
         }
-        var gapDeletions: [GapBlock] = []
-        var gapInsertions: [GapBlock] = []
+        var pendingDeletions: [PendingBlock] = []
+        var pendingInsertions: [PendingBlock] = []
+        var deletionFlushTarget: SourceKey?
         var pairMap: [String: String] = [:]
         var wordSpanMap: [String: [WordSpan]] = [:]
-        var wordSpanDeletionHTML: [String: String] = [:]
 
-        /// Pair deletions with insertions in the current gap and compute
-        /// word spans for pairs with matching inline structure.
-        func processGap() {
-            for (del, ins) in zip(gapDeletions, gapInsertions) {
+        /// Finalizes the current gap: pairs deletions with insertions,
+        /// computes word spans, renders deletions (with word spans
+        /// now available), and flushes them into the preceding map.
+        func finalizeGap() {
+            // Pair and compute word spans.
+            for (del, ins) in zip(pendingDeletions, pendingInsertions) {
                 pairMap[del.changeID] = ins.changeID
                 pairMap[ins.changeID] = del.changeID
 
-                // Compute word spans for pairs with compatible structure.
                 guard WordDiff.hasMatchingStructure(
                     del.block.markup, ins.block.markup
                 ) else { continue }
@@ -81,39 +73,57 @@ struct DiffContext {
                         as? (any InlineContainer)
                 else { continue }
 
-                let result = WordDiff.diff(
+                let spans = WordDiff.diff(
                     old: oldInline.plainText,
                     new: newInline.plainText)
-                if !result.forNew.isEmpty {
-                    wordSpanMap[del.changeID] = result.forOld
-                    wordSpanMap[ins.changeID] = result.forNew
-                    // Re-render the deletion with word-level markers
-                    // for the red block (using old-side spans).
-                    wordSpanDeletionHTML[del.changeID] =
-                        UpHTMLVisitor.renderWithWordSpans(
-                            del.block.markup, spans: result.forOld,
-                            role: .deletion)
+                if !spans.isEmpty {
+                    wordSpanMap[del.changeID] = spans
+                    wordSpanMap[ins.changeID] = spans
                 }
             }
-            gapDeletions.removeAll()
-            gapInsertions.removeAll()
+
+            // Render deletions and flush to preceding map or trailing.
+            if !pendingDeletions.isEmpty {
+                let rendered = pendingDeletions.map {
+                    Self.renderedDeletion(
+                        for: $0.block, changeID: $0.changeID,
+                        wordSpans: wordSpanMap[$0.changeID])
+                }
+                if let key = deletionFlushTarget {
+                    precedingMap[key] = rendered
+                } else {
+                    trailing += rendered
+                }
+            }
+
+            pendingDeletions.removeAll()
+            pendingInsertions.removeAll()
+            deletionFlushTarget = nil
         }
 
         for match in matches {
             switch match {
             case .unchanged(_, let new):
-                flushDeletions(before: new.markup)
-                processGap()
+                // Set flush target for any pending deletions that
+                // haven't been claimed by an insertion.
+                if !pendingDeletions.isEmpty && deletionFlushTarget == nil {
+                    deletionFlushTarget = sourceKey(for: new.markup)
+                }
+                finalizeGap()
                 lastWasChange = false
 
             case .inserted(let new):
-                flushDeletions(before: new.markup)
+                // First block after pending deletions becomes
+                // the flush target.
+                if !pendingDeletions.isEmpty && deletionFlushTarget == nil {
+                    deletionFlushTarget = sourceKey(for: new.markup)
+                }
                 let id = nextChangeID()
                 if let key = sourceKey(for: new.markup) {
                     annotations[key] = AnnotationEntry(
                         annotation: .inserted, changeID: id)
                 }
-                gapInsertions.append(GapBlock(
+                pendingInsertions.append(PendingBlock(
                     changeID: id, block: new))
                 changeEntries.append(ChangeEntry(
                     changeID: id, isDeletion: false,
@@ -122,9 +132,7 @@ struct DiffContext {
 
             case .deleted(let old):
                 let id = nextChangeID()
-                pendingDeletions.append(Self.renderedDeletion(
-                    for: old, changeID: id))
-                gapDeletions.append(GapBlock(
+                pendingDeletions.append(PendingBlock(
                     changeID: id, block: old))
                 changeEntries.append(ChangeEntry(
                     changeID: id, isDeletion: true,
@@ -133,38 +141,19 @@ struct DiffContext {
             }
         }
 
-        trailing = pendingDeletions
-        processGap()
+        // Finalize any trailing gap (renders trailing deletions).
+        finalizeGap()
 
-        // Attach word spans to paired annotations and deletions.
-        if !wordSpanMap.isEmpty {
-            for (key, entry) in annotations
-                where wordSpanMap[entry.changeID] != nil {
-                annotations[key] = AnnotationEntry(
-                    annotation: entry.annotation,
-                    changeID: entry.changeID,
-                    wordSpans: wordSpanMap[entry.changeID])
-            }
-
-            func applyWordSpans(
-                _ deletions: [RenderedDeletion]
-            ) -> [RenderedDeletion] {
-                deletions.map { del in
-                    guard let spans = wordSpanMap[del.changeID]
-                    else { return del }
-                    return RenderedDeletion(
-                        html: wordSpanDeletionHTML[del.changeID]
-                            ?? del.html,
-                        changeID: del.changeID,
-                        summary: del.summary, tag: del.tag,
-                        wordSpans: spans)
-                }
-            }
-
-            for (key, deletions) in precedingMap {
-                precedingMap[key] = applyWordSpans(deletions)
-            }
-            trailing = applyWordSpans(trailing)
+        // Attach word spans to annotations created before gap
+        // processing computed them.
+        for (key, entry) in annotations {
+            guard entry.wordSpans == nil,
+                  let spans = wordSpanMap[entry.changeID]
+            else { continue }
+            annotations[key] = AnnotationEntry(
+                annotation: entry.annotation,
+                changeID: entry.changeID,
+                wordSpans: spans)
         }
 
         // Grouping pass: break change entries into groups at
@@ -371,29 +360,38 @@ extension DiffContext {
     /// Builds a `RenderedDeletion` for a leaf block: renders inner HTML
     /// and extracts a plain-text summary. The `tag` field records the
     /// native element type; `html` contains only inner content.
+    /// When `wordSpans` is provided, the deletion's inner HTML is
+    /// rendered with word-level `<del>` markers for the red block.
     static func renderedDeletion(
-        for block: LeafBlock, changeID: String
+        for block: LeafBlock, changeID: String,
+        wordSpans: [WordSpan]? = nil
     ) -> RenderedDeletion {
         let markup = block.markup
         let tag = tagForBlock(markup)
         let html: String
 
-        switch markup {
-        case let cb as CodeBlock:
-            html = UpHTMLVisitor.codeBlockInnerHTML(cb)
-        case is ThematicBreak:
-            html = ""
-        case let hb as HTMLBlock:
-            html = hb.rawHTML
-        default:
-            var visitor = UpHTMLVisitor()
-            for child in markup.children { visitor.visit(child) }
-            html = visitor.result
+        if let wordSpans, !wordSpans.isEmpty {
+            html = UpHTMLVisitor.renderWithWordSpans(
+                markup, spans: wordSpans, role: .deletion)
+        } else {
+            switch markup {
+            case let cb as CodeBlock:
+                html = UpHTMLVisitor.codeBlockInnerHTML(cb)
+            case is ThematicBreak:
+                html = ""
+            case let hb as HTMLBlock:
+                html = hb.rawHTML
+            default:
+                var visitor = UpHTMLVisitor()
+                for child in markup.children { visitor.visit(child) }
+                html = visitor.result
+            }
         }
 
         return RenderedDeletion(
             html: html, changeID: changeID,
-            summary: blockSummary(block), tag: tag
+            summary: blockSummary(block), tag: tag,
+            wordSpans: wordSpans
         )
     }
 
