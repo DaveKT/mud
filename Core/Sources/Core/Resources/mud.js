@@ -304,6 +304,25 @@
       var sub = _subOverlays[i];
       positionOverlay(sub.overlay, sub.els, containerRect, scrollTop);
     }
+
+    // Make consecutive sub-overlays for the same group continuous:
+    // extend each overlay's bottom to meet the next overlay's top.
+    // Mark non-last overlays as "cont" and last overlays as "tail".
+    for (var i = 0; i < _subOverlays.length; i++) {
+      var cur = _subOverlays[i];
+      var next = _subOverlays[i + 1];
+      var isLast = !next || next.groupId !== cur.groupId;
+      cur.overlay.classList.toggle("mud-overlay-cont", !isLast);
+      cur.overlay.classList.toggle("mud-overlay-tail", isLast);
+      if (isLast) continue;
+      if (cur.overlay.style.display === "none") continue;
+      if (next.overlay.style.display === "none") continue;
+      var curTop = parseFloat(cur.overlay.style.top);
+      var nextTop = parseFloat(next.overlay.style.top);
+      if (nextTop > curTop) {
+        cur.overlay.style.height = (nextTop - curTop) + "px";
+      }
+    }
   }
 
   // Build overlays on load; reposition on resize.

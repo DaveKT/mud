@@ -110,6 +110,15 @@ span.mud-change-del.mud-change-revealed { display: inline; }
     animation: overlay-flash 1s ease-out forwards;
 }
 
+.mud-overlay-cont {
+  border-bottom: 0;
+}
+
+.mud-overlay-cont + .mud-overlay-cont,
+.mud-overlay-cont + .mud-overlay-tail {
+  border-top-style: dashed;
+}
+
 @keyframes overlay-flash {
     0%   { opacity: 0.5; }
     100% { opacity: 1; }
