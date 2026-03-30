@@ -132,54 +132,64 @@ walking the AST in parallel with the span list.
 
 **File:** `Core/Sources/Core/Rendering/UpHTMLVisitor.swift`
 
-When visiting a paired insertion that has `wordSpans`, the visitor uses a
-modified inline walk. Instead of the normal `visitText` (which emits the text
-node's content verbatim), it consumes spans from the word span list:
+When visiting a block that has `wordSpans`, the visitor uses a modified inline
+walk. Instead of the normal `visitText` (which emits the text node's content
+verbatim), it consumes spans from the word span list. Which span types are
+emitted depends on the block's role:
+
+**Blue block** (paired insertion — visible by default, blue overlay):
 
 - `unchanged` spans → emit as normal text
 - `inserted` spans → wrap in `<ins>`
-- `deleted` spans → wrap in `<del>` (these are words from the old block that
-  are absent in the new block, shown inline for context)
+- `deleted` spans → wrap in `<del>` (old words shown inline for context)
 
-The formatting structure (Strong, Emphasis, etc.) is walked normally — the
-visitor opens and closes `<strong>`, `<em>`, etc. as usual. Only the Text leaf
-nodes are affected, emitting word spans instead of their literal content.
+**Red block** (paired deletion — hidden, shown on reveal):
+
+- `unchanged` spans → emit as normal text
+- `deleted` spans → wrap in `<del>`
+- `inserted` spans → skip entirely
+
+**Green block** (pure insertion — no paired deletion): no word spans, renders
+normally at block level.
+
+The same span list drives both the blue and red blocks; only the rendering
+filter differs. The formatting structure (Strong, Emphasis, etc.) is walked
+normally — the visitor opens and closes `<strong>`, `<em>`, etc. as usual. Only
+the Text leaf nodes are affected, emitting word spans instead of their literal
+content.
 
 A `wordSpanCursor` index tracks position in the span list as the visitor
 descends through inline nodes.
 
-For the paired deletion block (rendered as a native element with
-`mud-change-del`), the same approach applies: the deletion's `wordSpans` are
-consumed during rendering. Unchanged words are plain, deleted words are in
-`<del>`, inserted words are in `<ins>`.
-
 
 ### Example output
 
-Old paragraph: `"The quick brown fox"` New paragraph: `"The slow brown dog"`
+Old paragraph: `"The quick brown fox"`
+
+New paragraph: `"The slow brown dog"`
 
 Word spans:
-`[unchanged("The "), deleted("quick"), inserted("slow"), unchanged(" brown "), deleted("fox"), inserted("dog")]`
+`[unchanged("The "), deleted("quick "), inserted("slow "), unchanged("brown "), deleted("fox"), inserted("dog")]`
 
-Insertion block (visible):
+Blue block (paired insertion, visible by default):
 
 ```html
 <p class="mud-change-ins" data-change-id="change-2" data-group-id="group-1">
-The <del>quick</del><ins>slow</ins> brown <del>fox</del><ins>dog</ins>
+The <del>quick </del><ins>slow </ins>brown <del>fox</del><ins>dog</ins>
 </p>
 ```
 
-Deletion block (hidden by default, shown on reveal):
+Red block (paired deletion, hidden by default, shown on reveal):
 
 ```html
 <p class="mud-change-del" data-change-id="change-1" data-group-id="group-1">
-The <del>quick</del><ins>slow</ins> brown <del>fox</del><ins>dog</ins>
+The <del>quick </del>brown <del>fox</del>
 </p>
 ```
 
-Both blocks show the same merged content — the difference is the block-level
-styling (green tint vs red tint + strikethrough). The inline `<ins>`/ `<del>`
-markers let the user see exactly which words changed.
+The red block reads as the original text with removed words highlighted. The
+blue block shows the new text with both removed and added words marked, giving
+a complete inline diff.
 
 
 ## Step 5: Down mode rendering
