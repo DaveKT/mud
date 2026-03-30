@@ -5,14 +5,15 @@ Plan: Track Changes
 >
 > Current task: Step 9 - Polish…
 
+
 ## Overview
 
 Add a change-tracking feature to Mud. When a document is opened, its content is
 snapshot as a "waypoint". On each subsequent reload (file change), the current
-content is diffed against the waypoint at the block level and `<ins>`/ `<del>`
-elements are injected into the rendered HTML (both Up and Down modes). A new
-sidebar pane lists each change; selecting one scrolls to and highlights it.
-Deletions are hidden unless selected.
+content is diffed against the waypoint at the block level and change markers
+are injected into the rendered HTML (both Up and Down modes). A new sidebar
+pane lists each change; selecting one scrolls to and highlights it. Deletions
+are hidden unless selected.
 
 
 ## Concepts
@@ -22,9 +23,22 @@ timestamp. Created automatically when the document is first opened, and
 manually when the user clicks "Accept". Old waypoints are retained in memory
 for a future waypoint-selector UI.
 
-**Change** — a discrete insertion, deletion, or modification identified by the
-diff engine. Each change has a unique ID that appears as a `data-change-id`
-attribute in the HTML and as an entry in the sidebar list.
+**Change** — a discrete insertion or deletion identified by the diff engine.
+Each change has a unique ID that appears as a `data-change-id` attribute in the
+HTML and as an entry in the sidebar list. There is no separate "modification"
+type — an edit to a paragraph produces a deletion (old version) and an
+insertion (new version), grouped together in the sidebar.
+
+**Change group** — consecutive changes with no unchanged block between them are
+condensed into a single sidebar entry and a single visual overlay in Up mode.
+Groups that contain both deletions and insertions are "mixed" (blue); pure
+insertion groups are green; pure deletion groups are red. Grouping is computed
+at diff time in `DiffContext` and carried through to rendering and the sidebar.
+
+**Block pairing** — within a gap between unchanged anchors, deletions pair with
+insertions by position (first deletion with first insertion, etc.). Paired
+blocks get word-level diff highlighting; unpaired blocks show block-level
+highlighting only.
 
 **Accept** — creates a new waypoint from the current content. The diff is
 recomputed against the new waypoint (producing zero changes until the next file
@@ -59,7 +73,7 @@ sequenceDiagram
     MC-->>CT: [DocumentChange]
     Note over DCV: opts.waypoint = waypoint.content
     DCV->>MC: render(content, opts)
-    MC-->>WV: HTML with <ins>/<del>
+    MC-->>WV: HTML with change markers
     CT-->>Sidebar: changes[] populates list
 
     Note over Sidebar: User clicks Accept
@@ -76,127 +90,147 @@ sequenceDiagram
 Implemented in `Core/Sources/Core/Diff/`. Works with `ParsedMarkdown` values
 directly (pre-parsed ASTs, no redundant parsing).
 
-**`BlockMatcher.swift`** — `BlockMatcher.match(old:new:) -> [BlockMatch]`. Two
-phases:
+**`BlockMatcher.swift`** — `BlockMatcher.match(old:new:) -> [BlockMatch]`.
+Fingerprint matching via `CollectionDifference`:
 
-1. **Fingerprint matching.** `LeafBlockCollector` (a `MarkupWalker`) flattens
-   each AST into leaf blocks: paragraphs, headings, code blocks, list items,
-   table head/rows, blockquote paragraphs, thematic breaks, HTML blocks. Nested
-   lists are handled specially — the item's own paragraph becomes a leaf, then
-   inner list items become separate leaves. Each block carries its source text
-   as the fingerprint (not plain text — formatting-only changes like `text` →
-   `**text**` are detected). `CollectionDifference` on the fingerprint arrays
-   identifies unchanged, inserted, and removed blocks.
+`LeafBlockCollector` (a `MarkupWalker`) flattens each AST into leaf blocks:
+paragraphs, headings, code blocks, list items, table head/rows, blockquote
+paragraphs, thematic breaks, HTML blocks. Nested lists are handled specially —
+the item's own paragraph becomes a leaf, then inner list items become separate
+leaves. Each block carries its source text as the fingerprint (not plain text —
+formatting-only changes like `text` → `**text**` are detected).
+`CollectionDifference` on the fingerprint arrays identifies unchanged,
+inserted, and removed blocks.
 
-2. **Modification detection.** Gap-based pairing: unchanged blocks serve as
-   anchors, and the gaps between them contain removals and insertions. Within
-   each gap, removals pair with insertions from the end (closest to the next
-   anchor). Excess removals become deletions at the front of the gap; excess
-   insertions become insertions at the end.
-
-Output is a `[BlockMatch]` list: `.unchanged(old, new)`, `.modified(old, new)`,
-`.inserted(new)`, or `.deleted(old)`. Each `LeafBlock` carries the AST node,
-source text, fingerprint, and 1-based source line.
+Output is a `[BlockMatch]` list: `.unchanged(old, new)`, `.inserted(new)`, or
+`.deleted(old)`. Each `LeafBlock` carries the AST node, source text,
+fingerprint, and 1-based source line. There is no `.modified` case — edits
+produce a `.deleted` and `.inserted` pair in the same gap, which are grouped
+and paired at the `DiffContext` level.
 
 **`DiffContext.swift`** — `DiffContext(old:new:)` runs `BlockMatcher`
 internally and builds lookup tables keyed by `SourceKey` (line/column range).
-API:
 
-- `annotation(for: Markup) -> BlockAnnotation?` — returns `.inserted` or
-  `.modified` for changed blocks, `nil` for unchanged. Never returns `.deleted`
-  (deleted blocks don't exist in the new AST).
+Core API:
+
+- `annotation(for: Markup) -> BlockAnnotation?` — returns `.inserted` for
+  changed blocks, `nil` for unchanged. Never returns `.deleted` (deleted blocks
+  don't exist in the new AST).
 - `changeID(for: Markup) -> String?` — deterministic IDs (`"change-1"`,
   `"change-2"`, ...) for `data-change-id` attributes.
-- `precedingDeletions(before: Markup) -> [RenderedDeletion]` — deleted and
-  modified-old blocks that should appear before a given node, pre-rendered as
-  HTML via a separate `UpHTMLVisitor` walk.
+- `precedingDeletions(before: Markup) -> [RenderedDeletion]` — deleted blocks
+  that should appear before a given node, pre-rendered as HTML via a separate
+  `UpHTMLVisitor` walk.
 - `trailingDeletions() -> [RenderedDeletion]` — deletions after the last
   surviving block (or all deletions when new document is empty).
 
-`RenderedDeletion` carries `.html`, `.changeID`, `.summary`, and
-`.isModificationOld` (so `ChangeList` can count a modification as one sidebar
-entry, not two).
+Group API:
 
-The `DiffContext` is an optional input to the rendering functions. When `nil`,
-rendering proceeds exactly as today (zero overhead for the common case).
+- `groupInfo(for changeID: String) -> GroupInfo?` — returns `GroupInfo` with
+  `groupID`, `groupPos` (first/middle/last/sole), `groupIndex` (1-based badge
+  number), and `isMixed` flag. Groups are computed during initialization by
+  walking all change IDs in document order and breaking at non-consecutive
+  boundaries.
+
+Block pairing API:
+
+- `pairedChangeID(for changeID: String) -> String?` — maps each insertion's
+  change ID to its paired deletion's change ID and vice versa.
+- `wordSpans(for changeID: String) -> [WordSpan]?` — word-level diff spans for
+  paired blocks. Nil for unpaired blocks or formatting-only changes.
+
+`RenderedDeletion` carries `.html`, `.changeID`, `.summary`, `.tag` (the native
+HTML element: `"p"`, `"li"`, `"tr"`, `"hN"`, `"pre"`, `"hr"`, `"div"`), and
+optional `.wordSpans`.
 
 **`ChangeList.swift`** — `ChangeList.computeChanges(old:new:)` walks
 `DiffContext` and leaf blocks to produce a `[DocumentChange]` array for the
-sidebar. Filters out `isModificationOld` deletions. Each `DocumentChange`
-carries `id`, `type` (.insertion/.deletion/.modification), `summary` (~60
-chars, word-boundary truncation), and `sourceLine` (for scroll targeting;
-deletions use the following block's line).
+sidebar. Each `DocumentChange` carries `id`, `type` (.insertion/.deletion),
+`summary` (~60 chars, word-boundary truncation), `sourceLine` (for scroll
+targeting; deletions use the following block's line), `isConsecutive`,
+`groupID`, and `groupIndex`.
+
+**`WordDiff.swift`** — word-level diff for paired blocks.
+`WordDiff.diff(old:new:) -> [WordSpan]` tokenizes on whitespace boundaries
+(preserving whitespace in tokens for lossless round-trip) and runs
+`CollectionDifference` to produce `.unchanged`, `.inserted`, and `.deleted`
+spans. `WordDiff.inlineText(of:)` extracts plain text from markup nodes for
+diffing. Word spans are computed for all paired blocks regardless of formatting
+structure — the rendering cursor splits spans at text node boundaries, so
+mismatched inline formatting is handled naturally. Formatting-only changes (all
+spans are `.unchanged`) skip word-level highlighting and fall back to
+block-level.
+
+**`LineDiffMap.swift`** — bridges block-level diff data to line-level rendering
+for Down mode. Built from `BlockMatcher.match()` results, maps block source
+ranges to line ranges:
+
+- `annotation(forLine:) -> LineAnnotation?` — returns a `LineAnnotation`
+  (carrying `changeID`) for new-document lines within an inserted block.
+  Returns `nil` for unchanged lines.
+- `deletionGroups: [DeletionGroup]` — old-document line ranges to interleave,
+  each with `beforeNewLine` (position), `oldLineRange`, and `changeID`.
+  Trailing deletions use `Int.max`.
 
 
-### Layer 2: Rendering integration (MudCore)
+### Layer 2: Rendering integration (MudCore) — implemented
 
-#### Up mode — implemented
+#### Up mode
 
 `UpHTMLVisitor` has an optional `diffContext: DiffContext?` field. When set,
 `MudCore.renderUpToHTML` creates a `DiffContext(old: waypoint, new: parsed)`
-and assigns it before the walk. After the walk, `emitTrailingDeletions()` is
-called.
+and assigns it before the walk.
 
-Two private helpers, `emitChangeOpen(for:)` and `emitChangeClose(for:)`,
-bracket leaf-block visit methods: `visitParagraph`, `visitHeading`,
-`visitCodeBlock`, `visitListItem`, `visitHTMLBlock`, `visitThematicBreak`.
-Container visit methods (`visitBlockQuote`, `visitOrderedList`,
-`visitUnorderedList`, `visitTable`) are not wrapped — their leaf children
-receive markers instead.
+Changed blocks get attributes on their native HTML elements (not `<ins>`/
+`<del>` wrappers). A `changeAttributes(for:)` helper returns a `ChangeAttrs`
+struct with `classes` ("mud-change-ins" or "mud-change-del") and `dataAttrs`
+(`data-change-id`, `data-group-id`, `data-group-index`). Each block visitor
+interpolates these into its opening tag:
 
-`emitChangeOpen`:
+```html
+<p class="mud-change-ins" data-change-id="change-2" data-group-id="group-1">
+```
 
-1. Emits **preceding deletions** — pre-rendered HTML wrapped in
-   `<del class="mud-change mud-change-del" data-change-id="…">`. This includes
-   the old version of modified blocks.
-2. For **inserted** or **modified** blocks, opens an `<ins>` wrapper
-   (`mud-change-ins` or `mud-change-mod`).
+Deleted blocks are emitted as native elements with `mud-change-del` class
+(hidden by default, revealed via sidebar). The `tag` field on
+`RenderedDeletion` determines the element type — `<p>`, `<li>`, `<tr>`, etc.
+Table row deletions are emitted outside the `<table>` element to avoid invalid
+HTML.
 
-`emitChangeClose`: closes the `</ins>` if the node was annotated.
+**Word-level markers:** When a block has `wordSpans`, the visitor uses a span
+cursor to emit inline `<ins>` and `<del>` tags around individual changed words.
+Blue blocks (paired insertions) show both `<del>` (old words) and `<ins>` (new
+words) inline. Red blocks (paired deletions) show only `<del>` markers; the
+`<ins>` spans are skipped. Consecutive inline markers of the same type are
+coalesced. The cursor splits spans at text node boundaries, so mismatched
+formatting between old and new blocks is handled naturally.
 
-Both are no-ops when `diffContext` is nil — the hot path is unchanged.
+Alert handling: for GFM and DocC alerts, change attributes go on the
+`<blockquote>` opening tag, and word-level markers work inside alert content.
 
-Deleted and modified-old blocks are pre-rendered by `DiffContext` via a
-separate `UpHTMLVisitor` walk (without a `diffContext`, to avoid recursion).
-
-**Not yet wrapped:** `visitTableRow` and `visitTableHead` — these are leaf
-blocks per `LeafBlockCollector` but lack change markers in the visitor. To be
-added when table change-tracking is needed.
+**Not yet wrapped:** `visitTableRow` and `visitTableHead` — table row changes
+are tracked at the block level but don't have word-level markers.
 
 
-#### Down mode — implemented
+#### Down mode
 
 Down mode is line-based, not AST-based. `DownHTMLVisitor` is a stateless
 `Sendable` struct (stored as `static let`), so unlike `UpHTMLVisitor` it cannot
 carry a mutable `diffContext` field.
 
-**`LineDiffMap`** (`Core/Sources/Core/Diff/LineDiffMap.swift`) bridges
-block-level diff data to line-level rendering. Built from
-`BlockMatcher.match()` results, it maps block source ranges to line ranges:
-
-- `annotation(forLine:) -> LineAnnotation?` — returns a `LineAnnotation`
-  (carrying `changeID`) for new-document lines within an inserted or modified
-  block. Returns `nil` for unchanged lines. Both insertions and modifications
-  use the same annotation (the old-version lines appear as a `DeletionGroup`
-  immediately before).
-- `deletionGroups: [DeletionGroup]` — old-document line ranges to interleave,
-  each with `beforeNewLine` (position), `oldLineRange`, and `changeID`.
-  Trailing deletions use `Int.max`.
-
-**Integration:** `DownHTMLVisitor.highlight()` was refactored to extract Phases
-1+2 into `highlightLines()` (returning a `HighlightResult`). A new
+`DownHTMLVisitor.highlight()` was refactored to extract Phases 1+2 into
+`highlightLines()` (returning a `HighlightResult`). A new
 `highlightWithChanges(new:old:matches:)` method highlights both documents,
 builds a `LineDiffMap`, and calls `buildLayoutWithChanges()` — a variant of the
 Phase 3 layout that interleaves deletion groups and adds CSS classes.
 `MudCore.renderDownToHTML` branches on `options.waypoint`.
 
-**HTML structure** — CSS classes on existing `<div class="dl">` rows, not
-`<ins>`/ `<del>` wrappers (avoids conflicts with syntax-highlighting spans):
+HTML structure — CSS classes on existing `<div class="dl">` rows:
 
 ```html
 <!-- Unchanged -->
 <div class="dl"><span class="ln">1</span><span class="lc">…</span></div>
-<!-- Inserted or modified (new version) -->
+<!-- Inserted (new version) -->
 <div class="dl dl-ins" data-change-id="change-1"><span class="ln">3</span><span class="lc">…</span></div>
 <!-- Deleted (re-inserted from old doc, syntax-highlighted) -->
 <div class="dl dl-del" data-change-id="change-2"><span class="ln">–</span><span class="lc">…</span></div>
@@ -207,7 +241,7 @@ highlighted via `DownHTMLVisitor` and rendered line content is extracted). Line
 numbers show an en dash (`–`) for deleted lines.
 
 
-#### RenderOptions and ParsedMarkdown changes — implemented
+#### RenderOptions and ParsedMarkdown changes
 
 `RenderOptions.waypoint: ParsedMarkdown?` — when set, the render function
 creates a `DiffContext` and injects change markers. When nil (the default),
@@ -215,12 +249,9 @@ rendering is unchanged.
 
 `ParsedMarkdown` gained `@unchecked Sendable` (justified: immutable struct,
 `RawMarkup` has no mutation API) and `Equatable` (by source string comparison).
-Both conformances live in `ParsedMarkdown.swift`.
 
 `contentIdentity` includes `String(waypoint.markdown.hashValue)` so content
-changes when the waypoint changes (e.g. Accept). Theme/zoom changes go through
-JS without re-calling the render function, so the diff is only computed when
-content actually changes.
+changes when the waypoint changes (e.g. Accept).
 
 
 #### API changes
@@ -234,10 +265,6 @@ MudCore.computeChanges(
     old: ParsedMarkdown, new: ParsedMarkdown
 ) -> [DocumentChange]
 ```
-
-This is called by `ChangeTracker` when content changes, independently of
-rendering. Both paths (rendering and sidebar) work with pre-parsed ASTs — no
-redundant parsing anywhere.
 
 
 ### Layer 3: State management (App) — implemented
@@ -275,43 +302,50 @@ states:
 
 1. **Status bar** — "X changes since HH:MM" with an Accept button. Timestamp
    formatting: time-only for today, "yesterday", short date+time for older.
-   Accept calls `changeTracker.accept()` (now parameterless — tracker stores
-   `currentParsed` internally).
+   Accept calls `changeTracker.accept()`.
 2. **Change list** — `List` with selection bound to
-   `changeTracker.selectedChangeID`. `ChangeRow` shows icon
-   (`plus.circle`/green, `minus.circle`/red, `pencil.circle`/blue) and one-line
-   summary. Selection triggers `onSelectChange` callback.
+   `changeTracker.selectedChangeID`. Consecutive changes are grouped into
+   `ChangeGroup` entries (built by `ChangeGroup.build(from:)` using `groupID`).
+   `ChangeGroupRow` shows icon (`plus.circle`/green for insertions,
+   `minus.circle`/red for deletions, `pencil.circle`/blue for mixed) and
+   one-line summary. Count badge `"(N)"` when a group has more than one change.
+   Selection triggers `onSelectChange` callback.
 3. **Empty state** — "No changes since HH:MM" or generic message.
 
-**`App/SidebarView.swift`** — now receives `changeTracker` and
-`onSelectChange`, threading them to `ChangesSidebarView`.
-
-**`DocumentWindowController.setupContent()`** — wires `onSelectChange` as a
-placeholder (scroll-to-change deferred to Step 8).
+**`App/SidebarView.swift`** — receives `changeTracker` and `onSelectChange`,
+threading them to `ChangesSidebarView`.
 
 
 ### Layer 5: WebView and JavaScript (App + Resources) — implemented
 
-**`mud.js`** — two new functions on the `Mud` namespace:
+**`mud.js`** — overlay system and change navigation:
 
-- `Mud.scrollToChange(id)` — queries `[data-change-id="…"]`, scrolls to center,
-  adds `mud-change-active` class (triggers CSS flash animation, auto-removed
+- `buildOverlays()` — discovers groups from `[data-group-id]` attributes,
+  creates one absolutely-positioned overlay `<div>` per group within
+  `.up-mode-output`. Overlay class (`mud-overlay-ins`, `mud-overlay-mix`,
+  `mud-overlay-del`) determined from the group's content. Each overlay has a
+  `::before` badge showing the group index number. Called on load; content
+  reloads rebuild from scratch.
+- `positionOverlays()` — measures visible elements per group and sets overlay
+  `top`/ `height`. Called after `buildOverlays`, on resize (via
+  `ResizeObserver`), and after reveal/hide.
+- `Mud.scrollToChange(ids)` — scrolls the first element into view, flashes the
+  group's overlay via `mud-change-active` class (CSS animation, auto-removed
   after 2s).
-- `Mud.revealChange(id)` — clears any previous `mud-change-revealed` class,
-  then adds it to the target if it has `mud-change-del` (so non-deletion
-  changes are scrolled to but not "revealed").
+- `Mud.revealChanges(ids)` — adds `mud-change-revealed` class to targeted
+  deletion elements, updates overlay state, and repositions overlays.
 
 **`ChangeScrollTarget`** (in `DocumentState.swift`) — a separate published
 property, parallel to `ScrollTarget`. Carries a UUID (for deduplication) and a
-`changeID` string.
+`changeIDs: [String]` array.
 
 **`WebView.updateNSView`** — checks `changeScrollTarget`, calls
-`Mud.revealChange()` then `Mud.scrollToChange()` (reveal first so the element
+`Mud.revealChanges()` then `Mud.scrollToChange()` (reveal first so the element
 is visible before scrolling). Uses `lastChangeScrollTargetID` for
-deduplication, same pattern as other targets.
+deduplication.
 
 **Sidebar → WebView flow:** `ChangesSidebarView` selection → `onSelectChange`
-callback (passes change ID string) → `DocumentWindowController` creates
+callback (passes change IDs array) → `DocumentWindowController` creates
 `ChangeScrollTarget` → `DocumentState` publishes it → `DocumentContentView`
 passes to `WebView` → JS execution.
 
@@ -323,159 +357,82 @@ passes to `WebView` → JS execution.
 no change-tracking classes are present).
 
 - **Color system:** `--change-ins` (green), `--change-del` (red),
-  `--change-mod` (blue) CSS variables with light/dark variants via
+  `--change-mix` (blue) CSS variables with light/dark variants via
   `prefers-color-scheme`. Uses `color-mix(in srgb, …)` for transparency layers.
-- **Up mode:** `mud-change-ins`/ `mud-change-mod` get left border + background
-  tint. `mud-change-del` hidden by default, revealed via `mud-change-revealed`
-  class (strikethrough, reduced opacity).
-- **Down mode:** `dl-ins`/ `dl-del` classes colour line numbers and tint line
-  content backgrounds. Deleted lines always visible (interleaved inline, not
-  hidden behind sidebar reveal).
-- **Active highlight:** `change-flash` keyframe animation (box-shadow pulse, 2s
-  fade) for both modes, applied via `mud-change-active` class.
+- **Up mode overlays:** `.mud-overlay` absolutely positioned within
+  `.up-mode-output`. Badge via `::before` pseudo-element with
+  `content: attr(data-group-index)`. Type variants: `mud-overlay-ins` (green),
+  `mud-overlay-mix` (blue), `mud-overlay-del` (red).
+- **Up mode deletions:** `mud-change-del` hidden by default. When
+  `mud-change-revealed` is added: `display: block` (or `list-item`/ `table-row`
+  per element), strikethrough, reduced opacity.
+- **Down mode:** `dl-ins`/ `dl-del` classes color line numbers and tint line
+  content backgrounds. Deleted lines always visible (interleaved inline).
+- **Word-level inline markers:** `[data-change-id] ins` gets background tint,
+  no text decoration. `[data-change-id] del` gets strikethrough + background
+  tint.
+- **Active highlight:** `overlay-flash` keyframe animation (brightness pulse,
+  1s fade) applied via `mud-change-active` class.
 
 
 ## Key design decisions (resolved)
 
 1. **Block matching strategy** — LCS on block fingerprints via Swift's
-   `CollectionDifference`. Handles adds/removes/reorders well. Fuzzy matching
-   for modified blocks can be added later.
+   `CollectionDifference`. Handles adds/removes/reorders well.
 
 2. **Block granularity** — Leaf blocks (individual list items, table rows,
    blockquote paragraphs), not top-level containers. Finer diffs, more precise
    sidebar entries.
 
 3. **Diff computation** — Synchronous. Markdown files are typically small.
-   Profile during implementation and move to async if needed.
 
-4. **Deleted line numbers in Down mode** — Show a dash (`–`) in the line number
-   column, styled with the deletion colour.
+4. **No modification type** — The original design had three change types
+   (insertion, deletion, modification). Modifications added complexity across
+   the entire stack without clear UX benefit. Removed in favor of
+   deletion+insertion pairs, grouped together in the sidebar. Mixed groups
+   (blue/pencil icon) naturally convey "something was edited here" — arguably
+   more intuitive since blue means "there's more to unfold."
 
-5. **Sidebar pane state** — Per-window (`@State` in `SidebarView`), not
+5. **Native element attributes, not wrappers** — The original design wrapped
+   changed blocks in `<ins>` and `<del>` elements. This caused invalid HTML
+   inside tables and lists and required per-element-type special casing.
+   Replaced with `mud-change-ins`/ `mud-change-del` classes and `data-*`
+   attributes on the native elements themselves. A JS overlay system provides
+   the visual highlight (positioned background + numbered badge).
+
+6. **Word-level diffs with formatting tolerance** — Paired blocks (a deletion
+   and insertion in the same gap) get word-level diff highlighting via inline
+   `<ins>` and `<del>` tags. The word diff operates on extracted plain text and
+   works regardless of inline formatting structure — the rendering cursor
+   splits spans at text node boundaries naturally. Formatting-only changes
+   (same words, different emphasis) fall back to block-level highlighting since
+   word-level markers would add nothing.
+
+7. **Deleted line numbers in Down mode** — Show a dash (`–`) in the line number
+   column, styled with the deletion color.
+
+8. **Sidebar pane state** — Per-window (`@State` in `SidebarView`), not
    persisted.
 
-6. **Diff granularity** — Block-level only for the initial implementation
-   (Approach A). See the section below for the full analysis and evolution
-   path.
 
+## Diff granularity
 
-## Diff granularity approaches
+Two levels of diff granularity work together:
 
-Three approaches for how changes are presented in the rendered document,
-ordered from simplest to most precise. We implement **Approach A** first and
-may evolve to **B** later. **C** is documented for completeness.
+**Block-level** — every change gets block-level highlighting. The whole block
+is marked as inserted or deleted, with an overlay (Up mode) or row class (Down
+mode).
 
+**Word-level** — paired blocks additionally get word-level highlighting within
+the block. Individual changed words are wrapped in inline `<ins>` and `<del>`
+tags. This makes single-word edits in long paragraphs immediately scannable
+without comparing old and new versions side by side.
 
-### Approach A: Block-level only (the `git diff` model) — ACTIVE
-
-Modifications are treated as a deletion of the old block followed by an
-insertion of the new block. No word-level diffing. This is how `git diff`
-presents modified lines: old line in red, new line in green.
-
-**In Up mode:** for a modified paragraph, the old version is rendered as a
-hidden `<del>` block (revealable via the sidebar), and the new version is
-rendered normally inside an `<ins>` wrapper with a "modified" visual indicator.
-
-**In Down mode:** for a modified line, the old line is re-inserted as a hidden
-`<del>` row, and the new line gets an `<ins>` wrapper.
-
-**Pros:**
-
-- Simplest to implement — no `WordDiff` engine, no inline marker injection, no
-  cross-boundary concerns
-- Always readable, even for heavily rewritten prose
-- Matches the `git diff` mental model developers are used to
-
-**Cons:**
-
-- A single typo fix in a 200-word paragraph shows the entire paragraph as
-  modified (old + new). The sidebar tells you which paragraph changed, but you
-  must visually compare the two versions to spot the difference.
-
-
-### Approach B: Block-level with word highlights (enhanced `git diff`)
-
-Same structure as A — modifications are shown as old block (hidden) + new block
-(visible). But within each version, changed words get a subtle background
-highlight: insertions in the new block, deletions in the old block.
-
-Crucially, this is **not interleaved**. The new version only has insertion
-marks. The old version only has deletion marks. Each version reads as natural
-prose with a bit of colour.
-
-**Implementation (deferred):**
-
-- Add `WordDiff.swift` to `Core/Sources/Core/Diff/` — tokenise text into words,
-  diff via `CollectionDifference`, produce `[DiffToken]`.
-- `DiffContext` gains `wordAnnotations(for: Markup) -> [WordAnnotation]` —
-  character-offset ranges within a block's plain text.
-- In `UpHTMLVisitor`, when rendering a modified block (old or new version),
-  `visitText` consults word annotations and wraps changed runs in
-  `<mark class="mud-word-ins">` or `<mark class="mud-word-del">`.
-- The cross-boundary problem (a highlight spanning from plain text into
-  emphasis) still exists but is less severe than Approach C because each
-  version has only one type of mark — no interleaving of `<ins>` and `<del>`.
-  The approach: close the `<mark>` before the formatting boundary and reopen it
-  after. Only `visitText` needs modification.
-
-**CSS additions for B:**
-
-```css
-mark.mud-word-ins { background-color: var(--change-ins-word-bg); }
-mark.mud-word-del { background-color: var(--change-del-word-bg); }
-```
-
-**Pros:**
-
-- Same readability as A for large changes
-- Precise highlighting for small changes (typo fixes, number edits)
-- Each version still reads as natural prose
-
-**Cons:**
-
-- Requires `WordDiff` engine
-- Cross-boundary `<mark>` handling needed in `visitText` (simpler than C but
-  still non-trivial)
-
-
-### Approach C: Inline word-level (the `--word-diff` model)
-
-Interleaved `<ins>` and `<del>` elements within the text of modified blocks.
-The old text is deleted inline and the new text is inserted inline, producing
-output like: `This is <del>important</del><ins>critical</ins> and relevant`.
-
-**Implementation (not planned):**
-
-- Same `WordDiff` engine as Approach B.
-
-- `DiffContext` provides `InlineAnnotation` records with character-offset
-  ranges and types (insertion/deletion).
-
-- `UpHTMLVisitor.visitText` must:
-
-  1. Track a running character offset across calls within a paragraph.
-  2. Split text emission at change boundaries.
-  3. Close `<ins>`/ `<del>` before inline formatting boundaries and reopen
-     after them, to produce valid HTML (e.g., when a change spans from plain
-     text into `<strong>`).
-
-- Substantial edge-case surface: changes inside code spans, changes spanning
-  emphasis boundaries, adjacent changes, overlapping formatting.
-
-**Pros:**
-
-- Most precise — you see exactly what changed without comparing two versions
-- Compact — no duplicate blocks
-
-**Cons:**
-
-- Least readable for prose. Interleaved markers break reading flow, even for
-  unchanged text surrounding the change. Empirically, `git diff` (line-level)
-  is consistently more readable than `git diff --word-diff` for prose edits.
-- Hardest to implement. The cross-boundary problem requires careful state
-  management in the visitor and extensive edge-case testing.
-- Modifications cannot be hidden — they're inline in the text, not separate
-  blocks.
+Word-level diffs are computed by `WordDiff.diff()`, which tokenizes plain text
+on whitespace boundaries and diffs the token arrays. The spans are stored on
+`DiffContext` and consumed by `UpHTMLVisitor` during rendering. Blue blocks
+(paired insertions) show both `<del>` and `<ins>` inline; red blocks (paired
+deletions) show only `<del>`.
 
 
 ## Implementation sequence
@@ -484,61 +441,32 @@ output like: `This is <del>important</del><ins>critical</ins> and relevant`.
    `ChangesSidebarView` .~~ _Done._
 
 2. ~~**Diff engine** — `BlockMatcher` , `DiffContext` , `ChangeList` in
-   MudCore. Unit-testable in isolation. (`WordDiff` deferred to Approach B.)~~
-   _Done._ Implemented in `Core/Sources/Core/Diff/`.
-   `MudCore.computeChanges(old:new:)` is the public API.
+   MudCore.~~ _Done._ Implemented in `Core/Sources/Core/Diff/`.
 
 3. ~~**Up mode integration** — `UpHTMLVisitor` changes, `DiffContext` threading
-   through `renderUpModeDocument` .~~ _Done._ Table row markers deferred.
+   through `renderUpModeDocument` .~~ _Done._
 
 4. ~~**Down mode integration** — `DownHTMLVisitor` changes.~~ _Done._
-   `LineDiffMap` bridges block matches to line ranges. `highlightWithChanges()`
-   and `buildLayoutWithChanges()` added.
+   `LineDiffMap` bridges block matches to line ranges.
 
 5. ~~**ChangeTracker + RenderOptions** — state management in App layer,
-   waypoint field on `RenderOptions` . Wire to
-   `DocumentContentView.loadFromDisk()` .~~ _Done._
+   waypoint field on `RenderOptions` .~~ _Done._
 
 6. ~~**CSS** — change marker styles, theme variable additions.~~ _Done._
-   `mud-changes.css` with light/dark variables, Up + Down mode styles, active
-   highlight animation.
 
 7. ~~**Sidebar UI (changes pane)** — flesh out `ChangesSidebarView` with change
-   list, status line, Accept button.~~ _Done._ (Reordered: built before CSS
-   since the UI was needed to validate the wiring.)
+   list, status line, Accept button.~~ _Done._
 
 8. ~~**JS + WebView** — `scrollToChange` , `revealChange` , wire to sidebar
-   selection.~~ _Done._ `ChangeScrollTarget` flows from sidebar through
-   `DocumentState` to `WebView`. JS reveal + scroll with flash animation.
+   selection.~~ _Done._
 
 9. **Polish** — ~~consecutive change grouping~~ _done_; ~~global toggle and
-   per-document pause~~ _done_; keyboard shortcuts (Next Change / Previous
-   Change), menu items, edge cases still open.
-
-
-## Polish: Consecutive change grouping — implemented
-
-Consecutive changes (no unchanged block between them) are condensed into a
-single sidebar entry. The grouping signal is computed at the data layer; the
-UI-level grouping is a presentation transform.
-
-**`DocumentChange.isConsecutive`** — boolean computed in `ChangeList` using a
-`sawUnchangedSinceLastChange` flag. Always `false` for the first change. The
-underlying `[DocumentChange]` array is unchanged in structure.
-
-**`ChangeGroup`** (in `ChangesSidebarView.swift`) — built by
-`ChangeGroup.build(from:)`, a one-pass grouper that breaks on `!isConsecutive`.
-Each group carries: `changeIDs: [String]`, `type` (most significant:
-modification > insertion > deletion), `summary` (first change's text), and
-`count`.
-
-**`ChangeGroupRow`** — icon by type priority, summary text, count badge `"(N)"`
-when count > 1.
-
-**`Mud.revealChanges(ids)`** — accepts an array, reveals all targeted
-deletions. `Mud.scrollToChange(id)` unchanged (targets first ID).
-`onSelectChange` callback is `([String]) -> Void`.
-`ChangeScrollTarget.changeIDs: [String]`.
+   per-document pause~~ _done_; ~~remove modification type~~ _done_ (deletions
+   \+ insertions with grouping); ~~Up mode redesign~~ _done_ (native element
+   attributes + JS overlays); ~~word-level diffs~~ _done_ (paired block word
+   highlighting); ~~formatting tolerance~~ _done_ (removed structure gate);
+   keyboard shortcuts (Next Change / Previous Change), menu items, edge cases
+   still open.
 
 
 ## Resolved questions
