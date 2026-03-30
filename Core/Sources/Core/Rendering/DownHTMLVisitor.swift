@@ -676,7 +676,7 @@ public struct DownHTMLVisitor: Sendable {
         var inScroll = false
         var groupIdx = 0
 
-        for (i, content) in rendered.enumerated() {
+        for (i, var content) in rendered.enumerated() {
             let lineNum = i + 1
             let role = roles[i]
 
@@ -686,7 +686,8 @@ public struct DownHTMLVisitor: Sendable {
             {
                 emitDeletionGroup(
                     diffMap.deletionGroups[groupIdx],
-                    oldRendered: oldRendered, to: &html)
+                    oldRendered: oldRendered,
+                    diffMap: diffMap, to: &html)
                 groupIdx += 1
             }
 
@@ -707,6 +708,16 @@ public struct DownHTMLVisitor: Sendable {
             if let annotation = diffMap.annotation(forLine: lineNum) {
                 html += "<div class=\"\(roleClass) dl-ins\""
                 html += " data-change-id=\"\(annotation.changeID)\">"
+                // Word-level markers for paired insertion lines.
+                if let wd = diffMap.wordData(
+                    for: annotation.changeID) {
+                    let markers = Self.wordMarkers(
+                        from: wd, forLine: lineNum)
+                    if !markers.isEmpty {
+                        content = Self.injectMarkers(
+                            into: content, markers: markers)
+                    }
+                }
             } else {
                 html += "<div class=\"\(roleClass)\">"
             }
@@ -730,7 +741,8 @@ public struct DownHTMLVisitor: Sendable {
         while groupIdx < diffMap.deletionGroups.count {
             emitDeletionGroup(
                 diffMap.deletionGroups[groupIdx],
-                oldRendered: oldRendered, to: &html)
+                oldRendered: oldRendered,
+                diffMap: diffMap, to: &html)
             groupIdx += 1
         }
 
@@ -742,18 +754,159 @@ public struct DownHTMLVisitor: Sendable {
     private func emitDeletionGroup(
         _ group: DeletionGroup,
         oldRendered: [String],
+        diffMap: LineDiffMap,
         to html: inout String
     ) {
+        let wd = diffMap.wordData(for: group.changeID)
         for oldLine in group.oldLineRange {
             let oldIdx = oldLine - 1
-            let content = oldIdx >= 0 && oldIdx < oldRendered.count
+            var content = oldIdx >= 0 && oldIdx < oldRendered.count
                 ? oldRendered[oldIdx] : ""
+            if let wd {
+                let markers = Self.wordMarkers(
+                    from: wd, forLine: oldLine)
+                if !markers.isEmpty {
+                    content = Self.injectMarkers(
+                        into: content, markers: markers)
+                }
+            }
             html += "<div class=\"dl dl-del\""
             html += " data-change-id=\"\(group.changeID)\">"
             html += "<span class=\"ln\">\u{2013}</span>"
             html += "<span class=\"lc\">\(content)</span>"
             html += "</div>"
         }
+    }
+
+    // MARK: - Word-level marker injection
+
+    private struct WordMarker {
+        let start: Int   // 0-based char offset within the line
+        let end: Int     // exclusive
+        let tag: String  // "ins" or "del"
+    }
+
+    /// Computes character ranges to mark for a single source line
+    /// within a paired block.
+    private static func wordMarkers(
+        from data: BlockWordData, forLine line: Int
+    ) -> [WordMarker] {
+        let blockLineIdx = line - data.startLine
+        let sourceLines = data.sourceText.split(
+            separator: "\n", omittingEmptySubsequences: false)
+        guard blockLineIdx >= 0,
+              blockLineIdx < sourceLines.count else { return [] }
+
+        // Character offset of this line within the block text.
+        var lineOffset = 0
+        for i in 0..<blockLineIdx {
+            lineOffset += sourceLines[i].count + 1  // +1 for \n
+        }
+        let lineLength = sourceLines[blockLineIdx].count
+
+        var markers: [WordMarker] = []
+        var pos = 0  // position within block source text
+
+        for span in data.spans {
+            switch span {
+            case .unchanged(let text):
+                pos += text.count
+            case .inserted(let text):
+                if data.isInsertion {
+                    appendClipped(
+                        start: pos, length: text.count, tag: "ins",
+                        lineOffset: lineOffset, lineLength: lineLength,
+                        to: &markers)
+                    pos += text.count
+                }
+            case .deleted(let text):
+                if !data.isInsertion {
+                    appendClipped(
+                        start: pos, length: text.count, tag: "del",
+                        lineOffset: lineOffset, lineLength: lineLength,
+                        to: &markers)
+                    pos += text.count
+                }
+            }
+        }
+
+        return markers
+    }
+
+    /// Clips a marker to a line's range and appends if non-empty.
+    private static func appendClipped(
+        start: Int, length: Int, tag: String,
+        lineOffset: Int, lineLength: Int,
+        to markers: inout [WordMarker]
+    ) {
+        let spanEnd = start + length
+        let lineEnd = lineOffset + lineLength
+        let clippedStart = max(start, lineOffset)
+        let clippedEnd = min(spanEnd, lineEnd)
+        guard clippedStart < clippedEnd else { return }
+        markers.append(WordMarker(
+            start: clippedStart - lineOffset,
+            end: clippedEnd - lineOffset,
+            tag: tag))
+    }
+
+    /// Injects `<ins>` / `<del>` tags into syntax-highlighted HTML
+    /// at source character boundaries.
+    private static func injectMarkers(
+        into html: String, markers: [WordMarker]
+    ) -> String {
+        var result = ""
+        result.reserveCapacity(html.count + markers.count * 11)
+        var srcPos = 0
+        var mIdx = 0
+        var open = false
+
+        var i = html.startIndex
+        while i < html.endIndex {
+            // HTML tag — copy verbatim.
+            if html[i] == "<" {
+                let tagStart = i
+                while i < html.endIndex, html[i] != ">" {
+                    i = html.index(after: i)
+                }
+                if i < html.endIndex { i = html.index(after: i) }
+                result += html[tagStart..<i]
+                continue
+            }
+
+            // Check marker transitions at this source position.
+            if open, mIdx < markers.count,
+               srcPos >= markers[mIdx].end {
+                result += "</\(markers[mIdx].tag)>"
+                open = false
+                mIdx += 1
+            }
+            if !open, mIdx < markers.count,
+               srcPos >= markers[mIdx].start {
+                result += "<\(markers[mIdx].tag)>"
+                open = true
+            }
+
+            // Emit the character (entity = one source char).
+            if html[i] == "&" {
+                let entityStart = i
+                while i < html.endIndex, html[i] != ";" {
+                    i = html.index(after: i)
+                }
+                if i < html.endIndex { i = html.index(after: i) }
+                result += html[entityStart..<i]
+            } else {
+                result.append(html[i])
+                i = html.index(after: i)
+            }
+            srcPos += 1
+        }
+
+        if open, mIdx < markers.count {
+            result += "</\(markers[mIdx].tag)>"
+        }
+
+        return result
     }
 
 }

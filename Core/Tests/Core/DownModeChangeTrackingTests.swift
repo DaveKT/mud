@@ -104,9 +104,9 @@ struct DownModeChangeTrackingTests {
     opts.waypoint = ParsedMarkdown(old)
     let html = MudCore.renderDownToHTML(new, options: opts)
     #expect(html.contains("dl-del"))
-    #expect(html.contains("Original text."))
+    #expect(html.contains("Original"))
     #expect(html.contains("dl-ins"))
-    #expect(html.contains("Revised text."))
+    #expect(html.contains("Revised"))
   }
 
   @Test func replacementOldLinesPrecedeNewLines() {
@@ -158,10 +158,9 @@ struct DownModeChangeTrackingTests {
     #expect(html.contains("Heading"))
   }
 
-  // MARK: - Word-level diffs (deferred — Down mode Step 5)
+  // MARK: - Word-level diffs
 
-  @Test(.disabled("Down mode word-level diffs deferred"))
-  func wordChangedInPairedBlockShowsInlineMarkers() {
+  @Test func wordChangedInPairedBlockShowsInlineMarkers() {
     let old = "The quick fox.\n"
     let new = "The slow fox.\n"
     var opts = RenderOptions()
@@ -174,24 +173,23 @@ struct DownModeChangeTrackingTests {
     #expect(html.contains("quick"))
   }
 
-  @Test(.disabled("Down mode word-level diffs deferred"))
-  func deletionLineInPairedBlockShowsDelOnly() {
+  @Test func deletionLineInPairedBlockShowsDelOnly() {
     let old = "The quick fox.\n"
     let new = "The slow fox.\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
     let html = MudCore.renderDownToHTML(new, options: opts)
-    // Find the deleted line — it should have <del> but no <ins>.
-    let delLines = html.components(separatedBy: "\n")
+    // Isolate deletion divs — split on </div> and filter.
+    let delDivs = html.components(separatedBy: "</div>")
       .filter { $0.contains("dl-del") }
-    for line in delLines {
-      #expect(!line.contains("<ins>"),
+    #expect(!delDivs.isEmpty, "Should have at least one deletion div")
+    for div in delDivs {
+      #expect(!div.contains("<ins>"),
         "Deletion line must not contain <ins>")
     }
   }
 
-  @Test(.disabled("Down mode word-level diffs deferred"))
-  func unpairedInsertionHasNoInlineMarkers() {
+  @Test func unpairedInsertionHasNoInlineMarkers() {
     let old = "Keep.\n"
     let new = "Keep.\n\nAdded.\n"
     var opts = RenderOptions()
