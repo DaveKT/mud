@@ -67,15 +67,9 @@ struct DiffContext {
                     del.block.markup, ins.block.markup
                 ) else { continue }
 
-                guard let oldInline = del.block.markup
-                        as? (any InlineContainer),
-                      let newInline = ins.block.markup
-                        as? (any InlineContainer)
-                else { continue }
-
                 let spans = WordDiff.diff(
-                    old: oldInline.plainText,
-                    new: newInline.plainText)
+                    old: WordDiff.inlineText(of: del.block.markup),
+                    new: WordDiff.inlineText(of: ins.block.markup))
                 if !spans.isEmpty {
                     wordSpanMap[del.changeID] = spans
                     wordSpanMap[ins.changeID] = spans

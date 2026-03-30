@@ -118,6 +118,40 @@ struct WordDiffTests {
     #expect(deletedWords[0].text == "end")
   }
 
+  // MARK: - plainText alignment diagnostic
+
+  @Test func inlineTextMatchesVisitorCharCount() {
+    // Verify that inlineText(of:) matches the sum of character
+    // counts the visitor would consume. plainText includes backticks
+    // around InlineCode, which causes misalignment; inlineText does not.
+    let cases = [
+      "Call `foo()` and wait.\n",
+      "The **important** value is high.\n",
+      "Use `foo()` then `bar()` to finish.\n",
+      "A *special* and `coded` thing.\n",
+      "Multi line\nparagraph here.\n",
+      "`start` middle `end`.\n",
+    ]
+    for md in cases {
+      let parsed = ParsedMarkdown(md)
+      let para = parsed.document.child(at: 0)!
+      let text = WordDiff.inlineText(of: para)
+      var visitorCount = 0
+      func countLeaves(_ node: Markup) {
+        for child in node.children {
+          if let t = child as? Text { visitorCount += t.string.count }
+          else if let c = child as? InlineCode { visitorCount += c.code.count }
+          else if child is SoftBreak { visitorCount += 1 }
+          else if child is LineBreak { visitorCount += 1 }
+          else { countLeaves(child) }
+        }
+      }
+      countLeaves(para)
+      #expect(text.count == visitorCount,
+        "inlineText vs visitor mismatch for: \(md.dropLast())")
+    }
+  }
+
   // MARK: - Structure comparison
 
   @Test func sameStructurePlainText() {

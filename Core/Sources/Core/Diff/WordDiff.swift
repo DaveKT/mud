@@ -264,6 +264,34 @@ enum WordDiff {
         return TaggedNode(tag: tag, node: node)
     }
 
+    // MARK: - Inline text extraction
+
+    /// Extracts the inline text content of a markup node, matching
+    /// the character sources the rendering visitor consumes:
+    /// `Text.string`, `InlineCode.code`, SoftBreak → `" "`,
+    /// LineBreak → `"\n"`, and recursion into formatting containers.
+    ///
+    /// This must be used instead of `plainText`, which includes
+    /// backticks around InlineCode — causing a character count
+    /// mismatch with the visitor.
+    static func inlineText(of node: Markup) -> String {
+        var result = ""
+        for child in node.children {
+            if let t = child as? Text {
+                result += t.string
+            } else if let c = child as? InlineCode {
+                result += c.code
+            } else if child is SoftBreak {
+                result += " "
+            } else if child is LineBreak {
+                result += "\n"
+            } else {
+                result += inlineText(of: child)
+            }
+        }
+        return result
+    }
+
     // MARK: - Tokenization
 
     /// Splits text into alternating word and whitespace tokens.

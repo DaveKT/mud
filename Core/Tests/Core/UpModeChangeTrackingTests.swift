@@ -442,6 +442,114 @@ struct UpModeChangeTrackingTests {
     }
   }
 
+  // MARK: - Word-level diff truncation guards
+  //
+  // These tests verify that paragraphs with inline formatting are not
+  // truncated by word-level diffs. The word diff operates on plainText
+  // (which flattens formatting) while the renderer walks the AST
+  // (which has formatting nodes). Any discrepancy in character
+  // counting causes text to be silently dropped.
+
+  @Test func inlineCodeDoesNotCauseTruncation() {
+    let old = "Call `foo()` and wait.\n"
+    let new = "Call `foo()` and sleep.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("foo()"), "Code content must survive")
+      #expect(block.contains("sleep"), "Text after code must survive")
+    }
+  }
+
+  @Test func multipleInlineCodesDoNotCauseTruncation() {
+    let old = "Use `foo()` then `bar()` to finish.\n"
+    let new = "Use `foo()` then `bar()` to start.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("foo()"), "First code must survive")
+      #expect(block.contains("bar()"), "Second code must survive")
+      #expect(block.contains("start"), "Text after codes must survive")
+    }
+  }
+
+  @Test func boldTextDoesNotCauseTruncation() {
+    let old = "The **important** value is high.\n"
+    let new = "The **important** value is low.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("important"), "Bold content must survive")
+      #expect(block.contains("low"), "Text after bold must survive")
+    }
+  }
+
+  @Test func emphasisDoesNotCauseTruncation() {
+    let old = "The *special* value is high.\n"
+    let new = "The *special* value is low.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("special"), "Emphasis content must survive")
+      #expect(block.contains("low"), "Text after emphasis must survive")
+    }
+  }
+
+  @Test func mixedFormattingDoesNotCauseTruncation() {
+    let old = "Call `render()` on the **main** thread now.\n"
+    let new = "Call `render()` on the **main** thread later.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("render()"), "Code content must survive")
+      #expect(block.contains("main"), "Bold content must survive")
+      #expect(block.contains("later"), "Text after formatting must survive")
+    }
+  }
+
+  @Test func inlineCodeAtStartDoesNotCauseTruncation() {
+    let old = "`foo` is a function.\n"
+    let new = "`foo` is a method.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("foo"), "Code at start must survive")
+      #expect(block.contains("method"), "Text after code must survive")
+    }
+  }
+
+  @Test func inlineCodeAtEndDoesNotCauseTruncation() {
+    let old = "The function is `foo`.\n"
+    let new = "The method is `foo`.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("method"), "Changed word must survive")
+      #expect(block.contains("foo"), "Code at end must survive")
+    }
+  }
+
   // MARK: - Word-level diffs in red block (paired deletion)
 
   @Test func redBlockShowsDeletedWordsOnly() {
