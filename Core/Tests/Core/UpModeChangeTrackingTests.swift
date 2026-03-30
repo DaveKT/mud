@@ -709,6 +709,45 @@ struct UpModeChangeTrackingTests {
     #expect(html.contains("New aside."))
   }
 
+  @Test func deletedAsideRenderedAsAlert() {
+    let old = "> Status: Planning\n\nKeep.\n"
+    let new = "Keep.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // The deleted aside should be a blockquote with alert styling.
+    let pattern = /blockquote class="[^"]*alert-status[^"]*mud-change-del/
+    #expect(html.contains(pattern),
+      "Deleted aside should be a <blockquote> with alert-status class")
+    #expect(html.contains("alert-title"),
+      "Deleted aside should have alert title paragraph")
+  }
+
+  @Test func replacedAsideDeletedVersionRenderedAsAlert() {
+    let old = "> Status: Planning\n"
+    let new = "> Status: Underway\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    // Both blocks should be blockquotes with alert styling.
+    let delPattern = /blockquote class="[^"]*alert-status[^"]*mud-change-del/
+    #expect(html.contains(delPattern),
+      "Deleted aside should have alert-status class")
+    #expect(html.contains("Planning"))
+  }
+
+  @Test func deletedGFMAlertRenderedAsAlert() {
+    let old = "> [!NOTE]\n> Important info.\n\nKeep.\n"
+    let new = "Keep.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let pattern = /blockquote class="[^"]*alert-note[^"]*mud-change-del/
+    #expect(html.contains(pattern),
+      "Deleted GFM alert should be a <blockquote> with alert-note class")
+    #expect(html.contains("alert-title"))
+  }
+
   @Test func alertChangeAttributeIsOnBlockquote() {
     let old = "> Status: Planning\n"
     let new = "> Status: Underway\n"

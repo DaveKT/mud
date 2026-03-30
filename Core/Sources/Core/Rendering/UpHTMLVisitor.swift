@@ -454,7 +454,11 @@ struct UpHTMLVisitor: MarkupWalker {
     /// attributes.
     private mutating func emitDeletion(_ del: RenderedDeletion) {
         let info = diffContext?.groupInfo(for: del.changeID)
-        var attrs = " class=\"mud-change-del\" data-change-id=\"\(del.changeID)\""
+        var classes = "mud-change-del"
+        if let extra = del.extraClasses {
+            classes = "\(extra) \(classes)"
+        }
+        var attrs = " class=\"\(classes)\" data-change-id=\"\(del.changeID)\""
         if let info {
             attrs += " data-group-id=\"\(info.groupID)\""
             if info.groupPos == .first || info.groupPos == .sole {
@@ -792,6 +796,31 @@ struct UpHTMLVisitor: MarkupWalker {
 
     private func escapeSpanText(_ text: String) -> String {
         HTMLEscaping.escape(EmojiShortcodes.replaceShortcodes(in: text))
+    }
+
+    /// Renders the inner HTML of a blockquote alert for deletion
+    /// rendering. Returns the inner HTML and alert category, or nil
+    /// if the blockquote is not a recognized alert.
+    static func renderAlertInnerHTML(
+        _ blockQuote: BlockQuote
+    ) -> (html: String, category: AlertCategory)? {
+        let detector = AlertDetector()
+
+        if let (category, title) = detector.detectGFMAlert(blockQuote) {
+            var visitor = UpHTMLVisitor()
+            visitor.emitAlertTitle(category, title)
+            visitor.emitGFMAlertContent(blockQuote, category: category)
+            return (visitor.result, category)
+        }
+
+        if let (category, title, content) =
+            detector.detectDocCAlert(blockQuote) {
+            var visitor = UpHTMLVisitor()
+            visitor.emitDocCAlertTitleAndContent(category, title, content)
+            return (visitor.result, category)
+        }
+
+        return nil
     }
 
     /// Renders a markup node's inner HTML using word spans.

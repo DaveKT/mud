@@ -281,16 +281,19 @@ struct RenderedDeletion {
     /// Word-level diff spans when this deletion is paired with an insertion.
     /// `nil` when unpaired or when inline structure diverges.
     let wordSpans: [WordSpan]?
+    /// Extra CSS classes to add to the outer tag (e.g. alert classes).
+    let extraClasses: String?
 
     init(
         html: String, changeID: String, summary: String, tag: String,
-        wordSpans: [WordSpan]? = nil
+        wordSpans: [WordSpan]? = nil, extraClasses: String? = nil
     ) {
         self.html = html
         self.changeID = changeID
         self.summary = summary
         self.tag = tag
         self.wordSpans = wordSpans
+        self.extraClasses = extraClasses
     }
 }
 
@@ -358,6 +361,18 @@ extension DiffContext {
         wordSpans: [WordSpan]? = nil
     ) -> RenderedDeletion {
         let markup = block.markup
+
+        // If the paragraph is inside an alert-style blockquote,
+        // render the deletion as a full alert with proper styling.
+        if let blockQuote = markup.parent as? BlockQuote,
+           let (alertHTML, category) =
+               UpHTMLVisitor.renderAlertInnerHTML(blockQuote) {
+            return RenderedDeletion(
+                html: alertHTML, changeID: changeID,
+                summary: blockSummary(block), tag: "blockquote",
+                extraClasses: "alert \(category.cssClass)")
+        }
+
         let tag = tagForBlock(markup)
         let html: String
 
