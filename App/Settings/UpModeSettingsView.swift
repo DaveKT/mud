@@ -64,7 +64,7 @@ struct UpModeSettingsView: View {
                     }
                 )) {
                     Text("Copy button")
-                    Text("Show a button to copy the contents of code blocks.")
+                    Text("Hover over code blocks to reveal a button that copies the contents to your clipboard.")
                 }
             }
         }
