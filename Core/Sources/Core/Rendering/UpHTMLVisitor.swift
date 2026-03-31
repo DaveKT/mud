@@ -448,18 +448,48 @@ struct UpHTMLVisitor: MarkupWalker {
     /// Emits preceding deletions as native HTML elements.
     private mutating func emitPrecedingDeletions(before node: Markup) {
         guard let diffContext else { return }
-        for del in diffContext.precedingDeletions(before: node) {
-            if consumedDeletionIDs.contains(del.changeID) { continue }
-            emitDeletion(del)
-        }
+        let deletions = diffContext.precedingDeletions(before: node)
+            .filter { !consumedDeletionIDs.contains($0.changeID) }
+        emitDeletionsWrappingTableRows(deletions)
     }
 
     /// Emits trailing deletions (after the last surviving block).
     mutating func emitTrailingDeletions() {
         guard let diffContext else { return }
-        for del in diffContext.trailingDeletions() {
+        let deletions = diffContext.trailingDeletions()
+            .filter { !consumedDeletionIDs.contains($0.changeID) }
+        emitDeletionsWrappingTableRows(deletions)
+    }
+
+    /// Emits a list of deletions, wrapping any `<tr>` deletions in
+    /// `<table><tbody>…</tbody></table>` so they produce valid HTML
+    /// even when emitted outside a table context.
+    private mutating func emitDeletionsWrappingTableRows(
+        _ deletions: [RenderedDeletion]
+    ) {
+        var pendingTRs: [RenderedDeletion] = []
+        for del in deletions {
+            if del.tag == "tr" {
+                pendingTRs.append(del)
+            } else {
+                flushPendingTRs(&pendingTRs)
+                emitDeletion(del)
+            }
+        }
+        flushPendingTRs(&pendingTRs)
+    }
+
+    /// Flushes accumulated `<tr>` deletions wrapped in a table.
+    private mutating func flushPendingTRs(
+        _ pending: inout [RenderedDeletion]
+    ) {
+        guard !pending.isEmpty else { return }
+        result += "<table>\n<tbody>\n"
+        for del in pending {
             emitDeletion(del)
         }
+        result += "</tbody>\n</table>\n"
+        pending.removeAll()
     }
 
     /// Emits a single deletion as a native HTML element with change
@@ -488,11 +518,17 @@ struct UpHTMLVisitor: MarkupWalker {
     /// as `<tr>` siblings inside `<tbody>`.  Non-`<tr>` deletions
     /// (e.g. a paragraph that followed the old table) are deferred
     /// to `deferredDeletions` so they emit after `</table>`.
+    ///
+    /// After all surviving rows, reclaims any `<tr>` deletions that
+    /// follow the last row (these would otherwise be emitted outside
+    /// the table as preceding deletions of the next block, or as
+    /// trailing deletions).
     private mutating func emitTableBodyDeletions(in tableBody: Table.Body) {
         guard let diffContext else {
             descendInto(tableBody)
             return
         }
+        var lastRow: Table.Row?
         for child in tableBody.children {
             guard let row = child as? Table.Row else {
                 visit(child)
@@ -507,6 +543,17 @@ struct UpHTMLVisitor: MarkupWalker {
                 consumedDeletionIDs.insert(del.changeID)
             }
             visitTableRow(row)
+            lastRow = row
+        }
+
+        // Reclaim <tr> deletions that follow the last surviving row.
+        if let lastRow {
+            for del in diffContext.followingDeletions(after: lastRow) {
+                if del.tag == "tr" {
+                    emitDeletion(del)
+                    consumedDeletionIDs.insert(del.changeID)
+                }
+            }
         }
     }
 

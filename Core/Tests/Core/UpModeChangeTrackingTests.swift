@@ -325,6 +325,58 @@ struct UpModeChangeTrackingTests {
     #expect(delTrRange.upperBound < tbodyEndRange.upperBound)
   }
 
+  @Test func deletedLastTableRowInsideOriginalTable() {
+    // When the last row is deleted and content follows the table,
+    // the deleted row must appear inside the original table's <tbody>,
+    // not in a separate wrapper table (regression: bare <tr> outside
+    // table was invisible in the browser).
+    let old = "| A |\n|---|\n| 1 |\n| 2 |\n\nAfter.\n"
+    let new = "| A |\n|---|\n| 1 |\n\nAfter.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    #expect(html.contains("<tr class=\"mud-change-del\""))
+
+    // Only one <table> — the deleted row is inside the original,
+    // not a separate wrapper.
+    let tableCount = html.components(separatedBy: "<table>").count - 1
+    #expect(tableCount == 1, "Deleted row should be in the original table")
+
+    // The deleted <tr> must be inside the open <tbody>.
+    let delRange = html.range(of: "mud-change-del")!
+    let before = html[html.startIndex..<delRange.lowerBound]
+    let tbodyCount = before.components(separatedBy: "<tbody>").count - 1
+    let tbodyEndCount = before.components(separatedBy: "</tbody>").count - 1
+    #expect(tbodyCount > tbodyEndCount,
+            "Deleted <tr> must be inside an open <tbody>")
+  }
+
+  @Test func deletedLastTableRowAsTrailingDeletion() {
+    // When the deleted row is the last block in the document
+    // (nothing follows the table), it becomes a trailing deletion.
+    // It must still appear inside the original table's <tbody>.
+    let old = "| A |\n|---|\n| 1 |\n| 2 |\n"
+    let new = "| A |\n|---|\n| 1 |\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    #expect(html.contains("<tr class=\"mud-change-del\""))
+
+    // Only one <table>.
+    let tableCount = html.components(separatedBy: "<table>").count - 1
+    #expect(tableCount == 1, "Deleted row should be in the original table")
+
+    // The deleted <tr> must be inside the open <tbody>.
+    let delRange = html.range(of: "mud-change-del")!
+    let before = html[html.startIndex..<delRange.lowerBound]
+    let tbodyCount = before.components(separatedBy: "<tbody>").count - 1
+    let tbodyEndCount = before.components(separatedBy: "</tbody>").count - 1
+    #expect(tbodyCount > tbodyEndCount,
+            "Deleted <tr> must be inside an open <tbody>")
+  }
+
   // MARK: - Edge cases
 
   @Test func allContentDeleted() {

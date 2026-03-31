@@ -8,6 +8,7 @@ import Markdown
 struct DiffContext {
     private let annotations: [SourceKey: AnnotationEntry]
     private let precedingDeletionMap: [SourceKey: [RenderedDeletion]]
+    private let followingDeletionMap: [SourceKey: [RenderedDeletion]]
     private let _trailingDeletions: [RenderedDeletion]
     private let _groupMap: [String: GroupInfo]
     private let _pairMap: [String: String]
@@ -18,6 +19,7 @@ struct DiffContext {
 
         var annotations: [SourceKey: AnnotationEntry] = [:]
         var precedingMap: [SourceKey: [RenderedDeletion]] = [:]
+        var followingMap: [SourceKey: [RenderedDeletion]] = [:]
         var trailing: [RenderedDeletion] = []
 
         // Assign change IDs and build lookup tables.
@@ -51,6 +53,7 @@ struct DiffContext {
         var pendingDeletions: [PendingBlock] = []
         var pendingInsertions: [PendingBlock] = []
         var deletionFlushTarget: SourceKey?
+        var lastUnchangedKey: SourceKey?
         var pairMap: [String: String] = [:]
         var wordSpanMap: [String: [WordSpan]] = [:]
 
@@ -74,6 +77,9 @@ struct DiffContext {
             }
 
             // Render deletions and flush to preceding map or trailing.
+            // Also store in following map keyed by the last unchanged
+            // block before this gap, so the rendering visitor can
+            // reclaim deletions that logically follow a table body.
             if !pendingDeletions.isEmpty {
                 let rendered = pendingDeletions.map {
                     Self.renderedDeletion(
@@ -84,6 +90,9 @@ struct DiffContext {
                     precedingMap[key] = rendered
                 } else {
                     trailing += rendered
+                }
+                if let key = lastUnchangedKey {
+                    followingMap[key] = rendered
                 }
             }
 
@@ -101,6 +110,7 @@ struct DiffContext {
                     deletionFlushTarget = sourceKey(for: new.markup)
                 }
                 finalizeGap()
+                lastUnchangedKey = sourceKey(for: new.markup)
                 lastWasChange = false
 
             case .inserted(let new):
@@ -189,6 +199,7 @@ struct DiffContext {
 
         self.annotations = annotations
         self.precedingDeletionMap = precedingMap
+        self.followingDeletionMap = followingMap
         self._trailingDeletions = trailing
         self._groupMap = groupMap
         self._pairMap = pairMap
@@ -213,6 +224,13 @@ struct DiffContext {
     func precedingDeletions(before node: Markup) -> [RenderedDeletion] {
         guard let key = sourceKey(for: node) else { return [] }
         return precedingDeletionMap[key] ?? []
+    }
+
+    /// Returns pre-rendered deleted blocks that follow the given node
+    /// (i.e. deletions in the gap after this unchanged block).
+    func followingDeletions(after node: Markup) -> [RenderedDeletion] {
+        guard let key = sourceKey(for: node) else { return [] }
+        return followingDeletionMap[key] ?? []
     }
 
     /// Returns pre-rendered deleted blocks that appear after the last
