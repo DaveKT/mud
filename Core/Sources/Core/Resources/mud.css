@@ -24,9 +24,10 @@ body {
     background-color: var(--body-bg);
 }
 
-body *:first-child {
-    min-height: 100%;
+article {
+  min-height: 100%;
 }
+
 
 /* Alert color variables (shared between Up and Down mode).
    Themes may override these custom properties. */

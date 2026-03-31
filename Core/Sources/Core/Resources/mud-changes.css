@@ -54,27 +54,59 @@
 }
 
 
-/* ── Up mode: overlay badges ──────────────────────────────────── */
+/* ── Up mode: expando buttons ────────────────────────────────── */
 
-.mud-overlay::before {
-    content: attr(data-group-index);
+.mud-expando {
     position: absolute;
-    top: 3px;
-    left: 3px;
-    min-width: 1.4em;
-    height: 1.4em;
-    line-height: 1.4em;
-    text-align: center;
-    font-size: 0.7em;
+    top: -1px;
+    right: 0.75em;
+    min-width: 1.5em;
+    height: 1.5em;
+    padding: 0.2em;
+    white-space: nowrap;
+    box-sizing: content-box;
+    border: 2px solid;
+    border-radius: 1.6em;
+    font-family: inherit;
     font-weight: 600;
-    border-radius: 50%;
-    color: white;
-    pointer-events: none;
+    font-size: 0.7em;
+    line-height: 1;
+    color: var(--bg-color);
+    background-color: var(--change-mix);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transform: translateY(-50%);
 }
 
-.mud-overlay-ins::before { background: var(--change-ins); }
-.mud-overlay-mix::before { background: var(--change-mix); }
-.mud-overlay-del::before { background: var(--change-del); }
+.mud-overlay-ins > .mud-expando { background-color: var(--change-ins); }
+.mud-overlay-del > .mud-expando { background-color: var(--change-del); }
+
+.mud-expando:disabled {
+    cursor: default;
+}
+
+.mud-overlay-ins .mud-expando-expanded {
+    color: var(--change-ins);
+    background-color: var(--bg-color);
+    border-width: 1.5px;
+}
+.mud-overlay-del .mud-expando-expanded {
+    color: var(--change-del);
+    background-color: var(--bg-color);
+    border-width: 1.5px;
+}
+
+
+/* ── Up mode: collapsed del-only overlays ────────────────────── */
+
+.mud-overlay-collapsed {
+    height: 0px !important;
+    border-bottom: 0;
+    overflow: visible;
+}
 
 
 /* ── Up mode: deletions ───────────────────────────────────────── */

@@ -154,7 +154,6 @@ struct WebView: NSViewRepresentable {
                     .replacingOccurrences(of: "'", with: "\\'")
                 return "'\(escaped)'"
             }.joined(separator: ",") + "]"
-            webView.evaluateJavaScript("Mud.revealChanges(\(idsJSON))")
             webView.evaluateJavaScript("Mud.scrollToChange(\(idsJSON))")
         }
 
