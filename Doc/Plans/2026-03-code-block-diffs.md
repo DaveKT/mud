@@ -1,7 +1,7 @@
 Plan: Code Block Diffs
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
 
 
 ## Overview
@@ -437,33 +437,44 @@ The `injectMarkers` machinery from Down mode can be reused for this.
 
 ## Implementation sequence
 
-1. **`splitHighlightedLines`** — utility function in Core to split highlighted
-   HTML at newline boundaries, tracking and reopening open `<span>` tags.
+1. ~~**`splitHighlightedLines`**~~ _Done._ Reuses existing `HTMLLineSplitter`
+   (already splits highlighted HTML at newline boundaries with span balancing).
+   New test suite validates code-block-diff requirements.
 
-2. **`CodeBlockDiff`** — new type in `Core/Sources/Core/Diff/`. Line-level diff
-   computation using `CollectionDifference` on raw source lines. Line grouping
-   within the code block (consecutive changed lines form a group).
+2. ~~**`CodeBlockDiff`**~~ _Done._ New type in `Core/Sources/Core/Diff/`.
+   Two-phase design: `computeRaw` produces annotations + highlighted HTML
+   without IDs; `assignGroups` applies change IDs and group IDs from closures
+   supplied by the caller. `compute` convenience combines both phases (used by
+   unit tests).
 
-3. **`DiffContext` integration** — detect code block pairs, compute
-   `CodeBlockDiff`, populate `codeBlockDiffMap`. Suppress block-level entries
-   for these pairs. Assign change IDs and group IDs from the global sequence.
+3. ~~**`DiffContext` integration**~~ _Done._ `processCodeBlockPairs` scans gaps
+   for CodeBlock del+ins pairs by type (not position), computes raw diffs, and
+   replaces block-level change entries with `CodeBlockMarker` placeholders. The
+   grouping pass assigns IDs to code block line groups in document order
+   alongside block-level groups. New `codeBlockDiff(for:)` public API.
 
-4. **`UpHTMLVisitor` changes** — `visitCodeBlock()` checks
-   `codeBlockDiff(for:)`. When present, emits line-span structure with
-   pre-highlighted HTML. When absent, existing path.
+4. ~~**`UpHTMLVisitor` changes**~~ _Done._ `visitCodeBlock` checks
+   `codeBlockDiff(for:)`. When present, `emitDiffedCodeBlock` renders
+   `<span class="cl">` line structure with per-line `cl-ins`/ `cl-del` classes
+   and data attributes. Code header and syntax highlighting preserved.
 
-5. **`ChangeList` changes** — emit `DocumentChange` entries for code block line
-   groups.
+5. ~~**`ChangeList` changes**~~ _Done._ `computeChanges` detects code block
+   diffs via `codeBlockDiff(for:)` and emits one `DocumentChange` per line
+   group via `emitCodeBlockChanges`.
 
-6. **CSS** — `cl`, `cl-ins`, `cl-del` styles in `mud-changes.css`.
+6. ~~**CSS**~~ _Done._ `.cl`, `.cl-ins`, `.cl-del` styles in `mud-changes.css`.
+   Parallels existing Down mode styles.
 
-7. **JS: mermaid-init.js** — copy change attributes through `<pre>` → `<div>`
-   replacement. Skip `mud-change-del` blocks.
+7. ~~**JS: mermaid-init.js**~~ _Done._ Copies `data-change-id`,
+   `data-group-id`, `data-group-index`, and `mud-change-*` classes through
+   `<pre>` → `<div>` replacement. Skips `mud-change-del` blocks.
 
-8. **JS: copy-code.js** — filter hidden deleted lines from copy.
+8. ~~**JS: copy-code.js**~~ _Done._ For `mud-code-diff` blocks, copies only
+   `.cl:not(.cl-del)` line content. Fallback path also uses extracted text.
 
-9. **Mermaid suppression** — `DiffContext` skips deletion for paired mermaid
-   blocks, marks insertion as mixed.
+9. ~~**Mermaid suppression**~~ _Done._ Handled in `processCodeBlockPairs`:
+   mermaid pairs suppress the deletion entry and remove it from pending
+   deletions. The insertion keeps its block-level annotation.
 
 10. **Testing and polish** — overlay positioning for in-code-block groups,
     collapsed button positioning, visual review.

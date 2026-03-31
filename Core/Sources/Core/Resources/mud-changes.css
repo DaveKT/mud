@@ -122,6 +122,29 @@
 }
 
 
+/* ── Up mode: code block line diffs ──────────────────────────── */
+
+.cl {
+    /* Structural wrapper only — no visual properties. */
+}
+
+.cl.cl-del {
+    display: none;
+}
+
+.cl.cl-del.mud-change-revealed {
+    display: inline;
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--change-del) 50%, transparent);
+    text-decoration-thickness: 1.5px;
+    opacity: 0.75;
+}
+
+.cl.cl-ins {
+    background: color-mix(in srgb, var(--change-ins) 12%, transparent);
+}
+
+
 /* ── Up mode: active highlight ────────────────────────────────── */
 
 .mud-overlay.mud-change-active {

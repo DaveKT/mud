@@ -19,9 +19,23 @@
     var pre = code.parentElement;
     if (!pre || pre.tagName !== "PRE") return;
 
+    // Skip deleted mermaid blocks (change tracking).
+    if (pre.classList.contains("mud-change-del")) return;
+
     var container = document.createElement("div");
     container.className = "mermaid";
     container.textContent = code.textContent;
+
+    // Preserve change-tracking attributes through the replacement.
+    if (pre.dataset.changeId) {
+      container.dataset.changeId = pre.dataset.changeId;
+      container.dataset.groupId = pre.dataset.groupId;
+      container.dataset.groupIndex = pre.dataset.groupIndex;
+      pre.classList.forEach(function (cls) {
+        if (cls.startsWith("mud-change-")) container.classList.add(cls);
+      });
+    }
+
     pre.parentNode.replaceChild(container, pre);
     nodes.push(container);
   });

@@ -247,7 +247,8 @@
           hasIns: false
         };
       }
-      if (els[j].classList.contains("mud-change-del")) {
+      if (els[j].classList.contains("mud-change-del")
+          || els[j].classList.contains("cl-del")) {
         groups[gid].hasDel = true;
       } else {
         groups[gid].hasIns = true;
@@ -426,7 +427,8 @@
       var runs = [];
       var cur = null;
       for (var k = 0; k < els.length; k++) {
-        var t = els[k].classList.contains("mud-change-del") ? "del" : "ins";
+        var t = (els[k].classList.contains("mud-change-del")
+                 || els[k].classList.contains("cl-del")) ? "del" : "ins";
         if (cur && cur.type === t) {
           cur.els.push(els[k]);
         } else {
