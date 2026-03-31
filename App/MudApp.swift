@@ -18,8 +18,10 @@ struct MudApp: App {
         }
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button("Settings...") {
+                Button {
                     SettingsWindowController.shared.openSettings()
+                } label: {
+                    Label("Settings...", systemImage: "gearshape")
                 }
                 .keyboardShortcut(",", modifiers: .command)
 

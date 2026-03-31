@@ -29,8 +29,10 @@ struct CheckForUpdatesView: View {
     @StateObject private var viewModel = CheckForUpdatesViewModel()
 
     var body: some View {
-        Button("Check for Updates...") {
+        Button {
             SparkleController.updater.checkForUpdates()
+        } label: {
+            Label("Check for Updates...", systemImage: "arrow.triangle.2.circlepath")
         }
         .disabled(!viewModel.canCheckForUpdates)
     }
