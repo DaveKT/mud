@@ -205,6 +205,68 @@ struct DownModeChangeTrackingTests {
     }
   }
 
+  // MARK: - Word markers and syntax spans don't cross
+
+  @Test func wordMarkersDoNotCrossSyntaxSpans() {
+    // When inline code is in a changed block, <ins>/<del> tags must
+    // not cross <span> boundaries. Crossed tags cause the browser to
+    // close the .lc span prematurely, breaking Down mode layout.
+    let old = "The `quick` fox.\n"
+    let new = "The `slow` fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // Extract all insertion divs' .lc content.
+    let insLines = html.components(separatedBy: "</div>")
+      .filter { $0.contains("dl-ins") }
+    for line in insLines {
+      // No <ins> or <del> should be open when a </span> is emitted.
+      // Pattern: <ins>...<span...>...</ins> (crossing).
+      // This regex detects <ins> opened AFTER <span> and closed before
+      // </span>, or <ins> containing an unmatched </span>.
+      let crossingPattern =
+        /<ins>[^<]*<span[^>]*>[^<]*<\/ins>/
+      #expect(!line.contains(crossingPattern),
+        "Word markers must not cross syntax span boundaries")
+    }
+  }
+
+  @Test func wordMarkersInsideCodeSpanProduceValidNesting() {
+    // When inline code is in a changed block, <ins>/<del> tags must
+    // not cross <span> boundaries. Crossed tags cause the browser to
+    // close the .lc span prematurely, breaking Down mode layout.
+    let old = "Call `foo` now.\n"
+    let new = "Call `bar` now.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // Extract insertion divs and verify all content is inside .lc.
+    let lines = html.components(separatedBy: "</div>")
+      .filter { $0.contains("dl-ins") }
+    for line in lines where line.contains("<ins>") {
+      let lcStart = line.range(of: "<span class=\"lc\">")
+      #expect(lcStart != nil, "Insertion line should have .lc span")
+      if let start = lcStart {
+        let afterLc = String(line[start.upperBound...])
+        // The inner syntax spans should be balanced (the extra
+        // </span> at the end is the .lc element itself).
+        let innerOpens = afterLc.components(separatedBy: "<span").count - 1
+        let innerCloses = afterLc.components(separatedBy: "</span>").count - 1
+        #expect(innerOpens + 1 == innerCloses,
+          "Inner spans plus .lc close should balance")
+        // No syntax-highlight span should appear after .lc closes.
+        // Split on the last </span> (the .lc close) and check.
+        if let lastClose = afterLc.range(
+          of: "</span>", options: .backwards
+        ) {
+          let afterLcClose = afterLc[lastClose.upperBound...]
+          #expect(!afterLcClose.contains("<span"),
+            "No content should spill outside .lc")
+        }
+      }
+    }
+  }
+
   // MARK: - Edge cases
 
   @Test func allContentDeleted() {

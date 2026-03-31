@@ -848,7 +848,18 @@ public struct DownHTMLVisitor: Sendable {
             }
         }
 
-        return markers
+        // Coalesce adjacent same-type markers into single ranges.
+        var coalesced: [WordMarker] = []
+        for marker in markers {
+            if let last = coalesced.last,
+               last.end == marker.start, last.tag == marker.tag {
+                coalesced[coalesced.count - 1] = WordMarker(
+                    start: last.start, end: marker.end, tag: last.tag)
+            } else {
+                coalesced.append(marker)
+            }
+        }
+        return coalesced
     }
 
     /// Clips a marker to a line's range and appends if non-empty.
@@ -870,6 +881,10 @@ public struct DownHTMLVisitor: Sendable {
 
     /// Injects `<ins>` / `<del>` tags into syntax-highlighted HTML
     /// at source character boundaries.
+    ///
+    /// To prevent markers from crossing HTML tag boundaries (which
+    /// causes invalid nesting and layout breakage), the marker is
+    /// closed before each HTML tag and reopened after it.
     private static func injectMarkers(
         into html: String, markers: [WordMarker]
     ) -> String {
@@ -881,14 +896,20 @@ public struct DownHTMLVisitor: Sendable {
 
         var i = html.startIndex
         while i < html.endIndex {
-            // HTML tag — copy verbatim.
+            // HTML tag — close marker, copy tag, reopen marker.
             if html[i] == "<" {
+                if open {
+                    result += "</\(markers[mIdx].tag)>"
+                }
                 let tagStart = i
                 while i < html.endIndex, html[i] != ">" {
                     i = html.index(after: i)
                 }
                 if i < html.endIndex { i = html.index(after: i) }
                 result += html[tagStart..<i]
+                if open {
+                    result += "<\(markers[mIdx].tag)>"
+                }
                 continue
             }
 
