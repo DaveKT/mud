@@ -673,6 +673,59 @@ struct UpModeChangeTrackingTests {
     }
   }
 
+  // MARK: - Word-level diffs in list items
+
+  @Test func unorderedListItemWordChangeShowsInlineMarkers() {
+    let old = "- The quick fox\n"
+    let new = "- The slow fox\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<ins>"),
+        "Changed list item should show word-level <ins> markers")
+      #expect(block.contains("slow"))
+      #expect(block.contains("<del>"),
+        "Changed list item should show word-level <del> markers")
+      #expect(block.contains("quick"))
+    }
+  }
+
+  @Test func orderedListItemWordChangeShowsInlineMarkers() {
+    let old = "1. The quick fox\n"
+    let new = "1. The slow fox\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<ins>"),
+        "Changed ordered list item should show word-level <ins> markers")
+      #expect(block.contains("slow"))
+      #expect(block.contains("<del>"),
+        "Changed ordered list item should show word-level <del> markers")
+      #expect(block.contains("quick"))
+    }
+  }
+
+  @Test func listItemWordAppendShowsInlineMarkers() {
+    let old = "- Alpha done\n"
+    let new = "- Alpha done and more\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<ins>"),
+        "Appended words in list item should be marked with <ins>")
+      #expect(block.contains("more"))
+    }
+  }
+
   // MARK: - Alerts and asides
 
   @Test func insertedGFMAlertHasChangeAttributes() {

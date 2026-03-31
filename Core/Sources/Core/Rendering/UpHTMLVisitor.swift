@@ -138,6 +138,11 @@ struct UpHTMLVisitor: MarkupWalker {
     mutating func visitParagraph(_ paragraph: Paragraph) {
         let attrs = changeAttributes(for: paragraph)
         activateWordSpans(for: paragraph)
+        // List items store their annotation on the ListItem node,
+        // not the inner Paragraph. Fall back to the parent.
+        if wordSpans == nil, let listItem = paragraph.parent as? ListItem {
+            activateWordSpans(for: listItem)
+        }
         if inTightList && paragraph.parent is ListItem {
             if attrs != nil {
                 result += "<span\(attrs!.asString)>"
