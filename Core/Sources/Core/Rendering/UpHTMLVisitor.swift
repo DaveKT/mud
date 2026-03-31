@@ -34,6 +34,10 @@ struct UpHTMLVisitor: MarkupWalker {
     /// for blocks that differ from the waypoint document.
     var diffContext: DiffContext?
 
+    /// When false, non-consuming `<del>` spans in paired insertion
+    /// blocks are silently skipped instead of emitted inline.
+    var showInlineDeletions = true
+
     /// Change IDs already emitted by peek-ahead in `visitListItem`,
     /// preventing double emission in `emitPrecedingDeletions`.
     private var consumedDeletionIDs: Set<String> = []
@@ -793,8 +797,10 @@ struct UpHTMLVisitor: MarkupWalker {
             // Non-consuming: deleted in blue, inserted in red.
             switch (span, wordSpanRole) {
             case (.deleted(let text), .insertion):
-                setInlineTag(.del)
-                result += escapeSpanText(text)
+                if showInlineDeletions {
+                    setInlineTag(.del)
+                    result += escapeSpanText(text)
+                }
                 wordSpanCursor += 1
                 continue
             case (.inserted, .deletion):
@@ -827,8 +833,10 @@ struct UpHTMLVisitor: MarkupWalker {
         while wordSpanCursor < spans.count {
             switch (spans[wordSpanCursor], wordSpanRole) {
             case (.deleted(let text), .insertion):
-                setInlineTag(.del)
-                result += escapeSpanText(text)
+                if showInlineDeletions {
+                    setInlineTag(.del)
+                    result += escapeSpanText(text)
+                }
                 wordSpanCursor += 1
             case (.inserted, .deletion):
                 wordSpanCursor += 1

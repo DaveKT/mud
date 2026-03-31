@@ -23,6 +23,7 @@ public struct RenderOptions: Sendable, Equatable {
 
     // Change tracking
     public var waypoint: ParsedMarkdown?
+    public var showInlineDeletions: Bool = true
 
     public init() {}
 
@@ -33,6 +34,6 @@ public struct RenderOptions: Sendable, Equatable {
         let waypointHash = waypoint.map {
             String($0.markdown.hashValue)
         } ?? ""
-        return "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(extensions.sorted())\(waypointHash)"
+        return "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(extensions.sorted())\(waypointHash)\(showInlineDeletions)"
     }
 }

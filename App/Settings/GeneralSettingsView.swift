@@ -44,6 +44,16 @@ struct GeneralSettingsView: View {
                     Text("Show changes to documents")
                     Text("Highlight insertions, deletions, and modifications since the document was opened.")
                 }
+                Toggle(isOn: Binding(
+                    get: { appState.inlineDeletions },
+                    set: { newValue in
+                        appState.inlineDeletions = newValue
+                        appState.saveInlineDeletions()
+                    }
+                )) {
+                    Text("Inline deletions")
+                    Text("Show replaced words with strikethrough alongside new words in changed blocks.")
+                }
             }
 
             Section {

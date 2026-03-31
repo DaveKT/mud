@@ -13,6 +13,7 @@ class AppState: ObservableObject {
     @Published var sidebarVisible: Bool
     @Published var sidebarPane: SidebarPane
     @Published var trackChangesEnabled: Bool
+    @Published var inlineDeletions: Bool
     @Published var quitOnClose: Bool
     @Published var allowRemoteContent: Bool
     @Published var enabledExtensions: Set<String>
@@ -27,6 +28,7 @@ class AppState: ObservableObject {
     private static let sidebarVisibleKey = "Mud-SidebarVisible"
     private static let sidebarPaneKey = "Mud-SidebarPane"
     private static let trackChangesEnabledKey = "Mud-TrackChangesEnabled"
+    private static let inlineDeletionsKey = "Mud-InlineDeletions"
     private static let quitOnCloseKey = "Mud-QuitOnClose"
     private static let allowRemoteContentKey = "Mud-AllowRemoteContent"
     private static let enabledExtensionsKey = "Mud-EnabledExtensions"
@@ -46,6 +48,7 @@ class AppState: ObservableObject {
         let paneRaw = defaults.string(forKey: Self.sidebarPaneKey) ?? ""
         self.sidebarPane = SidebarPane(rawValue: paneRaw) ?? .outline
         self.trackChangesEnabled = defaults.object(forKey: Self.trackChangesEnabledKey) as? Bool ?? true
+        self.inlineDeletions = defaults.object(forKey: Self.inlineDeletionsKey) as? Bool ?? true
         self.quitOnClose = defaults.object(forKey: Self.quitOnCloseKey) as? Bool ?? true
         self.allowRemoteContent = defaults.object(forKey: Self.allowRemoteContentKey) as? Bool ?? true
         let allExtensions = Set(RenderExtension.registry.keys)
@@ -82,6 +85,10 @@ class AppState: ObservableObject {
 
     func saveTrackChangesEnabled() {
         UserDefaults.standard.set(trackChangesEnabled, forKey: Self.trackChangesEnabledKey)
+    }
+
+    func saveInlineDeletions() {
+        UserDefaults.standard.set(inlineDeletions, forKey: Self.inlineDeletionsKey)
     }
 
     func saveQuitOnClose() {

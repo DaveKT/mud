@@ -726,6 +726,44 @@ struct UpModeChangeTrackingTests {
     }
   }
 
+  // MARK: - Inline deletions setting
+
+  @Test func inlineDeletionsOffHidesDelInBlueBlock() {
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = false
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(!block.contains("<del>"),
+        "Blue block should not show <del> when inline deletions is off")
+      #expect(block.contains("<ins>"),
+        "Blue block should still show <ins> markers")
+      #expect(block.contains("slow"))
+      #expect(!block.contains("quick"),
+        "Old word should not appear when inline deletions is off")
+    }
+  }
+
+  @Test func inlineDeletionsOnShowsDelInBlueBlock() {
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = true
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<del>"),
+        "Blue block should show <del> when inline deletions is on")
+      #expect(block.contains("quick"))
+    }
+  }
+
   // MARK: - Alerts and asides
 
   @Test func insertedGFMAlertHasChangeAttributes() {

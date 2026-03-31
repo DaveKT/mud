@@ -42,6 +42,7 @@ struct DocumentContentView: View {
         opts.extensions = appState.enabledExtensions
         opts.htmlClasses = Set(appState.viewToggles.map(\.className))
         opts.zoomLevel = modeZoomLevel
+        opts.showInlineDeletions = appState.inlineDeletions
         if appState.trackChangesEnabled && !changeTracker.isPaused && !changeTracker.changes.isEmpty {
             opts.waypoint = changeTracker.activeWaypoint
         }
