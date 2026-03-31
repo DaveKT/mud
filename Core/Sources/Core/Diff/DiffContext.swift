@@ -12,6 +12,7 @@ struct DiffContext {
     private let _trailingDeletions: [RenderedDeletion]
     private let _groupMap: [String: GroupInfo]
     private let _pairMap: [String: String]
+    private let _codeBlockDiffMap: [SourceKey: CodeBlockDiff]
 
     /// Creates a diff context by matching blocks between old and new documents.
     init(old: ParsedMarkdown, new: ParsedMarkdown) {
@@ -36,12 +37,16 @@ struct DiffContext {
             let isDeletion: Bool
             let isConsecutive: Bool
         }
-        var changeEntries: [ChangeEntry] = []
+        // Replaces a paired code block's del+ins entries so the
+        // grouping pass can assign IDs in document order.
+        struct CodeBlockMarker { let sourceKey: SourceKey }
+        enum ChangeItem {
+            case entry(ChangeEntry)
+            case codeBlock(CodeBlockMarker)
+        }
+        var changeItems: [ChangeItem] = []
         var lastWasChange = false
 
-        // Track deletions and insertions per gap for positional pairing.
-        // Within each gap, buildResult emits all deletions before all
-        // insertions. The i-th deletion pairs with the i-th insertion.
         // Track deletions and insertions per gap for positional
         // pairing. Within each gap, buildResult emits all deletions
         // before all insertions. The i-th deletion pairs with the
@@ -56,11 +61,20 @@ struct DiffContext {
         var lastUnchangedKey: SourceKey?
         var pairMap: [String: String] = [:]
         var wordSpanMap: [String: [WordSpan]] = [:]
+        var codeBlockDiffMap: [SourceKey: CodeBlockDiff] = [:]
+        var rawCodeBlockDiffs: [SourceKey: CodeBlockDiff.RawDiff] = [:]
+        var groupCounter = 0
 
         /// Finalizes the current gap: pairs deletions with insertions,
         /// computes word spans, renders deletions (with word spans
         /// now available), and flushes them into the preceding map.
         func finalizeGap() {
+            // Scan paired blocks for code block pairs that need
+            // line-level diff or mermaid suppression. Process these
+            // before normal pairing so they can be removed from the
+            // pending lists.
+            processCodeBlockPairs()
+
             // Pair and compute word spans.
             for (del, ins) in zip(pendingDeletions, pendingInsertions) {
                 pairMap[del.changeID] = ins.changeID
@@ -101,6 +115,110 @@ struct DiffContext {
             deletionFlushTarget = nil
         }
 
+        /// Scans the gap for code block pairs by matching CodeBlock
+        /// deletions to CodeBlock insertions (regardless of position).
+        /// For each matched pair:
+        /// - Mermaid: suppress deletion, keep insertion block-level.
+        /// - Other: compute line-level diff. If successful, store in
+        ///   codeBlockDiffMap and remove block-level entries. If no
+        ///   line changes, leave as normal block-level pair.
+        func processCodeBlockPairs() {
+            // Find CodeBlock insertions and deletions.
+            var cbIns: [(at: Int, pending: PendingBlock)] = []
+            for (i, ins) in pendingInsertions.enumerated() {
+                if ins.block.markup is CodeBlock {
+                    cbIns.append((at: i, pending: ins))
+                }
+            }
+            guard !cbIns.isEmpty else { return }
+
+            var cbDel: [(at: Int, pending: PendingBlock)] = []
+            for (i, del) in pendingDeletions.enumerated() {
+                if del.block.markup is CodeBlock {
+                    cbDel.append((at: i, pending: del))
+                }
+            }
+            guard !cbDel.isEmpty else { return }
+
+            // Pair the i-th CodeBlock deletion with the i-th
+            // CodeBlock insertion.
+            var delIndicesToRemove: [Int] = []
+            var insIndicesToRemove: [Int] = []
+
+            for (del, ins) in zip(cbDel, cbIns) {
+                let oldCB = del.pending.block.markup as! CodeBlock
+                let newCB = ins.pending.block.markup as! CodeBlock
+
+                let isMermaid = oldCB.language?.lowercased() == "mermaid"
+                    || newCB.language?.lowercased() == "mermaid"
+
+                if isMermaid {
+                    // Suppress the deletion — don't render old diagram.
+                    changeItems.removeAll {
+                        if case .entry(let e) = $0 {
+                            return e.changeID == del.pending.changeID
+                        }
+                        return false
+                    }
+                    delIndicesToRemove.append(del.at)
+                    insIndicesToRemove.append(ins.at)
+                    continue
+                }
+
+                guard let insKey = sourceKey(for: newCB)
+                else { continue }
+
+                let raw = CodeBlockDiff.computeRaw(
+                    oldCode: oldCB.code,
+                    newCode: newCB.code,
+                    oldLanguage: oldCB.language,
+                    newLanguage: newCB.language)
+
+                guard let raw else { continue }
+
+                // Store raw diff (IDs assigned during grouping pass).
+                rawCodeBlockDiffs[insKey] = raw
+
+                // Remove block-level annotation for the insertion.
+                annotations.removeValue(forKey: insKey)
+
+                // Replace the del+ins change items with a single
+                // code block marker so the grouping pass assigns
+                // IDs in document order. The marker takes the
+                // insertion's position (document order).
+                let delID = del.pending.changeID
+                let insID = ins.pending.changeID
+
+                if let insIdx = changeItems.firstIndex(where: {
+                    if case .entry(let e) = $0 {
+                        return e.changeID == insID
+                    }
+                    return false
+                }) {
+                    changeItems[insIdx] = .codeBlock(
+                        CodeBlockMarker(sourceKey: insKey))
+                }
+                changeItems.removeAll {
+                    if case .entry(let e) = $0 {
+                        return e.changeID == delID
+                    }
+                    return false
+                }
+
+                delIndicesToRemove.append(del.at)
+                insIndicesToRemove.append(ins.at)
+            }
+
+            // Remove processed pairs from pending lists (reverse
+            // order to preserve indices).
+            for i in delIndicesToRemove.sorted().reversed() {
+                pendingDeletions.remove(at: i)
+            }
+            for i in insIndicesToRemove.sorted().reversed() {
+                pendingInsertions.remove(at: i)
+            }
+        }
+
         for match in matches {
             switch match {
             case .unchanged(_, let new):
@@ -126,18 +244,18 @@ struct DiffContext {
                 }
                 pendingInsertions.append(PendingBlock(
                     changeID: id, block: new))
-                changeEntries.append(ChangeEntry(
+                changeItems.append(.entry(ChangeEntry(
                     changeID: id, isDeletion: false,
-                    isConsecutive: lastWasChange))
+                    isConsecutive: lastWasChange)))
                 lastWasChange = true
 
             case .deleted(let old):
                 let id = nextChangeID()
                 pendingDeletions.append(PendingBlock(
                     changeID: id, block: old))
-                changeEntries.append(ChangeEntry(
+                changeItems.append(.entry(ChangeEntry(
                     changeID: id, isDeletion: true,
-                    isConsecutive: lastWasChange))
+                    isConsecutive: lastWasChange)))
                 lastWasChange = true
             }
         }
@@ -157,10 +275,10 @@ struct DiffContext {
                 wordSpans: spans)
         }
 
-        // Grouping pass: break change entries into groups at
-        // non-consecutive boundaries.
+        // Grouping pass: break change items into groups at
+        // non-consecutive boundaries. Code block markers get their
+        // own group IDs assigned to their line groups.
         var groupMap: [String: GroupInfo] = [:]
-        var groupCounter = 0
         var currentGroup: [ChangeEntry] = []
 
         func finalizeGroup() {
@@ -189,11 +307,33 @@ struct DiffContext {
             currentGroup.removeAll()
         }
 
-        for entry in changeEntries {
-            if !entry.isConsecutive && !currentGroup.isEmpty {
+        for item in changeItems {
+            switch item {
+            case .entry(let entry):
+                if !entry.isConsecutive && !currentGroup.isEmpty {
+                    finalizeGroup()
+                }
+                currentGroup.append(entry)
+
+            case .codeBlock(let marker):
+                // Code block boundary always breaks block-level groups.
                 finalizeGroup()
+
+                // Assign IDs to the raw code block diff's line groups.
+                if let raw = rawCodeBlockDiffs[marker.sourceKey] {
+                    var lines = raw.lines
+                    CodeBlockDiff.assignGroups(
+                        &lines,
+                        nextChangeID: { nextChangeID() },
+                        nextGroupID: {
+                            groupCounter += 1
+                            return (id: "group-\(groupCounter)",
+                                    index: groupCounter)
+                        })
+                    codeBlockDiffMap[marker.sourceKey] =
+                        CodeBlockDiff(lines: lines)
+                }
             }
-            currentGroup.append(entry)
         }
         finalizeGroup()
 
@@ -203,6 +343,7 @@ struct DiffContext {
         self._trailingDeletions = trailing
         self._groupMap = groupMap
         self._pairMap = pairMap
+        self._codeBlockDiffMap = codeBlockDiffMap
     }
 
     // MARK: - Public API
@@ -255,6 +396,13 @@ struct DiffContext {
     func wordSpans(for node: Markup) -> [WordSpan]? {
         guard let key = sourceKey(for: node) else { return nil }
         return annotations[key]?.wordSpans
+    }
+
+    /// Returns a line-level diff for a code block in the new AST,
+    /// or `nil` if the block is not a diffed code block pair.
+    func codeBlockDiff(for node: Markup) -> CodeBlockDiff? {
+        guard let key = sourceKey(for: node) else { return nil }
+        return _codeBlockDiffMap[key]
     }
 }
 

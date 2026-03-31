@@ -1,0 +1,221 @@
+/// Line-level diff within a paired code block.
+///
+/// When a code block is modified (deletion + insertion in the same gap),
+/// this type provides per-line change data: unchanged, inserted, and
+/// deleted lines with pre-highlighted HTML, change IDs, and group info.
+struct CodeBlockDiff {
+  let lines: [CodeLine]
+
+  struct CodeLine {
+    /// Pre-highlighted HTML content for this line (no outer tag).
+    let highlightedHTML: String
+    /// Whether this line is unchanged, inserted, or deleted.
+    let annotation: Annotation
+    /// Change ID for changed lines; nil for unchanged.
+    let changeID: String?
+    /// Group ID for changed lines; nil for unchanged.
+    let groupID: String?
+    /// 1-based badge number; non-nil only for the first line in
+    /// each group.
+    let groupIndex: Int?
+  }
+
+  enum Annotation {
+    case unchanged
+    case inserted
+    case deleted
+  }
+
+  /// Computes a line-level diff between two code block contents.
+  ///
+  /// Returns `nil` when the line-level diff shows no changes (e.g.,
+  /// only the language tag or fence style changed), signaling the
+  /// caller to fall back to block-level handling.
+  ///
+  /// - Parameters:
+  ///   - oldCode: Content of the old code block (without fences).
+  ///   - newCode: Content of the new code block (without fences).
+  ///   - oldLanguage: Language of the old code block (for highlighting).
+  ///   - newLanguage: Language of the new code block (for highlighting).
+  ///   - nextChangeID: Closure that returns the next global change ID.
+  ///   - nextGroupID: Closure that returns the next global group ID
+  ///     and its 1-based index.
+  static func compute(
+    oldCode: String, newCode: String,
+    oldLanguage: String?, newLanguage: String?,
+    nextChangeID: () -> String,
+    nextGroupID: () -> (id: String, index: Int)
+  ) -> CodeBlockDiff? {
+    guard let raw = computeRaw(
+      oldCode: oldCode, newCode: newCode,
+      oldLanguage: oldLanguage, newLanguage: newLanguage
+    ) else { return nil }
+
+    var lines = raw.lines
+    assignGroups(&lines, nextChangeID: nextChangeID,
+                 nextGroupID: nextGroupID)
+    return CodeBlockDiff(lines: lines)
+  }
+}
+
+// MARK: - Raw computation (no IDs)
+
+extension CodeBlockDiff {
+  /// A raw line-level diff without change IDs or group IDs.
+  /// Used internally; IDs are assigned in a separate pass.
+  struct RawDiff {
+    let lines: [CodeLine]
+  }
+
+  /// Computes a raw line-level diff (annotations + highlighted HTML,
+  /// no change IDs or group IDs). Returns `nil` when no line changes
+  /// exist.
+  static func computeRaw(
+    oldCode: String, newCode: String,
+    oldLanguage: String?, newLanguage: String?
+  ) -> RawDiff? {
+    let oldLines = splitCode(oldCode)
+    let newLines = splitCode(newCode)
+
+    // Diff the raw source lines.
+    let diff = newLines.difference(from: oldLines)
+    guard !diff.isEmpty else { return nil }
+
+    // Classify indices.
+    var removedOld = Set<Int>()
+    var insertedNew = Set<Int>()
+    for change in diff {
+      switch change {
+      case .remove(let offset, _, _): removedOld.insert(offset)
+      case .insert(let offset, _, _): insertedNew.insert(offset)
+      }
+    }
+
+    // Build anchors (unchanged pairs).
+    var anchors: [(old: Int, new: Int)] = []
+    var oi = 0, ni = 0
+    while oi < oldLines.count && ni < newLines.count {
+      if removedOld.contains(oi) { oi += 1; continue }
+      if insertedNew.contains(ni) { ni += 1; continue }
+      anchors.append((old: oi, new: ni))
+      oi += 1; ni += 1
+    }
+
+    // Highlight both code blocks and split into per-line HTML.
+    let oldHighlighted = highlightLines(oldLines, language: oldLanguage)
+    let newHighlighted = highlightLines(newLines, language: newLanguage)
+
+    // Build interleaved line list, processing gaps between anchors.
+    var result: [CodeLine] = []
+    var prevOld = 0, prevNew = 0
+
+    for anchor in anchors {
+      emitGap(
+        oldRange: prevOld..<anchor.old,
+        newRange: prevNew..<anchor.new,
+        oldHighlighted: oldHighlighted,
+        newHighlighted: newHighlighted,
+        into: &result)
+      result.append(CodeLine(
+        highlightedHTML: newHighlighted[anchor.new],
+        annotation: .unchanged,
+        changeID: nil, groupID: nil, groupIndex: nil))
+      prevOld = anchor.old + 1
+      prevNew = anchor.new + 1
+    }
+
+    // Trailing gap after last anchor.
+    emitGap(
+      oldRange: prevOld..<oldLines.count,
+      newRange: prevNew..<newLines.count,
+      oldHighlighted: oldHighlighted,
+      newHighlighted: newHighlighted,
+      into: &result)
+
+    return RawDiff(lines: result)
+  }
+
+  /// Assigns change IDs and group IDs to a raw diff's lines.
+  static func assignGroups(
+    _ lines: inout [CodeLine],
+    nextChangeID: () -> String,
+    nextGroupID: () -> (id: String, index: Int)
+  ) {
+    var i = 0
+    while i < lines.count {
+      guard lines[i].annotation != .unchanged else {
+        i += 1
+        continue
+      }
+
+      // Found the start of a cluster.
+      let group = nextGroupID()
+      let changeID = nextChangeID()
+      var isFirst = true
+
+      while i < lines.count && lines[i].annotation != .unchanged {
+        lines[i] = CodeLine(
+          highlightedHTML: lines[i].highlightedHTML,
+          annotation: lines[i].annotation,
+          changeID: changeID,
+          groupID: group.id,
+          groupIndex: isFirst ? group.index : nil)
+        isFirst = false
+        i += 1
+      }
+    }
+  }
+}
+
+// MARK: - Private helpers
+
+extension CodeBlockDiff {
+  /// Splits code content into lines, trimming a trailing empty line
+  /// caused by a trailing newline before the closing fence.
+  private static func splitCode(_ code: String) -> [String] {
+    var lines = code.split(
+      separator: "\n", omittingEmptySubsequences: false
+    ).map(String.init)
+    // Trim trailing empty line from trailing newline.
+    if lines.last == "" { lines.removeLast() }
+    return lines
+  }
+
+  /// Highlights code lines and splits the result per line.
+  private static func highlightLines(
+    _ lines: [String], language: String?
+  ) -> [String] {
+    let joined = lines.joined(separator: "\n")
+    if let highlighted = CodeHighlighter.highlight(
+      joined, language: language
+    ) {
+      let split = HTMLLineSplitter.splitByLine(highlighted)
+      // Ensure we have the right number of lines.
+      if split.count == lines.count { return split }
+      // Fallback if split count mismatches.
+    }
+    return lines.map { HTMLEscaping.escape($0) }
+  }
+
+  /// Emits deleted then inserted lines for a gap between anchors.
+  private static func emitGap(
+    oldRange: Range<Int>, newRange: Range<Int>,
+    oldHighlighted: [String], newHighlighted: [String],
+    into result: inout [CodeLine]
+  ) {
+    // Deletions first.
+    for i in oldRange {
+      result.append(CodeLine(
+        highlightedHTML: oldHighlighted[i],
+        annotation: .deleted,
+        changeID: nil, groupID: nil, groupIndex: nil))
+    }
+    // Then insertions.
+    for i in newRange {
+      result.append(CodeLine(
+        highlightedHTML: newHighlighted[i],
+        annotation: .inserted,
+        changeID: nil, groupID: nil, groupIndex: nil))
+    }
+  }
+}

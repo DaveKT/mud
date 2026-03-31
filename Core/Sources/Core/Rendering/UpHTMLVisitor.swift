@@ -165,7 +165,15 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitCodeBlock(_ codeBlock: CodeBlock) {
+        // Check for line-level diff first. changeAttributes is still
+        // called so preceding deletions are emitted as a side effect.
         let attrs = changeAttributes(for: codeBlock)
+
+        if let codeDiff = diffContext?.codeBlockDiff(for: codeBlock) {
+            emitDiffedCodeBlock(codeBlock, diff: codeDiff)
+            return
+        }
+
         let classAttr: String
         if let attrs {
             classAttr = "mud-code \(attrs.classes)"
@@ -175,6 +183,59 @@ struct UpHTMLVisitor: MarkupWalker {
         result += "<pre class=\"\(classAttr)\"\(attrs?.dataAttrs ?? "")>"
         result += Self.codeBlockInnerHTML(codeBlock)
         result += "</pre>\n"
+    }
+
+    /// Emits a code block with line-level diff structure.
+    private mutating func emitDiffedCodeBlock(
+        _ codeBlock: CodeBlock, diff: CodeBlockDiff
+    ) {
+        let lang = codeBlock.language.flatMap { $0.isEmpty ? nil : $0 }
+
+        // <pre> has mud-code-diff but no block-level data-change-id.
+        result += "<pre class=\"mud-code mud-code-diff\">"
+
+        // Code header (language label).
+        if let lang {
+            let escaped = HTMLEscaping.escape(lang)
+            result += "<div class=\"code-header\">"
+            result += "<span class=\"code-language\">\(escaped)</span>"
+            result += "</div>"
+            result += "<code class=\"language-\(escaped)\">"
+        } else {
+            result += "<code>"
+        }
+
+        // Emit each line as a <span class="cl"> with annotation
+        // classes and data attributes.
+        for line in diff.lines {
+            var classes = "cl"
+            var dataAttrs = ""
+
+            switch line.annotation {
+            case .unchanged:
+                break
+            case .inserted:
+                classes += " cl-ins"
+            case .deleted:
+                classes += " cl-del"
+            }
+
+            if let changeID = line.changeID {
+                dataAttrs += " data-change-id=\"\(changeID)\""
+            }
+            if let groupID = line.groupID {
+                dataAttrs += " data-group-id=\"\(groupID)\""
+            }
+            if let groupIndex = line.groupIndex {
+                dataAttrs += " data-group-index=\"\(groupIndex)\""
+            }
+
+            result += "<span class=\"\(classes)\"\(dataAttrs)>"
+            result += line.highlightedHTML
+            result += "\n</span>"
+        }
+
+        result += "</code></pre>\n"
     }
 
     /// Renders the inner HTML of a code block (`<code>` with optional
