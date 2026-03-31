@@ -338,9 +338,27 @@ public struct DownHTMLVisitor: Sendable {
                 cssClass: cssClass
             ))
             descendInto(node)
+            // cmark-gfm's upperBound is exclusive (one past the last
+            // byte), matching the column convention used by
+            // emitLineContent.
+            var closeLine = range.upperBound.line
+            var closeCol = range.upperBound.column
+            // cmark-gfm may report incorrect end positions for
+            // multi-line strikethrough (child ranges extend beyond
+            // the parent). Use the maximum descendant end position
+            // to ensure the span covers all content.
+            for child in node.children {
+                guard let cr = child.range else { continue }
+                if cr.upperBound.line > closeLine ||
+                   (cr.upperBound.line == closeLine &&
+                    cr.upperBound.column > closeCol) {
+                    closeLine = cr.upperBound.line
+                    closeCol = cr.upperBound.column
+                }
+            }
             events.append(SpanEvent(
-                line: Int32(range.upperBound.line),
-                column: Int32(range.upperBound.column) + 1,
+                line: Int32(closeLine),
+                column: Int32(closeCol),
                 isClose: true,
                 depth: depth,
                 cssClass: cssClass
@@ -362,7 +380,7 @@ public struct DownHTMLVisitor: Sendable {
             ))
             events.append(SpanEvent(
                 line: Int32(range.upperBound.line),
-                column: Int32(range.upperBound.column) + 1,
+                column: Int32(range.upperBound.column),
                 isClose: true,
                 depth: depth,
                 cssClass: cssClass

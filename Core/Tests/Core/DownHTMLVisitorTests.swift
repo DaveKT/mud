@@ -47,6 +47,43 @@ struct DownHTMLVisitorTests {
         #expect(html.contains("md-strong"))
     }
 
+    @Test func strongInsideStrikethroughCoversFullRange() {
+        let html = visitor.highlight("~~**JS + WebView** done~~\n")
+        let lc = html.components(separatedBy: "<span class=\"lc\">")
+            .last?.components(separatedBy: "</span></div>").first ?? ""
+        let strongOpen = lc.range(of: "<span class=\"md-strong\">")
+        let strongClose = lc.range(of: "</span>",
+            range: (strongOpen?.upperBound ?? lc.startIndex)..<lc.endIndex)
+        #expect(strongOpen != nil, "md-strong span must exist")
+        if let open = strongOpen, let close = strongClose {
+            let inside = String(lc[open.upperBound..<close.lowerBound])
+            #expect(inside.contains("WebView"),
+                "WebView must be inside md-strong span, got: \(inside)")
+        }
+    }
+
+    @Test func strongInMultiLineStrikethroughListItem() {
+        // cmark-gfm reports incorrect ranges for multi-line
+        // strikethrough — the child's close position fix ensures
+        // the parent span covers all content.
+        let md = "8. ~~**JS + WebView** — wire to sidebar\n   selection.~~\n"
+        let html = visitor.highlight(md)
+        let lines = html.components(separatedBy: "</div>")
+            .filter { $0.contains("class=\"dl") }
+        let line1 = lines.first ?? ""
+        let lc = line1.components(separatedBy: "<span class=\"lc\">")
+            .last ?? ""
+        let strongOpen = lc.range(of: "<span class=\"md-strong\">")
+        let strongClose = lc.range(of: "</span>",
+            range: (strongOpen?.upperBound ?? lc.startIndex)..<lc.endIndex)
+        #expect(strongOpen != nil, "md-strong span must exist on line 1")
+        if let open = strongOpen, let close = strongClose {
+            let inside = String(lc[open.upperBound..<close.lowerBound])
+            #expect(inside.contains("WebView"),
+                "WebView must be inside md-strong, got: \(inside)")
+        }
+    }
+
     @Test func inlineCodeSpan() {
         let html = visitor.highlight("`code`\n")
         #expect(html.contains("md-code"))
