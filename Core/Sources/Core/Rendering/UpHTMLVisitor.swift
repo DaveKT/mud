@@ -327,9 +327,9 @@ struct UpHTMLVisitor: MarkupWalker {
     }
 
     mutating func visitStrikethrough(_ strikethrough: Strikethrough) {
-        result += "<del>"
+        result += "<s>"
         descendInto(strikethrough)
-        result += "</del>"
+        result += "</s>"
     }
 
     mutating func visitLink(_ link: Markdown.Link) {

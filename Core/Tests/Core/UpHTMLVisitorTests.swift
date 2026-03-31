@@ -36,7 +36,7 @@ struct UpHTMLVisitorTests {
 
     @Test func strikethrough() {
         let html = MudCore.renderUpToHTML("~~deleted~~\n")
-        #expect(html.contains("<del>deleted</del>"))
+        #expect(html.contains("<s>deleted</s>"))
     }
 
     @Test func inlineCode() {
