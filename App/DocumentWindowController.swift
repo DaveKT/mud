@@ -177,7 +177,7 @@ class DocumentWindowController: NSWindowController {
     }
 
     private func updateModeButton(_ mode: Mode) {
-        let symbol = mode == .down ? "arrowshape.down.circle" : "arrowshape.up.circle"
+        let symbol = mode == .down ? "arrow.uturn.down.circle.fill" : "arrow.uturn.up.circle.fill"
         modeButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
     }
 
@@ -363,7 +363,7 @@ extension DocumentWindowController: NSToolbarDelegate {
             return item
 
         case .toggleMode:
-            let button = makeToolbarButton(symbolName: "arrowshape.up.circle", action: #selector(toggleMode(_:)))
+            let button = makeToolbarButton(symbolName: "arrow.uturn.up.circle.fill", action: #selector(toggleMode(_:)))
             modeButton = button
             item.view = button
             item.label = "Mode"

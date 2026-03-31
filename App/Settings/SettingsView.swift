@@ -38,8 +38,8 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .markdown: return "text.document"
         case .theme: return "paintpalette"
-        case .upMode: return "arrowshape.up.circle"
-        case .downMode: return "arrowshape.down.circle"
+        case .upMode: return "arrow.uturn.up.circle"
+        case .downMode: return "arrow.uturn.down.circle"
         case .commandLine: return "terminal"
         #if SPARKLE
         case .updates: return "arrow.triangle.2.circlepath"
