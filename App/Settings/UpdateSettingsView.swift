@@ -51,7 +51,7 @@ struct UpdateSettingsView: View {
             }
 
             Section {
-                Text("View the latest [Mud release notes](https://apps.josephpearson.org/mud/releases/history.html) in your browser.")
+                Text("View the latest [Mud release notes](https://apps.josephpearson.org/mud/releases) in your browser.")
             }
         }
         .formStyle(.grouped)
