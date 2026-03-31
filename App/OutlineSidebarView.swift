@@ -33,9 +33,15 @@ struct OutlineSidebarView: View {
                     }
                 }
                 .listStyle(.sidebar)
-                .background(DeselectMonitor(
-                    selection: $selection,
-                    guardValue: AnyHashable(expandedIDs)
+                .background(ReselectMonitor(
+                    selection: selection,
+                    guardValue: AnyHashable(expandedIDs),
+                    onReselect: { id in
+                        guard let heading = state.outlineHeadings.first(
+                            where: { $0.id == id }
+                        ) else { return }
+                        onSelect(heading)
+                    }
                 ))
                 .onAppear {
                     expandedIDs = collectParentIDs(tree)

@@ -36,7 +36,15 @@ struct ChangesSidebarView: View {
                     .tag(group.id)
             }
             .listStyle(.sidebar)
-            .background(DeselectMonitor(selection: $selectedGroupID))
+            .background(ReselectMonitor(
+                selection: selectedGroupID,
+                onReselect: { id in
+                    guard let group = groups.first(
+                        where: { $0.id == id }
+                    ) else { return }
+                    onSelectChange(group.changeIDs)
+                }
+            ))
             .onChange(of: selectedGroupID) { _, newValue in
                 if let id = newValue,
                    let group = groups.first(where: { $0.id == id }) {

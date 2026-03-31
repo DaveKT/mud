@@ -1,43 +1,44 @@
 import SwiftUI
 
-/// An invisible `NSViewRepresentable` that enables click-to-deselect on
-/// `List(selection:)` rows.
+/// An invisible `NSViewRepresentable` that detects clicks on the
+/// already-selected row in a `List(selection:)` and fires a callback.
 ///
-/// Place as `.background(DeselectMonitor(selection: $sel))` on the List.
-/// Works by installing a local `NSEvent` monitor for left-mouse-down.
-/// When a click lands within the List's bounds and the selection doesn't
-/// change on the next run-loop tick, the monitor clears the selection.
+/// SwiftUI's List does not re-fire `onChange` when the user clicks a
+/// row that is already selected. This view works around that limitation
+/// by installing a local `NSEvent` monitor for left-mouse-down.
 ///
-/// For lists with `DisclosureGroup` (where clicking a disclosure arrow
-/// should NOT deselect), pass a `guardValue` that tracks expand/collapse
-/// state. If it changes between the click and the deferred check,
-/// deselection is suppressed.
-struct DeselectMonitor: NSViewRepresentable {
-    @Binding var selection: String?
+/// Place as `.background(ReselectMonitor(...))` on the List.
+///
+/// For lists with `DisclosureGroup`, pass a `guardValue` that tracks
+/// expand/collapse state. If it changes between the click and the
+/// deferred check, the callback is suppressed.
+struct ReselectMonitor: NSViewRepresentable {
+    var selection: String?
     var guardValue: AnyHashable?
+    var onReselect: (String) -> Void
 
-    func makeNSView(context: Context) -> DeselectMonitorView {
-        DeselectMonitorView()
+    func makeNSView(context: Context) -> ReselectMonitorView {
+        ReselectMonitorView()
     }
 
-    func updateNSView(_ nsView: DeselectMonitorView, context: Context) {
+    func updateNSView(_ nsView: ReselectMonitorView, context: Context) {
         nsView.currentSelection = selection
         nsView.guardValue = guardValue
-        nsView.selectionBinding = $selection
+        nsView.onReselect = onReselect
     }
 
     static func dismantleNSView(
-        _ nsView: DeselectMonitorView, coordinator: ()
+        _ nsView: ReselectMonitorView, coordinator: ()
     ) {
         nsView.removeMonitor()
     }
 }
 
-/// The backing AppKit view for `DeselectMonitor`.
-final class DeselectMonitorView: NSView {
+/// The backing AppKit view for `ReselectMonitor`.
+final class ReselectMonitorView: NSView {
     var currentSelection: String?
     var guardValue: AnyHashable?
-    var selectionBinding: Binding<String?>?
+    var onReselect: ((String) -> Void)?
 
     private var monitor: Any?
 
@@ -70,7 +71,7 @@ final class DeselectMonitorView: NSView {
     }
 
     private func handleMouseDown(_ event: NSEvent) {
-        // Ignore double-clicks (would select-then-deselect).
+        // Ignore double-clicks (would select-then-reselect).
         guard event.clickCount == 1 else { return }
 
         guard currentSelection != nil,
@@ -90,10 +91,12 @@ final class DeselectMonitorView: NSView {
             // A new row was selected — don't interfere.
             guard self.currentSelection == selBefore else { return }
 
-            // Guard state changed (e.g. disclosure toggle) — don't deselect.
+            // Guard state changed (e.g. disclosure toggle) — don't act.
             if let guardBefore, self.guardValue != guardBefore { return }
 
-            self.selectionBinding?.wrappedValue = nil
+            if let selBefore {
+                self.onReselect?(selBefore)
+            }
         }
     }
 }

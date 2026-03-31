@@ -41,7 +41,7 @@
 		7CA1197F2F3CC4D00098484A /* ViewToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */; };
 		7CA119812F3CC5110098484A /* Mode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA119802F3CC50F0098484A /* Mode.swift */; };
 		7CB9BB902F38E28B008AB0BC /* Mud.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7CB9BB8F2F38E28B008AB0BC /* Mud.icon */; };
-		7CC48AFC2F79D3BE00DA8118 /* DeselectMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC48AFB2F79D3BE00DA8118 /* DeselectMonitor.swift */; };
+		7CC48AFC2F79D3BE00DA8118 /* ReselectMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC48AFB2F79D3BE00DA8118 /* ReselectMonitor.swift */; };
 		7CC6E6B72F657A2200FE7D66 /* DebuggingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */; };
 		7CC6E6C02F658B1300FE7D66 /* Sparkle.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7CC6E6BF2F658B1300FE7D66 /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7CC6E6E32F6595BD00FE7D66 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC6E6E22F6595BD00FE7D66 /* UpdateSettingsView.swift */; };
@@ -123,7 +123,7 @@
 		7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewToggle.swift; sourceTree = "<group>"; };
 		7CA119802F3CC50F0098484A /* Mode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mode.swift; sourceTree = "<group>"; };
 		7CB9BB8F2F38E28B008AB0BC /* Mud.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Mud.icon; sourceTree = "<group>"; };
-		7CC48AFB2F79D3BE00DA8118 /* DeselectMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeselectMonitor.swift; sourceTree = "<group>"; };
+		7CC48AFB2F79D3BE00DA8118 /* ReselectMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReselectMonitor.swift; sourceTree = "<group>"; };
 		7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebuggingSettingsView.swift; sourceTree = "<group>"; };
 		7CC6E6BF2F658B1300FE7D66 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = Vendor/Sparkle/Sparkle.framework; sourceTree = "<group>"; };
 		7CC6E6E22F6595BD00FE7D66 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
@@ -260,7 +260,7 @@
 				7C0A00052F5B0002001C3BB7 /* OutlineSidebarView.swift */,
 				7C7A73442F678C2200A4A7FB /* ChangeTracker.swift */,
 				7C7A73202F67057900A4A7FB /* ChangesSidebarView.swift */,
-				7CC48AFB2F79D3BE00DA8118 /* DeselectMonitor.swift */,
+				7CC48AFB2F79D3BE00DA8118 /* ReselectMonitor.swift */,
 				7C5A00032F4800020046E0CD /* CommandLineInstaller.swift */,
 				7CC6E6E42F6595F900FE7D66 /* CheckForUpdatesView.swift */,
 				7CD093072F587185003E4037 /* ErrorPage.swift */,
@@ -510,7 +510,7 @@
 				7C7A73452F678C2200A4A7FB /* ChangeTracker.swift in Sources */,
 				7C282ADF2F50063900611919 /* CommandLineSettingsView.swift in Sources */,
 				7C442A652F3457C20046E0CD /* DocumentController.swift in Sources */,
-				7CC48AFC2F79D3BE00DA8118 /* DeselectMonitor.swift in Sources */,
+				7CC48AFC2F79D3BE00DA8118 /* ReselectMonitor.swift in Sources */,
 				7C56C3F32F55166800F922B5 /* SettingsWindowController.swift in Sources */,
 				7C3640C52F60FCF400364BEC /* MarkdownSettingsView.swift in Sources */,
 				7C3640B52F60DC2C00364BEC /* AppState.swift in Sources */,
