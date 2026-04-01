@@ -14,25 +14,27 @@ struct ChangeListCodeBlockTests {
       "Changed code block should produce sidebar entries")
   }
 
-  @Test func oneLineGroupProducesOneEntry() {
-    // Single change cluster → one sidebar entry.
+  @Test func oneLineChangeProducesEntryPerLine() {
+    // Single line changed → one deletion + one insertion entry,
+    // sharing a group ID for sidebar grouping.
     let old = ParsedMarkdown("```\nkeep\nold\n```\n")
     let new = ParsedMarkdown("```\nkeep\nnew\n```\n")
     let changes = MudCore.computeChanges(old: old, new: new)
 
-    // One line group (the changed line).
-    #expect(changes.count == 1,
-      "One change cluster should produce one sidebar entry")
+    #expect(changes.count == 2, "One del + one ins")
+    let groupIDs = Set(changes.map(\.groupID))
+    #expect(groupIDs.count == 1, "Both entries share one group")
   }
 
-  @Test func multipleLineGroupsProduceMultipleEntries() {
-    // Two separated change clusters → two sidebar entries.
+  @Test func multipleLineGroupsProduceMultipleGroups() {
+    // Two separated change clusters → entries in two distinct groups.
     let old = ParsedMarkdown("```\na\nb\nc\nd\ne\n```\n")
     let new = ParsedMarkdown("```\na\nB\nc\nD\ne\n```\n")
     let changes = MudCore.computeChanges(old: old, new: new)
 
-    #expect(changes.count == 2,
-      "Two separated change clusters should produce two sidebar entries")
+    let groupIDs = Set(changes.map(\.groupID))
+    #expect(groupIDs.count == 2,
+      "Two separated change clusters should produce two groups")
   }
 
   // MARK: - Entry properties
@@ -54,8 +56,10 @@ struct ChangeListCodeBlockTests {
 
     for change in changes {
       #expect(!change.groupID.isEmpty, "Each entry should have a group ID")
-      #expect(change.groupIndex > 0, "Group index should be positive")
     }
+    // At least one entry carries the group index (badge number).
+    #expect(changes.contains { $0.groupIndex > 0 },
+      "Group should have a positive index")
   }
 
   @Test func lineGroupEntrySummaryContainsChangedContent() {

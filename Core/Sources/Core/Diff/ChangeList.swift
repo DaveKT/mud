@@ -104,103 +104,57 @@ enum ChangeList {
         return changes
     }
 
-    /// Emits `DocumentChange` entries for each line group in a
-    /// code block diff.
+    /// Emits `DocumentChange` entries for each changed line in a
+    /// code block diff. Lines sharing a change ID are grouped by the
+    /// sidebar into a single `ChangeGroup` with per-line summaries.
     private static func emitCodeBlockChanges(
         _ codeDiff: CodeBlockDiff, sourceLine: Int,
         changes: inout [DocumentChange],
         sawUnchangedSinceLastChange: inout Bool
     ) {
-        // Collect line groups. Each group shares a change ID and
-        // group ID; we emit one DocumentChange per group.
-        var currentGroupID: String?
         var currentChangeID: String?
-        var currentGroupIndex: Int = 0
-        var hasDel = false
-        var hasIns = false
-        var summaryLine: String?
-
-        func flushGroup() {
-            guard let changeID = currentChangeID,
-                  let groupID = currentGroupID
-            else { return }
-            let type: ChangeType
-            if hasDel && hasIns {
-                // Mixed — emit as insertion (the visible part).
-                type = .insertion
-            } else if hasDel {
-                type = .deletion
-            } else {
-                type = .insertion
-            }
-            let consecutive = !changes.isEmpty && !sawUnchangedSinceLastChange
-            changes.append(DocumentChange(
-                id: changeID,
-                type: type,
-                summary: summaryLine ?? "",
-                sourceLine: sourceLine,
-                isConsecutive: consecutive,
-                groupID: groupID,
-                groupIndex: currentGroupIndex,
-                isMixed: hasDel && hasIns
-            ))
-            sawUnchangedSinceLastChange = false
-        }
 
         for line in codeDiff.lines {
             guard let changeID = line.changeID,
                   let groupID = line.groupID
             else {
                 // Unchanged line — breaks consecutive run.
-                if currentChangeID != nil {
-                    flushGroup()
-                    currentChangeID = nil
-                    currentGroupID = nil
-                    hasDel = false
-                    hasIns = false
-                    summaryLine = nil
-                }
+                currentChangeID = nil
                 sawUnchangedSinceLastChange = true
                 continue
             }
 
-            if changeID != currentChangeID {
-                // New group.
-                if currentChangeID != nil { flushGroup() }
-                currentChangeID = changeID
-                currentGroupID = groupID
-                currentGroupIndex = line.groupIndex ?? 0
-                hasDel = false
-                hasIns = false
-                summaryLine = nil
-            }
+            let isNewGroup = changeID != currentChangeID
+            currentChangeID = changeID
 
-            switch line.annotation {
-            case .deleted:
-                hasDel = true
-                if summaryLine == nil {
-                    summaryLine = summaryFromHTML(line.highlightedHTML)
-                }
-            case .inserted:
-                hasIns = true
-                if summaryLine == nil {
-                    summaryLine = summaryFromHTML(line.highlightedHTML)
-                }
-            case .unchanged:
-                break
-            }
+            let type: ChangeType = line.annotation == .deleted
+                ? .deletion : .insertion
+            let consecutive = !changes.isEmpty
+                && !sawUnchangedSinceLastChange
+            changes.append(DocumentChange(
+                id: changeID,
+                type: type,
+                summary: summaryFromHTML(line.highlightedHTML),
+                sourceLine: sourceLine,
+                isConsecutive: isNewGroup ? consecutive : true,
+                groupID: groupID,
+                groupIndex: line.groupIndex ?? 0,
+                isMixed: false
+            ))
+            sawUnchangedSinceLastChange = false
         }
-
-        // Flush last group.
-        if currentChangeID != nil { flushGroup() }
     }
 
-    /// Strips HTML tags and truncates to ~60 characters.
+    /// Strips HTML tags and entities, truncates to ~60 characters.
     private static func summaryFromHTML(_ html: String) -> String {
         let text = html
             .replacingOccurrences(
                 of: "<[^>]+>", with: "",
                 options: .regularExpression)
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
             .trimmingCharacters(in: .whitespaces)
         guard text.count > 60 else { return text }
         let prefix = text.prefix(60)
