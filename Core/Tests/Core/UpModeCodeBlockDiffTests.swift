@@ -236,6 +236,34 @@ struct UpModeCodeBlockDiffTests {
       "Separated changes should produce multiple groups")
   }
 
+  // MARK: - Word-level markers within code lines
+
+  @Test func modifiedLineShowsWordLevelMarkers() {
+    let old = "```\nlet x = 1\n```\n"
+    let new = "```\nlet x = 2\n```\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    #expect(html.contains("<ins>"),
+      "Modified code line should have word-level <ins> marker")
+    #expect(html.contains("<del>"),
+      "Modified code line should have word-level <del> marker")
+  }
+
+  @Test func addedLineHasNoWordMarkers() {
+    let old = "```\na\n```\n"
+    let new = "```\na\nb\n```\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+
+    #expect(!html.contains("<ins>"),
+      "Added line should not have word-level markers")
+    #expect(!html.contains("<del>"),
+      "Added line should not have word-level markers")
+  }
+
   // MARK: - Ordering within the code element
 
   @Test func deletionLinesBeforeInsertionLinesInGap() {

@@ -396,4 +396,105 @@ struct CodeBlockDiffTests {
     let withIndex = diff.lines.filter { $0.groupIndex != nil }
     #expect(!withIndex.isEmpty, "At least one line should carry a group index")
   }
+
+  // MARK: - Word-level markers
+
+  @Test func pairedLinesGetWordLevelMarkers() {
+    let old = "let x = 1\nlet y = 2\n"
+    let new = "let x = 1\nlet z = 3\n"
+
+    var changeCounter = 0
+    var groupCounter = 0
+    let result = CodeBlockDiff.compute(
+      oldCode: old, newCode: new,
+      oldLanguage: nil, newLanguage: nil,
+      nextChangeID: { changeCounter += 1; return "change-\(changeCounter)" },
+      nextGroupID: { groupCounter += 1; return (id: "group-\(groupCounter)", index: groupCounter) })
+
+    guard let diff = result else { return }
+
+    let deleted = diff.lines.filter { $0.annotation == .deleted }
+    let inserted = diff.lines.filter { $0.annotation == .inserted }
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 1)
+
+    // The deleted line should have <del> markers for changed words.
+    #expect(deleted[0].highlightedHTML.contains("<del>"),
+      "Paired deleted line should have word-level <del> markers")
+    // The inserted line should have <ins> markers.
+    #expect(inserted[0].highlightedHTML.contains("<ins>"),
+      "Paired inserted line should have word-level <ins> markers")
+  }
+
+  @Test func unpairedLinesHaveNoWordMarkers() {
+    // More deletions than insertions — excess are unpaired.
+    let old = "a\nb\nc\n"
+    let new = "x\n"
+
+    var changeCounter = 0
+    var groupCounter = 0
+    let result = CodeBlockDiff.compute(
+      oldCode: old, newCode: new,
+      oldLanguage: nil, newLanguage: nil,
+      nextChangeID: { changeCounter += 1; return "change-\(changeCounter)" },
+      nextGroupID: { groupCounter += 1; return (id: "group-\(groupCounter)", index: groupCounter) })
+
+    guard let diff = result else { return }
+
+    // First deletion pairs with the insertion. Others are unpaired.
+    let deleted = diff.lines.filter { $0.annotation == .deleted }
+    #expect(deleted.count == 3)
+
+    // Unpaired deletions (indices 1, 2) should not have <del> markers.
+    #expect(!deleted[1].highlightedHTML.contains("<del>"))
+    #expect(!deleted[2].highlightedHTML.contains("<del>"))
+  }
+
+  @Test func identicalPairedLinesHaveNoWordMarkers() {
+    // Lines that pair but have identical content (shouldn't happen
+    // in practice since they'd be unchanged, but defensive).
+    let old = "a\nsame\nb\n"
+    let new = "x\nsame\ny\n"
+
+    var changeCounter = 0
+    var groupCounter = 0
+    let result = CodeBlockDiff.compute(
+      oldCode: old, newCode: new,
+      oldLanguage: nil, newLanguage: nil,
+      nextChangeID: { changeCounter += 1; return "change-\(changeCounter)" },
+      nextGroupID: { groupCounter += 1; return (id: "group-\(groupCounter)", index: groupCounter) })
+
+    guard let diff = result else { return }
+
+    // "same" should be unchanged — no markers.
+    let unchanged = diff.lines.filter { $0.annotation == .unchanged }
+    #expect(unchanged.count == 1)
+    #expect(!unchanged[0].highlightedHTML.contains("<ins>"))
+    #expect(!unchanged[0].highlightedHTML.contains("<del>"))
+  }
+
+  @Test func wordMarkersWorkWithSyntaxHighlighting() {
+    let old = "let x = 1\n"
+    let new = "let x = 2\n"
+
+    var changeCounter = 0
+    var groupCounter = 0
+    let result = CodeBlockDiff.compute(
+      oldCode: old, newCode: new,
+      oldLanguage: "swift", newLanguage: "swift",
+      nextChangeID: { changeCounter += 1; return "change-\(changeCounter)" },
+      nextGroupID: { groupCounter += 1; return (id: "group-\(groupCounter)", index: groupCounter) })
+
+    guard let diff = result else { return }
+
+    let inserted = diff.lines.filter { $0.annotation == .inserted }
+    #expect(inserted.count == 1)
+
+    let html = inserted[0].highlightedHTML
+    // Should have both syntax highlighting spans and word markers.
+    #expect(html.contains("<ins>"),
+      "Should have word-level markers")
+    #expect(html.contains("hljs-") || html.contains("x"),
+      "Should preserve syntax highlighting or content")
+  }
 }

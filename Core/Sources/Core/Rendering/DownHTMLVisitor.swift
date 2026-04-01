@@ -798,7 +798,7 @@ public struct DownHTMLVisitor: Sendable {
 
     // MARK: - Word-level marker injection
 
-    private struct WordMarker {
+    struct WordMarker {
         let start: Int   // 0-based char offset within the line
         let end: Int     // exclusive
         let tag: String  // "ins" or "del"
@@ -885,7 +885,7 @@ public struct DownHTMLVisitor: Sendable {
     /// To prevent markers from crossing HTML tag boundaries (which
     /// causes invalid nesting and layout breakage), the marker is
     /// closed before each HTML tag and reopened after it.
-    private static func injectMarkers(
+    static func injectMarkers(
         into html: String, markers: [WordMarker]
     ) -> String {
         var result = ""

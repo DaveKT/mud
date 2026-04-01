@@ -113,6 +113,7 @@ extension CodeBlockDiff {
       emitGap(
         oldRange: prevOld..<anchor.old,
         newRange: prevNew..<anchor.new,
+        oldLines: oldLines, newLines: newLines,
         oldHighlighted: oldHighlighted,
         newHighlighted: newHighlighted,
         into: &result)
@@ -128,6 +129,7 @@ extension CodeBlockDiff {
     emitGap(
       oldRange: prevOld..<oldLines.count,
       newRange: prevNew..<newLines.count,
+      oldLines: oldLines, newLines: newLines,
       oldHighlighted: oldHighlighted,
       newHighlighted: newHighlighted,
       into: &result)
@@ -198,22 +200,76 @@ extension CodeBlockDiff {
   }
 
   /// Emits deleted then inserted lines for a gap between anchors.
+  /// Paired lines (first del with first ins, etc.) get word-level
+  /// `<ins>` / `<del>` markers injected into their highlighted HTML.
   private static func emitGap(
     oldRange: Range<Int>, newRange: Range<Int>,
+    oldLines: [String], newLines: [String],
     oldHighlighted: [String], newHighlighted: [String],
     into result: inout [CodeLine]
   ) {
-    // Deletions first.
+    let delIndices = Array(oldRange)
+    let insIndices = Array(newRange)
+
+    // Compute word-level markers for paired lines.
+    let pairCount = min(delIndices.count, insIndices.count)
+    var delMarked = [Int: String]()  // index → HTML with markers
+    var insMarked = [Int: String]()
+
+    for p in 0..<pairCount {
+      let di = delIndices[p]
+      let ii = insIndices[p]
+      let oldSrc = oldLines[di]
+      let newSrc = newLines[ii]
+      let spans = WordDiff.diff(old: oldSrc, new: newSrc)
+      let hasChanges = spans.contains { !$0.isUnchanged }
+      guard hasChanges else { continue }
+
+      // WordDiff skips leading whitespace — offset markers to account
+      // for it.
+      let oldLeading = oldSrc.prefix(while: \.isWhitespace).count
+      let newLeading = newSrc.prefix(while: \.isWhitespace).count
+
+      // Build markers for the deletion line.
+      var delMarkers: [DownHTMLVisitor.WordMarker] = []
+      var insMarkers: [DownHTMLVisitor.WordMarker] = []
+      var oldPos = oldLeading, newPos = newLeading
+      for span in spans {
+        switch span {
+        case .unchanged(let text):
+          oldPos += text.count
+          newPos += text.count
+        case .deleted(let text):
+          delMarkers.append(.init(
+            start: oldPos, end: oldPos + text.count, tag: "del"))
+          oldPos += text.count
+        case .inserted(let text):
+          insMarkers.append(.init(
+            start: newPos, end: newPos + text.count, tag: "ins"))
+          newPos += text.count
+        }
+      }
+
+      if !delMarkers.isEmpty {
+        delMarked[di] = DownHTMLVisitor.injectMarkers(
+          into: oldHighlighted[di], markers: delMarkers)
+      }
+      if !insMarkers.isEmpty {
+        insMarked[ii] = DownHTMLVisitor.injectMarkers(
+          into: newHighlighted[ii], markers: insMarkers)
+      }
+    }
+
+    // Emit deletions first, then insertions.
     for i in oldRange {
       result.append(CodeLine(
-        highlightedHTML: oldHighlighted[i],
+        highlightedHTML: delMarked[i] ?? oldHighlighted[i],
         annotation: .deleted,
         changeID: nil, groupID: nil, groupIndex: nil))
     }
-    // Then insertions.
     for i in newRange {
       result.append(CodeLine(
-        highlightedHTML: newHighlighted[i],
+        highlightedHTML: insMarked[i] ?? newHighlighted[i],
         annotation: .inserted,
         changeID: nil, groupID: nil, groupIndex: nil))
     }
