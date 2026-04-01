@@ -232,18 +232,27 @@ struct DiffContextCodeBlockTests {
     // The new mermaid block should be annotated as inserted.
     #expect(context.annotation(for: leaves[0]) == .inserted,
       "Changed mermaid block should be annotated as inserted")
+
+    // The group should be mixed (del + ins).
+    let changeID = context.changeID(for: leaves[0])!
+    let info = context.groupInfo(for: changeID)!
+    #expect(info.isMixed,
+      "Mermaid replacement should produce a mixed group")
   }
 
-  @Test func pairedMermaidDeletionSuppressed() {
+  @Test func pairedMermaidDeletionRendersPlaceholder() {
     let old = ParsedMarkdown("```mermaid\ngraph LR\n  A-->B\n```\n")
     let new = ParsedMarkdown("```mermaid\ngraph LR\n  A-->C\n```\n")
     let context = DiffContext(old: old, new: new)
 
     let leaves = leafBlocks(of: new)
     let deletions = context.precedingDeletions(before: leaves[0])
-    #expect(deletions.isEmpty,
-      "Old mermaid block deletion should be suppressed")
-    #expect(context.trailingDeletions().isEmpty)
+    #expect(deletions.count == 1,
+      "Mermaid deletion should appear as a preceding deletion")
+    #expect(deletions[0].html.contains("[revised diagram]"),
+      "Mermaid deletion should show placeholder text")
+    #expect(!deletions[0].html.contains("graph LR"),
+      "Mermaid deletion should not show raw source")
   }
 
   // MARK: - Code block with surrounding context

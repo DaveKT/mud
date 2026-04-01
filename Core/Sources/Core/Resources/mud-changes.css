@@ -88,16 +88,13 @@
     cursor: default;
 }
 
-.mud-overlay-ins .mud-expando-expanded {
-    color: var(--change-ins);
-    background-color: var(--bg-color);
-    border-width: 1.5px;
+.mud-expando.mud-expando-expanded {
+  background-color: var(--bg-color);
+  border-width: 1.5px;
 }
-.mud-overlay-del .mud-expando-expanded {
-    color: var(--change-del);
-    background-color: var(--bg-color);
-    border-width: 1.5px;
-}
+.mud-overlay-ins .mud-expando-expanded { color: var(--change-ins); }
+.mud-overlay-mix .mud-expando-expanded { color: var(--change-mix); }
+.mud-overlay-del .mud-expando-expanded { color: var(--change-del); }
 
 
 /* ── Up mode: collapsed del-only overlays ────────────────────── */

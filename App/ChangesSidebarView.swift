@@ -216,11 +216,13 @@ struct ChangeGroup: Identifiable {
             else { return nil }
             let hasIns = members.contains { $0.type == .insertion }
             let hasDel = members.contains { $0.type == .deletion }
+            let isMixed = (hasIns && hasDel)
+                || members.contains(where: \.isMixed)
             return ChangeGroup(
                 id: gid,
                 changeIDs: members.map(\.id),
                 type: hasIns ? .insertion : .deletion,
-                isMixed: hasIns && hasDel,
+                isMixed: isMixed,
                 groupIndex: first.groupIndex,
                 members: members.map {
                     MemberInfo(type: $0.type, summary: $0.summary)

@@ -200,17 +200,18 @@ struct UpModeCodeBlockDiffTests {
       "Changed mermaid block should have block-level insertion marker")
   }
 
-  @Test func changedMermaidBlockOldVersionSuppressed() {
+  @Test func changedMermaidBlockOldVersionShowsPlaceholder() {
     let old = "```mermaid\ngraph LR\n  A-->B\n```\n"
     let new = "```mermaid\ngraph LR\n  A-->C\n```\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
     let html = MudCore.renderUpToHTML(new, options: opts)
 
-    // The old mermaid content should NOT appear in the output.
-    // Note: --> is HTML-escaped to --&gt; inside <code>.
+    // The deleted mermaid block should show a placeholder.
+    #expect(html.contains("[revised diagram]"),
+      "Old mermaid block should show placeholder")
     #expect(!html.contains("A--&gt;B"),
-      "Old mermaid diagram content should be suppressed")
+      "Old mermaid source should not appear")
     // The new content should appear.
     #expect(html.contains("A--&gt;C"))
   }

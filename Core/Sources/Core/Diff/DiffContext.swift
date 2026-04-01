@@ -152,18 +152,9 @@ struct DiffContext {
                 let isMermaid = oldCB.language?.lowercased() == "mermaid"
                     || newCB.language?.lowercased() == "mermaid"
 
-                if isMermaid {
-                    // Suppress the deletion — don't render old diagram.
-                    changeItems.removeAll {
-                        if case .entry(let e) = $0 {
-                            return e.changeID == del.pending.changeID
-                        }
-                        return false
-                    }
-                    delIndicesToRemove.append(del.at)
-                    insIndicesToRemove.append(ins.at)
-                    continue
-                }
+                // Mermaid: skip line-level diff, let normal
+                // block-level del+ins pairing handle it.
+                if isMermaid { continue }
 
                 guard let insKey = sourceKey(for: newCB)
                 else { continue }
@@ -543,6 +534,15 @@ extension DiffContext {
 
         let tag = tagForBlock(markup)
         let html: String
+
+        // Mermaid diagrams: show placeholder instead of raw source.
+        if let cb = markup as? CodeBlock,
+           cb.language?.lowercased() == "mermaid" {
+            html = "<code><em>[revised diagram]</em></code>"
+            return RenderedDeletion(
+                html: html, changeID: changeID,
+                summary: "[revised diagram]", tag: tag)
+        }
 
         if let wordSpans, !wordSpans.isEmpty {
             html = UpHTMLVisitor.renderWithWordSpans(

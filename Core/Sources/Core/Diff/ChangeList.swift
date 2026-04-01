@@ -39,7 +39,8 @@ enum ChangeList {
                     sourceLine: block.sourceLine,
                     isConsecutive: consecutive,
                     groupID: info?.groupID ?? "",
-                    groupIndex: info?.groupIndex ?? 0
+                    groupIndex: info?.groupIndex ?? 0,
+                    isMixed: info?.isMixed ?? false
                 ))
                 sawUnchangedSinceLastChange = false
             }
@@ -74,7 +75,8 @@ enum ChangeList {
                     sourceLine: block.sourceLine,
                     isConsecutive: consecutive,
                     groupID: info?.groupID ?? "",
-                    groupIndex: info?.groupIndex ?? 0
+                    groupIndex: info?.groupIndex ?? 0,
+                    isMixed: info?.isMixed ?? false
                 ))
                 sawUnchangedSinceLastChange = false
             }
@@ -93,7 +95,8 @@ enum ChangeList {
                 sourceLine: lastSurvivingLine,
                 isConsecutive: consecutive,
                 groupID: info?.groupID ?? "",
-                groupIndex: info?.groupIndex ?? 0
+                groupIndex: info?.groupIndex ?? 0,
+                isMixed: info?.isMixed ?? false
             ))
             sawUnchangedSinceLastChange = false
         }
@@ -138,7 +141,8 @@ enum ChangeList {
                 sourceLine: sourceLine,
                 isConsecutive: consecutive,
                 groupID: groupID,
-                groupIndex: currentGroupIndex
+                groupIndex: currentGroupIndex,
+                isMixed: hasDel && hasIns
             ))
             sawUnchangedSinceLastChange = false
         }
@@ -223,6 +227,10 @@ public struct DocumentChange: Identifiable, Sendable {
     public let groupID: String
     /// 1-based group index, used for badge numbering.
     public let groupIndex: Int
+    /// True when the group contains both deletions and insertions
+    /// (from DiffContext), even if only one type is emitted as a
+    /// DocumentChange (e.g. mermaid replacements suppress the deletion).
+    public let isMixed: Bool
 }
 
 /// The type of a document change.
