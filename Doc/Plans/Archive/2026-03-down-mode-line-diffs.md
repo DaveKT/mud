@@ -1,7 +1,7 @@
 Plan: Down Mode Line Diffs
 ===============================================================================
 
-> Status: Underway
+> Status: Complete
 
 
 ## Overview
@@ -105,17 +105,26 @@ block-level treatment — all their lines are marked.
 
 ### Word-level diffs within line pairs
 
-Within each gap of the line-level diff, pair deleted and inserted lines
-positionally (first deleted with first inserted) and run `WordDiff.diff` on
-each pair. This gives word-level markers within individual changed lines,
-exactly as block-level pairing does today.
+Within each gap of the line-level diff, pair deleted and inserted lines by word
+overlap and run `WordDiff.diff` on each pair. `WordPairing.bestPairs` scores
+every (del, ins) combination by shared-word count and greedily picks the
+best-scoring pairs. This matters when a gap has unequal counts (e.g. 3
+deletions, 1 insertion) — positional pairing would compare against the first
+deletion, which may be completely unrelated, while best-match pairing finds the
+most similar deletion and produces a narrow, useful word diff.
+
+The same best-match pairing is used in `CodeBlockDiff.emitGap` (Up mode code
+block diffs) and both `processLineLevelPair` and `processCodeBlockPair` in
+`LineDiffMap` (Down mode).
 
 The existing `wordMarkers(from:forLine:)` and `injectMarkers(into:markers:)`
 machinery works unchanged — it already operates at the single-line level.
 
-`BlockWordData` currently stores spans for an entire block with a start line.
-With line-level pairing, each paired line gets its own `BlockWordData` (or the
-existing structure is adapted to store per-line spans keyed by line number).
+`BlockWordData` stores per-line word data, keyed by `(changeID, lineNumber)` in
+the `wordDataMap`. Each paired line gets its own `BlockWordData` with
+`startLine` equal to its document line number and `sourceText` equal to the
+single line. The block-level fallback stores one `BlockWordData` per line of
+the block, all pointing to the same block-wide span data.
 
 
 ### Change IDs and sidebar consistency
@@ -236,6 +245,7 @@ Line-level behavior tests (fail until implemented):
 - Multi-line paragraph — only changed lines get `dl-ins`/ `dl-del`
 - Unchanged lines within a modified block render as normal divs
 - Word-level markers appear on line-paired content
+- Best-match word pairing compares against the most similar deletion
 - `data-change-id` attributes only on changed lines (not entire block)
 - Fenced code block — only changed content lines marked
 - Multi-line list item — only changed lines marked
@@ -264,8 +274,12 @@ Regression guards (pass now):
 3. ~~**Adapt word-level diffs**~~ _Done._ Per-line word diffs computed within
    each gap of the line-level diff.
 
-4. ~~**Tests**~~ _Done._ 17 `LineLevelDiffTests` + 13 new
-   `DownModeChangeTrackingTests`. All pass.
+4. ~~**Tests**~~ _Done._ 17 `LineLevelDiffTests` + 14 new
+   `DownModeChangeTrackingTests` + 5 `WordPairingTests`. All pass.
 
 5. ~~**Verify Up mode code block diffs**~~ _Done._ `CodeBlockDiff.computeRaw`
    refactored to use `LineLevelDiff`. All existing tests pass.
+
+6. ~~**Best-match word pairing**~~ _Done._ `WordPairing.bestPairs` pairs by
+   word overlap instead of position. Applied to `LineDiffMap` (both pair
+   handlers) and `CodeBlockDiff.emitGap`.
