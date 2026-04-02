@@ -472,6 +472,41 @@ struct DownModeChangeTrackingTests {
     #expect(delCount == 1, "Only the removed line should be deleted")
   }
 
+  // MARK: - Code block word marker correctness
+
+  @Test func codeBlockDeletionLinesHaveNoInsMarkers() {
+    // Code block where the changed content line maps to the same
+    // doc line in both old and new (triggers word data key
+    // collision if del/ins share a map).
+    let old = "```\nalpha\nbeta gamma\n```\n"
+    let new = "```\nalpha\nBETA gamma\n```\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let delDivs = html.components(separatedBy: "</div>")
+      .filter { $0.contains("dl-del") }
+    #expect(!delDivs.isEmpty, "Should have deletion lines")
+    for div in delDivs {
+      #expect(!div.contains("<ins>"),
+        "Deletion lines must not contain <ins> markers")
+    }
+  }
+
+  @Test func codeBlockInsertionLinesHaveNoDelMarkers() {
+    let old = "```\nalpha\nbeta gamma\n```\n"
+    let new = "```\nalpha\nBETA gamma\n```\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insDivs = html.components(separatedBy: "</div>")
+      .filter { $0.contains("dl-ins") }
+    #expect(!insDivs.isEmpty, "Should have insertion lines")
+    for div in insDivs {
+      #expect(!div.contains("<del>"),
+        "Insertion lines must not contain <del> markers")
+    }
+  }
+
   // MARK: - Sidebar and Down HTML change ID consistency
 
   @Test func sidebarAndDownHTMLChangeIDsMatch() {

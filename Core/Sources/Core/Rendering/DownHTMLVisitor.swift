@@ -727,7 +727,7 @@ public struct DownHTMLVisitor: Sendable {
                 html += "<div class=\"\(roleClass) dl-ins\""
                 html += " data-change-id=\"\(annotation.changeID)\">"
                 // Word-level markers for paired insertion lines.
-                if let wd = diffMap.wordData(
+                if let wd = diffMap.insertionWordData(
                     for: annotation.changeID, line: lineNum) {
                     let markers = Self.wordMarkers(
                         from: wd, forLine: lineNum)
@@ -779,7 +779,7 @@ public struct DownHTMLVisitor: Sendable {
             let oldIdx = oldLine - 1
             var content = oldIdx >= 0 && oldIdx < oldRendered.count
                 ? oldRendered[oldIdx] : ""
-            if let wd = diffMap.wordData(
+            if let wd = diffMap.deletionWordData(
                 for: group.changeID, line: oldLine) {
                 let markers = Self.wordMarkers(
                     from: wd, forLine: oldLine)

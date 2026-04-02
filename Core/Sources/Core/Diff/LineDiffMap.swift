@@ -11,14 +11,23 @@ import Markdown
 struct LineDiffMap {
     private let annotations: [Int: LineAnnotation]
     let deletionGroups: [DeletionGroup]
-    private let wordDataMap: [String: [Int: BlockWordData]]
+    private let delWordData: [String: [Int: BlockWordData]]
+    private let insWordData: [String: [Int: BlockWordData]]
 
     func annotation(forLine line: Int) -> LineAnnotation? {
         annotations[line]
     }
 
-    func wordData(for changeID: String, line: Int) -> BlockWordData? {
-        wordDataMap[changeID]?[line]
+    func deletionWordData(
+        for changeID: String, line: Int
+    ) -> BlockWordData? {
+        delWordData[changeID]?[line]
+    }
+
+    func insertionWordData(
+        for changeID: String, line: Int
+    ) -> BlockWordData? {
+        insWordData[changeID]?[line]
     }
 }
 
@@ -56,7 +65,8 @@ extension LineDiffMap {
     init(matches: [BlockMatch]) {
         var annotations: [Int: LineAnnotation] = [:]
         var groups: [DeletionGroup] = []
-        var wordData: [String: [Int: BlockWordData]] = [:]
+        var delWD: [String: [Int: BlockWordData]] = [:]
+        var insWD: [String: [Int: BlockWordData]] = [:]
         var changeCounter = 0
 
         func nextChangeID() -> String {
@@ -209,13 +219,13 @@ extension LineDiffMap {
                         old: oldLines[di], new: newLines[ii])
                     guard spans.contains(
                         where: { !$0.isUnchanged }) else { continue }
-                    wordData[del.changeID, default: [:]][delLine] =
+                    delWD[del.changeID, default: [:]][delLine] =
                         BlockWordData(
                             spans: spans,
                             sourceText: oldLines[di],
                             isInsertion: false,
                             startLine: delLine)
-                    wordData[ins.changeID, default: [:]][insLine] =
+                    insWD[ins.changeID, default: [:]][insLine] =
                         BlockWordData(
                             spans: spans,
                             sourceText: newLines[ii],
@@ -325,13 +335,13 @@ extension LineDiffMap {
                     guard spans.contains(
                         where: { !$0.isUnchanged })
                     else { continue }
-                    wordData[changeID, default: [:]][d.doc] =
+                    delWD[changeID, default: [:]][d.doc] =
                         BlockWordData(
                             spans: spans,
                             sourceText: delSrcLines[dsi],
                             isInsertion: false,
                             startLine: d.doc)
-                    wordData[changeID, default: [:]][i.doc] =
+                    insWD[changeID, default: [:]][i.doc] =
                         BlockWordData(
                             spans: spans,
                             sourceText: insSrcLines[isi],
@@ -394,12 +404,12 @@ extension LineDiffMap {
                     startLine: ins.block.sourceLine)
                 if let range = Self.lineRange(for: del.block) {
                     for line in range {
-                        wordData[del.changeID, default: [:]][line] =
+                        delWD[del.changeID, default: [:]][line] =
                             delData
                     }
                 }
                 for line in ins.lineRange {
-                    wordData[ins.changeID, default: [:]][line] =
+                    insWD[ins.changeID, default: [:]][line] =
                         insData
                 }
             }
@@ -442,7 +452,8 @@ extension LineDiffMap {
 
         self.annotations = annotations
         self.deletionGroups = groups
-        self.wordDataMap = wordData
+        self.delWordData = delWD
+        self.insWordData = insWD
     }
 
     /// Derives the 1-based line range from a leaf block's source text.

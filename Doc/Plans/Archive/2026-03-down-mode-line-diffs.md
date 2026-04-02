@@ -274,7 +274,7 @@ Regression guards (pass now):
 3. ~~**Adapt word-level diffs**~~ _Done._ Per-line word diffs computed within
    each gap of the line-level diff.
 
-4. ~~**Tests**~~ _Done._ 17 `LineLevelDiffTests` + 14 new
+4. ~~**Tests**~~ _Done._ 17 `LineLevelDiffTests` + 16 new
    `DownModeChangeTrackingTests` + 5 `WordPairingTests`. All pass.
 
 5. ~~**Verify Up mode code block diffs**~~ _Done._ `CodeBlockDiff.computeRaw`
@@ -283,3 +283,11 @@ Regression guards (pass now):
 6. ~~**Best-match word pairing**~~ _Done._ `WordPairing.bestPairs` pairs by
    word overlap instead of position. Applied to `LineDiffMap` (both pair
    handlers) and `CodeBlockDiff.emitGap`.
+
+7. ~~**Fix word data key collision for code block pairs**~~ _Done._ Code block
+   clusters share a single change ID, and when old/new blocks start at the same
+   line, deletion and insertion word data mapped to the same
+   `(changeID, docLine)` key — the insertion overwrote the deletion, causing
+   `<ins>` markers on deletion lines. Fixed by splitting `wordDataMap` into
+   separate `delWordData` and `insWordData` maps with corresponding
+   `deletionWordData(for:line:)` and `insertionWordData(for:line:)` lookups.
