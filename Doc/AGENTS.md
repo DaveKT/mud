@@ -149,6 +149,20 @@ MVP plan.
 - `Rendering/EmojiShortcodes.swift` — `:shortcode:` → emoji replacement
 - `Rendering/ImageDataURI.swift` — Image encoding for browser export
 - `OutlineHeading.swift` — Heading model shared between Core and App
+- `Diff/BlockMatcher.swift` — Block-level diff: leaf block collection,
+  fingerprinting, `CollectionDifference` matching
+- `Diff/LineLevelDiff.swift` — Shared line-level diff algorithm used by both
+  `CodeBlockDiff` and `LineDiffMap`
+- `Diff/LineDiffMap.swift` — Down mode change tracking: line-level annotations,
+  deletion groups, per-line word data (separate del/ins maps)
+- `Diff/CodeBlockDiff.swift` — Line-level diff within paired code blocks (Up
+  mode): highlighted HTML, change IDs, group IDs, word markers
+- `Diff/DiffContext.swift` — Up mode change tracking: block annotations,
+  rendered deletions, group info, code block diffs, word spans
+- `Diff/WordDiff.swift` — Word-level diff and inline text extraction
+- `Diff/WordPairing.swift` — Best-match pairing of deleted/inserted lines by
+  word overlap (greedy algorithm)
+- `Diff/ChangeList.swift` — Sidebar change list computed from `DiffContext`
 
 **Resources:**
 
