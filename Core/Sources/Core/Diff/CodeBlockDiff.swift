@@ -77,62 +77,58 @@ extension CodeBlockDiff {
     let oldLines = splitCode(oldCode)
     let newLines = splitCode(newCode)
 
-    // Diff the raw source lines.
-    let diff = newLines.difference(from: oldLines)
-    guard !diff.isEmpty else { return nil }
-
-    // Classify indices.
-    var removedOld = Set<Int>()
-    var insertedNew = Set<Int>()
-    for change in diff {
-      switch change {
-      case .remove(let offset, _, _): removedOld.insert(offset)
-      case .insert(let offset, _, _): insertedNew.insert(offset)
-      }
-    }
-
-    // Build anchors (unchanged pairs).
-    var anchors: [(old: Int, new: Int)] = []
-    var oi = 0, ni = 0
-    while oi < oldLines.count && ni < newLines.count {
-      if removedOld.contains(oi) { oi += 1; continue }
-      if insertedNew.contains(ni) { ni += 1; continue }
-      anchors.append((old: oi, new: ni))
-      oi += 1; ni += 1
-    }
+    guard let entries = LineLevelDiff.diff(
+      old: oldLines, new: newLines
+    ) else { return nil }
 
     // Highlight both code blocks and split into per-line HTML.
-    let oldHighlighted = highlightLines(oldLines, language: oldLanguage)
-    let newHighlighted = highlightLines(newLines, language: newLanguage)
+    let oldHighlighted = highlightLines(
+      oldLines, language: oldLanguage)
+    let newHighlighted = highlightLines(
+      newLines, language: newLanguage)
 
-    // Build interleaved line list, processing gaps between anchors.
+    // Build interleaved line list from diff entries.
     var result: [CodeLine] = []
-    var prevOld = 0, prevNew = 0
+    var idx = 0
 
-    for anchor in anchors {
+    while idx < entries.count {
+      if entries[idx].annotation == .unchanged {
+        result.append(CodeLine(
+          highlightedHTML: newHighlighted[entries[idx].sourceIndex],
+          annotation: .unchanged,
+          changeID: nil, groupID: nil, groupIndex: nil))
+        idx += 1
+        continue
+      }
+
+      // Collect the gap (consecutive changed entries).
+      var gapOld: [Int] = []
+      var gapNew: [Int] = []
+      while idx < entries.count,
+            entries[idx].annotation != .unchanged {
+        switch entries[idx].annotation {
+        case .deleted:
+          gapOld.append(entries[idx].sourceIndex)
+        case .inserted:
+          gapNew.append(entries[idx].sourceIndex)
+        case .unchanged:
+          break
+        }
+        idx += 1
+      }
+
+      let oldRange = gapOld.isEmpty ? 0..<0
+        : gapOld[0]..<(gapOld[gapOld.count - 1] + 1)
+      let newRange = gapNew.isEmpty ? 0..<0
+        : gapNew[0]..<(gapNew[gapNew.count - 1] + 1)
+
       emitGap(
-        oldRange: prevOld..<anchor.old,
-        newRange: prevNew..<anchor.new,
+        oldRange: oldRange, newRange: newRange,
         oldLines: oldLines, newLines: newLines,
         oldHighlighted: oldHighlighted,
         newHighlighted: newHighlighted,
         into: &result)
-      result.append(CodeLine(
-        highlightedHTML: newHighlighted[anchor.new],
-        annotation: .unchanged,
-        changeID: nil, groupID: nil, groupIndex: nil))
-      prevOld = anchor.old + 1
-      prevNew = anchor.new + 1
     }
-
-    // Trailing gap after last anchor.
-    emitGap(
-      oldRange: prevOld..<oldLines.count,
-      newRange: prevNew..<newLines.count,
-      oldLines: oldLines, newLines: newLines,
-      oldHighlighted: oldHighlighted,
-      newHighlighted: newHighlighted,
-      into: &result)
 
     return RawDiff(lines: result)
   }

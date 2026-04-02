@@ -288,4 +288,191 @@ struct DownModeChangeTrackingTests {
     #expect(html.contains("dl-ins"))
     #expect(html.contains("Brand new."))
   }
+
+  // MARK: - Line-level diffs within paired blocks
+
+  @Test func multiLineParagraphOnlyChangedLinesMarked() {
+    // Three-line paragraph with only the middle line changed.
+    // Only that line should be marked, not the entire block.
+    let old = "Line one.\nLine two.\nLine three.\n"
+    let new = "Line one.\nLine TWO.\nLine three.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 1, "Only the changed line should be inserted")
+    #expect(delCount == 1, "Only the old line should be deleted")
+  }
+
+  @Test func unchangedLinesInModifiedBlockAreNormal() {
+    // Unchanged lines within a modified multi-line block should
+    // render as plain divs without change classes.
+    let old = "Line one.\nLine two.\nLine three.\n"
+    let new = "Line one.\nLine TWO.\nLine three.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let lineOneDivs = html.components(separatedBy: "</div>")
+      .filter { $0.contains("Line one.") }
+    for div in lineOneDivs {
+      #expect(!div.contains("dl-ins"))
+      #expect(!div.contains("dl-del"))
+    }
+  }
+
+  @Test func lineLevelDeletionPrecedesInsertion() {
+    let old = "Keep.\nOld line.\nKeep too.\n"
+    let new = "Keep.\nNew line.\nKeep too.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // Word markers may split the text (e.g. "<del>Old</del> line.")
+    // so search for the unique changed word instead of the full line.
+    let delRange = html.range(of: "Old")!
+    let insRange = html.range(of: "New")!
+    #expect(delRange.lowerBound < insRange.lowerBound)
+  }
+
+  @Test func wordMarkersOnLinePairedContent() {
+    // A multi-line paragraph where one line has a word-level edit.
+    // The changed line should get inline <ins>/<del> markers.
+    let old = "Start.\nThe quick fox.\nEnd.\n"
+    let new = "Start.\nThe slow fox.\nEnd.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insLines = html.components(separatedBy: "</div>")
+      .filter { $0.contains("dl-ins") }
+    #expect(insLines.contains { $0.contains("<ins>") },
+      "Changed line should have word-level markers")
+  }
+
+  @Test func allLinesChangedDegeneratesToFullReplacement() {
+    // When every line changes, behavior matches block-level.
+    let old = "Alpha.\nBeta.\nGamma.\n"
+    let new = "One.\nTwo.\nThree.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 3)
+    #expect(delCount == 3)
+  }
+
+  @Test func singleLineBlockBehaviorUnchanged() {
+    // Single-line blocks produce trivially one del + one ins,
+    // same as current behavior. Regression guard.
+    let old = "Original.\n"
+    let new = "Changed.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 1)
+    #expect(delCount == 1)
+  }
+
+  @Test func changeIDOnlyOnChangedLines() {
+    // In a multi-line block with one line changed, only the
+    // changed lines carry data-change-id attributes.
+    let old = "Alpha.\nBeta.\nGamma.\n"
+    let new = "Alpha.\nBETA.\nGamma.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let idCount = html.components(separatedBy: "data-change-id").count - 1
+    #expect(idCount == 2,
+      "Only the deletion and insertion lines should have change IDs")
+  }
+
+  @Test func fencedCodeBlockLineLevelDiff() {
+    // A fenced code block where only one content line changes.
+    // Fence lines are unchanged anchors; only the changed
+    // content line should be marked.
+    let old = "```\nalpha\nbeta\ngamma\n```\n"
+    let new = "```\nalpha\nBETA\ngamma\n```\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 1)
+    #expect(delCount == 1)
+  }
+
+  @Test func multiLineListItemLineLevelDiff() {
+    // A list item spanning multiple source lines.
+    let old = "- First line\n  second line\n  third line\n"
+    let new = "- First line\n  SECOND line\n  third line\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 1)
+    #expect(delCount == 1)
+  }
+
+  @Test func linesAddedWithinPairedBlock() {
+    // Old paragraph: 2 lines. New: 3 lines (one inserted).
+    // Only the new line should be marked. No deletions.
+    let old = "First.\nSecond.\n"
+    let new = "First.\nInserted.\nSecond.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 1, "Only the new line should be inserted")
+    #expect(delCount == 0, "No lines were deleted")
+  }
+
+  @Test func linesDeletedWithinPairedBlock() {
+    // Old paragraph: 3 lines. New: 2 lines (middle removed).
+    // Only the removed line should be deleted. No insertions.
+    let old = "First.\nMiddle.\nLast.\n"
+    let new = "First.\nLast.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    let insCount = html.components(separatedBy: "dl-ins").count - 1
+    let delCount = html.components(separatedBy: "dl-del").count - 1
+    #expect(insCount == 0, "No lines were inserted")
+    #expect(delCount == 1, "Only the removed line should be deleted")
+  }
+
+  // MARK: - Sidebar and Down HTML change ID consistency
+
+  @Test func sidebarAndDownHTMLChangeIDsMatch() {
+    // The data-change-id values in Down mode HTML must match the
+    // IDs from ChangeList for scroll-to-change to work.
+    let old = ParsedMarkdown("Keep.\n\nOriginal.\n")
+    let new = ParsedMarkdown("Keep.\n\nRevised.\n")
+    let changes = MudCore.computeChanges(old: old, new: new)
+    var opts = RenderOptions()
+    opts.waypoint = old
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    for change in changes {
+      #expect(html.contains("data-change-id=\"\(change.id)\""),
+        "Sidebar ID '\(change.id)' must appear in Down HTML")
+    }
+  }
+
+  @Test func codeBlockSidebarAndDownHTMLChangeIDsMatch() {
+    // Code block pairs get per-cluster IDs in DiffContext. The
+    // Down mode HTML must use the same IDs.
+    let old = ParsedMarkdown("```\nkeep\nold\n```\n")
+    let new = ParsedMarkdown("```\nkeep\nnew\n```\n")
+    let changes = MudCore.computeChanges(old: old, new: new)
+    var opts = RenderOptions()
+    opts.waypoint = old
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    for change in changes {
+      #expect(html.contains("data-change-id=\"\(change.id)\""),
+        "Code block sidebar ID '\(change.id)' must appear in Down HTML")
+    }
+  }
 }
