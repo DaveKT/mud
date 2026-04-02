@@ -119,21 +119,13 @@ private struct LeafBlockCollector: MarkupWalker {
     }
 
     mutating func visitListItem(_ listItem: ListItem) {
-        let hasNestedList = listItem.children.contains {
-            $0 is UnorderedList || $0 is OrderedList
-        }
-        if hasNestedList {
-            // The item contains a nested list. Append the item's own
-            // paragraph as a leaf block, then visit only the nested
-            // list(s) — not the full item — so inner items become
-            // separate leaf blocks without double-counting the paragraph.
-            if let para = listItem.children.first(where: { $0 is Paragraph }) {
-                appendBlock(para)
-            }
-            for child in listItem.children
-                where child is UnorderedList || child is OrderedList {
-                visit(child)
-            }
+        let kids = Array(listItem.children)
+        let isSimple = kids.count == 1 && kids[0] is Paragraph
+        if !isSimple {
+            // Complex list item (multiple paragraphs, tables, nested
+            // lists, code blocks, etc.): descend so each child becomes
+            // its own leaf block(s) via the normal visitor dispatch.
+            descendInto(listItem)
         } else if listItem.parent is OrderedList {
             // Ordered list items: fingerprint using the child
             // paragraph's column-aware source text so that renumbering

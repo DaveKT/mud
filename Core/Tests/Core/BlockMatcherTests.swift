@@ -280,6 +280,128 @@ struct BlockMatcherTests {
     #expect(inserted.count == 1)  // Inner B changed
   }
 
+  // MARK: - Complex list item decomposition
+
+  @Test func tableInsideListItemRowGranularity() {
+    let old = ParsedMarkdown(
+      "- Item\n\n  | A | B |\n  | - | - |\n  | 1 | 2 |\n  | 3 | 4 |\n"
+    )
+    let new = ParsedMarkdown(
+      "- Item\n\n  | A | B |\n  | - | - |\n  | 1 | 2 |\n  | 3 | changed |\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    // The paragraph ("Item"), table header, and first data row are
+    // unchanged. The second data row is deleted + inserted.
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count >= 2)
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 1)
+  }
+
+  @Test func addedTableRowInsideListItem() {
+    let old = ParsedMarkdown(
+      "- Item\n\n  | A |\n  | - |\n  | 1 |\n"
+    )
+    let new = ParsedMarkdown(
+      "- Item\n\n  | A |\n  | - |\n  | 1 |\n  | 2 |\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count >= 2) // paragraph + header + row 1
+    #expect(inserted.count == 1)  // row 2
+  }
+
+  @Test func deletedTableRowInsideListItem() {
+    let old = ParsedMarkdown(
+      "- Item\n\n  | A |\n  | - |\n  | 1 |\n  | 2 |\n"
+    )
+    let new = ParsedMarkdown(
+      "- Item\n\n  | A |\n  | - |\n  | 1 |\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+
+    #expect(unchanged.count >= 2)
+    #expect(deleted.count == 1)
+  }
+
+  @Test func codeBlockInsideListItemDecomposes() {
+    let old = ParsedMarkdown(
+      "- Item\n\n  ```\n  old code\n  ```\n"
+    )
+    let new = ParsedMarkdown(
+      "- Item\n\n  ```\n  new code\n  ```\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    // The paragraph is unchanged; the code block is deleted + inserted.
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count == 1) // "Item" paragraph
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 1)
+  }
+
+  @Test func blockquoteInsideListItemDecomposes() {
+    let old = ParsedMarkdown(
+      "- Item\n\n  > Old quote\n"
+    )
+    let new = ParsedMarkdown(
+      "- Item\n\n  > New quote\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count == 1) // "Item" paragraph
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 1)
+  }
+
+  @Test func multipleParagraphsInListItemDecompose() {
+    let old = ParsedMarkdown(
+      "- First para\n\n  Second para\n\n  Third para\n"
+    )
+    let new = ParsedMarkdown(
+      "- First para\n\n  Second para changed\n\n  Third para\n"
+    )
+    let matches = BlockMatcher.match(old: old, new: new)
+
+    // Three paragraphs; the second is deleted + inserted.
+    let unchanged = matches.filter { $0.isUnchanged }
+    let deleted = matches.filter { $0.isDeleted }
+    let inserted = matches.filter { $0.isInserted }
+
+    #expect(unchanged.count == 2) // First + Third
+    #expect(deleted.count == 1)
+    #expect(inserted.count == 1)
+  }
+
+  @Test func simpleListItemRemainsAtomic() {
+    // A single-paragraph list item should still be one leaf block.
+    let old = ParsedMarkdown("- Alpha\n- Beta\n- Gamma\n")
+    let blocks = BlockMatcher.collectLeafBlocks(from: old)
+
+    #expect(blocks.count == 3)
+    // Each leaf block's markup is the ListItem, not the Paragraph.
+    for block in blocks {
+      #expect(String(describing: type(of: block.markup)) == "ListItem")
+    }
+  }
+
   // MARK: - Trailing deletions
 
   @Test func multipleTrailingDeletions() {
