@@ -1,7 +1,7 @@
 Plan: Down Mode Line Diffs
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
 
 
 ## Overview
@@ -144,6 +144,23 @@ The visual treatment (which lines are highlighted) is independent of ID
 assignment. All paired blocks show line-level highlighting, but non-code-block
 pairs share a single ID across all their changed lines.
 
+**Pre-existing bug:** `LineDiffMap` currently assigns two block-level IDs per
+code block pair (one for the deletion, one for the insertion). `DiffContext`
+consumes the same two initial IDs but then replaces them with per-cluster IDs
+via `CodeBlockDiff.assignGroups`. The total ID count diverges, so all
+subsequent IDs are offset — scroll-to-change is broken for code blocks in Down
+mode and for any block-level change that follows a code block pair. This work
+fixes the bug by making `LineDiffMap` match `DiffContext`'s ID assignment for
+code block pairs.
+
+For code blocks specifically, `LineDiffMap` must use `CodeBlockDiff` (on code
+content, without fences) rather than `LineLevelDiff` (on raw source text,
+including fences). The reason: when the language tag changes, `LineLevelDiff`
+sees the opening fence as a changed line (producing an extra cluster), while
+`CodeBlockDiff` only sees code content and ignores fence changes. Using
+`CodeBlockDiff` ensures the cluster count — and therefore the ID count —
+matches `DiffContext` exactly.
+
 
 ### Deletion group positioning
 
@@ -188,28 +205,67 @@ only annotates lines that appear in `annotations`.
    block. A modified list item's source includes the marker (`- `). If only
    content changes, the line-level diff catches it.
 
-6. **Fenced code blocks** — source text includes the opening/closing fences. If
-   only content changes, the fence lines are unchanged anchors. If the language
-   tag changes, the opening fence is a changed line.
+6. **Fenced code blocks** — handled via `CodeBlockDiff` (not `LineLevelDiff`)
+   to match `DiffContext`'s cluster-based ID assignment. `CodeBlockDiff`
+   operates on code content without fences; fence lines are always rendered
+   unchanged in the Down mode layout. If only the language tag changes (no code
+   content change), `CodeBlockDiff.computeRaw` returns nil and the pair falls
+   back to block-level treatment — matching `DiffContext`'s behavior.
 
 7. **Table rows** — each row is a separate leaf block (not a multi-line block),
    so line-level diffing doesn't apply. No change needed.
 
 
+## Tests
+
+Written TDD-style before the implementation. Two test files:
+
+**`LineLevelDiffTests.swift`** — 17 unit tests for the new `LineLevelDiff`
+type. Covers identical content (nil return), single-line changes, pure
+insertions/deletions, multiple gaps, gap ordering (deletions before
+insertions), degenerate cases (all changed, empty arrays), source index
+tracking (unchanged→new index, deleted→old index, inserted→new index), and
+whitespace sensitivity.
+
+**`DownModeChangeTrackingTests.swift`** — 13 new integration tests added to the
+existing suite (21 tests). Tests render through `MudCore.renderDownToHTML` and
+check the output HTML.
+
+Line-level behavior tests (fail until implemented):
+
+- Multi-line paragraph — only changed lines get `dl-ins`/ `dl-del`
+- Unchanged lines within a modified block render as normal divs
+- Word-level markers appear on line-paired content
+- `data-change-id` attributes only on changed lines (not entire block)
+- Fenced code block — only changed content lines marked
+- Multi-line list item — only changed lines marked
+- Lines added within a paired block — insertion only, no deletions
+- Lines deleted within a paired block — deletion only, no insertions
+- Code block sidebar/HTML change ID consistency (exposes pre-existing bug)
+
+Regression guards (pass now):
+
+- All lines changed degenerates to full replacement (3 del + 3 ins)
+- Single-line block behavior unchanged (1 del + 1 ins)
+- Deletion precedes insertion in output order
+- Non-code-block sidebar/HTML change ID consistency
+
+
 ## Implementation sequence
 
-1. **Extract `LineLevelDiff`** — shared line-diffing function from
-   `CodeBlockDiff.computeRaw`. Both callers use it.
+1. ~~**Extract `LineLevelDiff`**~~ _Done._ New
+   `Core/Sources/Core/Diff/LineLevelDiff.swift`.
 
-2. **Update `LineDiffMap.finalizeGap`** — detect paired blocks, run
-   `LineLevelDiff.diff`, emit fine-grained annotations and deletion groups.
+2. ~~**Update `LineDiffMap.finalizeGap`**~~ _Done._ Rewritten
+   `LineDiffMap.swift` with `processLineLevelPair` (non-code-blocks) and
+   `processCodeBlockPair` (code blocks via `CodeBlockDiff`). Word data map
+   changed to per-line keying. `DownHTMLVisitor` callers updated.
 
-3. **Adapt word-level diffs** — pair changed lines within gaps, compute
-   `WordDiff` per line pair, store in `wordDataMap`.
+3. ~~**Adapt word-level diffs**~~ _Done._ Per-line word diffs computed within
+   each gap of the line-level diff.
 
-4. **Tests** — update `DownModeChangeTrackingTests` to verify line-level
-   behavior. Existing tests for single-line blocks should pass unchanged. Add
-   tests for multi-line block edits.
+4. ~~**Tests**~~ _Done._ 17 `LineLevelDiffTests` + 13 new
+   `DownModeChangeTrackingTests`. All pass.
 
-5. **Verify Up mode code block diffs** — refactor `CodeBlockDiff.computeRaw` to
-   use `LineLevelDiff`. Existing tests must pass.
+5. ~~**Verify Up mode code block diffs**~~ _Done._ `CodeBlockDiff.computeRaw`
+   refactored to use `LineLevelDiff`. All existing tests pass.
