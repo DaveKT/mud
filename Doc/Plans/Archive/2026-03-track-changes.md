@@ -1,9 +1,7 @@
 Plan: Track Changes
 ===============================================================================
 
-> Status: Underway
->
-> Current task: Step 9 - Polish…
+> Status: Complete
 
 
 ## Overview
@@ -482,9 +480,7 @@ deletions) show only `<del>`.
    per-document pause~~ _done_; ~~remove modification type~~ _done_ (deletions
    \+ insertions with grouping); ~~Up mode redesign~~ _done_ (native element
    attributes + JS overlays); ~~word-level diffs~~ _done_ (paired block word
-   highlighting); ~~formatting tolerance~~ _done_ (removed structure gate);
-   keyboard shortcuts (Next Change / Previous Change), menu items, edge cases
-   still open.
+   highlighting); ~~formatting tolerance~~ _done_ (removed structure gate).
 
 
 ## Resolved questions
