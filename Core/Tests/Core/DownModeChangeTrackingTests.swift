@@ -348,6 +348,34 @@ struct DownModeChangeTrackingTests {
       "Changed line should have word-level markers")
   }
 
+  @Test func wordMarkersPairByBestMatchNotPosition() {
+    // 3 deleted lines, 1 inserted line. The insertion is most
+    // similar to the third deletion. Word markers should compare
+    // against the best-matching deletion, not the first one.
+    let old = """
+      Unrelated first line of text.\n\
+      Another different line here.\n\
+      The quick brown fox jumps over.\n
+      """
+    let new = """
+      The quick red fox jumps over.\n
+      """
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // With correct pairing (against "The quick brown fox jumps
+    // over."), only "brown"→"red" differs — producing a narrow
+    // <ins>red</ins> marker. With wrong pairing (against the
+    // unrelated first deletion), all new content lands in one
+    // big <ins> tag and <ins>red</ins> never appears alone.
+    let insDivs = html.components(separatedBy: "</div>")
+      .filter { $0.contains("dl-ins") }
+    #expect(!insDivs.isEmpty)
+    let insContent = insDivs.joined()
+    #expect(insContent.contains("<ins>red</ins>"),
+      "Should pair with the similar deletion and mark only 'red'")
+  }
+
   @Test func allLinesChangedDegeneratesToFullReplacement() {
     // When every line changes, behavior matches block-level.
     let old = "Alpha.\nBeta.\nGamma.\n"

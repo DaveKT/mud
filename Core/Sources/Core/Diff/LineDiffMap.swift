@@ -190,9 +190,17 @@ extension LineDiffMap {
                         changeID: ins.changeID)
                 }
 
-                // Word-level diffs for positionally paired lines.
-                for (delLine, insLine) in
-                    zip(gapDelOldLines, gapInsNewLines) {
+                // Word-level diffs for best-matched line pairs.
+                let delTexts = gapDelOldLines.map {
+                    oldLines[$0 - del.block.sourceLine]
+                }
+                let insTexts = gapInsNewLines.map {
+                    newLines[$0 - ins.block.sourceLine]
+                }
+                for pair in WordPairing.bestPairs(
+                    delLines: delTexts, insLines: insTexts) {
+                    let delLine = gapDelOldLines[pair.del]
+                    let insLine = gapInsNewLines[pair.ins]
                     let di = delLine - del.block.sourceLine
                     let ii = insLine - ins.block.sourceLine
                     guard di < oldLines.count,
@@ -291,7 +299,21 @@ extension LineDiffMap {
                         changeID: changeID)
                 }
 
-                for (d, i) in zip(gapDels, gapIns) {
+                let gapDelTexts = gapDels.compactMap {
+                    let si = $0.code + delFenceOff
+                    return si < delSrcLines.count
+                        ? delSrcLines[si] : nil
+                }
+                let gapInsTexts = gapIns.compactMap {
+                    let si = $0.code + insFenceOff
+                    return si < insSrcLines.count
+                        ? insSrcLines[si] : nil
+                }
+                for pair in WordPairing.bestPairs(
+                    delLines: gapDelTexts,
+                    insLines: gapInsTexts) {
+                    let d = gapDels[pair.del]
+                    let i = gapIns[pair.ins]
                     let dsi = d.code + delFenceOff
                     let isi = i.code + insFenceOff
                     guard dsi < delSrcLines.count,

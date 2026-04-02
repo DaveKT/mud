@@ -207,14 +207,16 @@ extension CodeBlockDiff {
     let delIndices = Array(oldRange)
     let insIndices = Array(newRange)
 
-    // Compute word-level markers for paired lines.
-    let pairCount = min(delIndices.count, insIndices.count)
+    // Compute word-level markers for best-matched line pairs.
     var delMarked = [Int: String]()  // index → HTML with markers
     var insMarked = [Int: String]()
 
-    for p in 0..<pairCount {
-      let di = delIndices[p]
-      let ii = insIndices[p]
+    let delTexts = delIndices.map { oldLines[$0] }
+    let insTexts = insIndices.map { newLines[$0] }
+    for pair in WordPairing.bestPairs(
+      delLines: delTexts, insLines: insTexts) {
+      let di = delIndices[pair.del]
+      let ii = insIndices[pair.ins]
       let oldSrc = oldLines[di]
       let newSrc = newLines[ii]
       let spans = WordDiff.diff(old: oldSrc, new: newSrc)
