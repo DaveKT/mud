@@ -20,6 +20,7 @@ class AppState: ObservableObject {
     @Published var doccAlertMode: DocCAlertMode
     @Published var useHeadingAsTitle: Bool
     var openSettingsAction: (() -> Void)?
+    let wordDiffThreshold: Double
 
     private static let lightingKey = "Mud-Lighting"
     private static let themeKey = "Mud-Theme"
@@ -34,6 +35,7 @@ class AppState: ObservableObject {
     private static let enabledExtensionsKey = "Mud-EnabledExtensions"
     private static let doccAlertModeKey = "Mud-DoccAlertMode"
     private static let useHeadingAsTitleKey = "Mud-UseHeadingAsTitle"
+    private static let wordDiffThresholdKey = "Mud-WordDiffThreshold"
 
     private init() {
         let raw = UserDefaults.standard.string(forKey: Self.lightingKey) ?? ""
@@ -60,6 +62,7 @@ class AppState: ObservableObject {
         let doccRaw = defaults.string(forKey: Self.doccAlertModeKey) ?? ""
         self.doccAlertMode = DocCAlertMode(rawValue: doccRaw) ?? .extended
         self.useHeadingAsTitle = defaults.object(forKey: Self.useHeadingAsTitleKey) as? Bool ?? true
+        self.wordDiffThreshold = defaults.object(forKey: Self.wordDiffThresholdKey) as? Double ?? 0.25
     }
 
     func saveLighting(_ lighting: Lighting) {

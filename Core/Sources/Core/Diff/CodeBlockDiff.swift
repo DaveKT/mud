@@ -43,12 +43,14 @@ struct CodeBlockDiff {
   static func compute(
     oldCode: String, newCode: String,
     oldLanguage: String?, newLanguage: String?,
+    wordDiffThreshold: Double = 0.25,
     nextChangeID: () -> String,
     nextGroupID: () -> (id: String, index: Int)
   ) -> CodeBlockDiff? {
     guard let raw = computeRaw(
       oldCode: oldCode, newCode: newCode,
-      oldLanguage: oldLanguage, newLanguage: newLanguage
+      oldLanguage: oldLanguage, newLanguage: newLanguage,
+      wordDiffThreshold: wordDiffThreshold
     ) else { return nil }
 
     var lines = raw.lines
@@ -72,7 +74,8 @@ extension CodeBlockDiff {
   /// exist.
   static func computeRaw(
     oldCode: String, newCode: String,
-    oldLanguage: String?, newLanguage: String?
+    oldLanguage: String?, newLanguage: String?,
+    wordDiffThreshold: Double = 0.25
   ) -> RawDiff? {
     let oldLines = splitCode(oldCode)
     let newLines = splitCode(newCode)
@@ -127,6 +130,7 @@ extension CodeBlockDiff {
         oldLines: oldLines, newLines: newLines,
         oldHighlighted: oldHighlighted,
         newHighlighted: newHighlighted,
+        wordDiffThreshold: wordDiffThreshold,
         into: &result)
     }
 
@@ -202,6 +206,7 @@ extension CodeBlockDiff {
     oldRange: Range<Int>, newRange: Range<Int>,
     oldLines: [String], newLines: [String],
     oldHighlighted: [String], newHighlighted: [String],
+    wordDiffThreshold: Double,
     into result: inout [CodeLine]
   ) {
     let delIndices = Array(oldRange)
@@ -220,8 +225,9 @@ extension CodeBlockDiff {
       let oldSrc = oldLines[di]
       let newSrc = newLines[ii]
       let spans = WordDiff.diff(old: oldSrc, new: newSrc)
-      let hasChanges = spans.contains { !$0.isUnchanged }
-      guard hasChanges else { continue }
+      let hasWordChanges = WordDiff.hasSignificantChanges(
+        spans, threshold: wordDiffThreshold)
+      guard hasWordChanges else { continue }
 
       // WordDiff skips leading whitespace — offset markers to account
       // for it.

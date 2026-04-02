@@ -816,6 +816,59 @@ struct UpModeChangeTrackingTests {
     }
   }
 
+  // MARK: - Word diff threshold
+
+  @Test func lowSimilarityBlockSuppressesWordMarkers() {
+    // 4 of 5 words changed → similarity well below 0.25 →
+    // block-level only, no inline <ins>/<del>.
+    let old = "The quick brown fox jumps.\n"
+    let new = "A slow red dog leaps.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(!block.contains("<ins>"),
+        "Low-similarity block should not have word-level <ins>")
+      #expect(!block.contains("<del>"),
+        "Low-similarity block should not have word-level <del>")
+    }
+  }
+
+  @Test func highSimilarityBlockShowsWordMarkers() {
+    // 1 of 3 words changed → similarity well above 0.25 →
+    // word-level markers present.
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(block.contains("<ins>"),
+        "High-similarity block should have word-level <ins>")
+    }
+  }
+
+  @Test func customThresholdOverridesDefault() {
+    // 1 of 3 words changed (similarity ≈ 0.6). With threshold
+    // raised to 0.8, word markers should be suppressed.
+    let old = "The quick fox.\n"
+    let new = "The slow fox.\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    opts.wordDiffThreshold = 0.8
+    let html = MudCore.renderUpToHTML(new, options: opts)
+    let insBlock = extractBlock(html, class: "mud-change-ins")
+    #expect(insBlock != nil)
+    if let block = insBlock {
+      #expect(!block.contains("<ins>"),
+        "Should suppress word markers when threshold is above similarity")
+    }
+  }
+
   // MARK: - Alerts and asides
 
   @Test func insertedGFMAlertHasChangeAttributes() {

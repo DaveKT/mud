@@ -31,13 +31,16 @@ public struct DownHTMLVisitor: Sendable {
         new newMarkdown: String,
         old oldMarkdown: String,
         matches: [BlockMatch],
-        doccAlertMode: DocCAlertMode = .extended
+        doccAlertMode: DocCAlertMode = .extended,
+        wordDiffThreshold: Double = 0.25
     ) -> String {
         let newResult = highlightLines(
             newMarkdown, doccAlertMode: doccAlertMode)
         let oldResult = highlightLines(
             oldMarkdown, doccAlertMode: doccAlertMode)
-        let diffMap = LineDiffMap(matches: matches)
+        let diffMap = LineDiffMap(
+            matches: matches,
+            wordDiffThreshold: wordDiffThreshold)
         return buildLayoutWithChanges(
             newResult.rendered,
             codeBlocks: newResult.codeBlocks,

@@ -15,7 +15,8 @@ struct DiffContext {
     private let _codeBlockDiffMap: [SourceKey: CodeBlockDiff]
 
     /// Creates a diff context by matching blocks between old and new documents.
-    init(old: ParsedMarkdown, new: ParsedMarkdown) {
+    init(old: ParsedMarkdown, new: ParsedMarkdown,
+         wordDiffThreshold: Double = 0.25) {
         let matches = BlockMatcher.match(old: old, new: new)
 
         var annotations: [SourceKey: AnnotationEntry] = [:]
@@ -83,7 +84,8 @@ struct DiffContext {
                 let spans = WordDiff.diff(
                     old: WordDiff.inlineText(of: del.block.markup),
                     new: WordDiff.inlineText(of: ins.block.markup))
-                let hasWordChanges = spans.contains { !$0.isUnchanged }
+                let hasWordChanges = WordDiff.hasSignificantChanges(
+                    spans, threshold: wordDiffThreshold)
                 if hasWordChanges {
                     wordSpanMap[del.changeID] = spans
                     wordSpanMap[ins.changeID] = spans
@@ -163,7 +165,8 @@ struct DiffContext {
                     oldCode: oldCB.code,
                     newCode: newCB.code,
                     oldLanguage: oldCB.language,
-                    newLanguage: newCB.language)
+                    newLanguage: newCB.language,
+                    wordDiffThreshold: wordDiffThreshold)
 
                 guard let raw else { continue }
 

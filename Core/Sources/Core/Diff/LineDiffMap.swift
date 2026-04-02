@@ -62,7 +62,8 @@ struct BlockWordData {
 // MARK: - Construction
 
 extension LineDiffMap {
-    init(matches: [BlockMatch]) {
+    init(matches: [BlockMatch],
+         wordDiffThreshold: Double = 0.25) {
         var annotations: [Int: LineAnnotation] = [:]
         var groups: [DeletionGroup] = []
         var delWD: [String: [Int: BlockWordData]] = [:]
@@ -217,8 +218,9 @@ extension LineDiffMap {
                           ii < newLines.count else { continue }
                     let spans = WordDiff.diff(
                         old: oldLines[di], new: newLines[ii])
-                    guard spans.contains(
-                        where: { !$0.isUnchanged }) else { continue }
+                    guard WordDiff.hasSignificantChanges(
+                        spans, threshold: wordDiffThreshold)
+                    else { continue }
                     delWD[del.changeID, default: [:]][delLine] =
                         BlockWordData(
                             spans: spans,
@@ -332,8 +334,8 @@ extension LineDiffMap {
                     let spans = WordDiff.diff(
                         old: delSrcLines[dsi],
                         new: insSrcLines[isi])
-                    guard spans.contains(
-                        where: { !$0.isUnchanged })
+                    guard WordDiff.hasSignificantChanges(
+                        spans, threshold: wordDiffThreshold)
                     else { continue }
                     delWD[changeID, default: [:]][d.doc] =
                         BlockWordData(
@@ -390,8 +392,9 @@ extension LineDiffMap {
             let spans = WordDiff.diff(
                 old: del.block.sourceText,
                 new: ins.block.sourceText)
-            let hasChanges = spans.contains { !$0.isUnchanged }
-            if hasChanges {
+            let hasWordChanges = WordDiff.hasSignificantChanges(
+                spans, threshold: wordDiffThreshold)
+            if hasWordChanges {
                 let delData = BlockWordData(
                     spans: spans,
                     sourceText: del.block.sourceText,

@@ -22,7 +22,9 @@ public enum MudCore {
         upVisitor.alertDetector.doccAlertMode = options.doccAlertMode
         upVisitor.showInlineDeletions = options.showInlineDeletions
         if let waypoint = options.waypoint {
-            upVisitor.diffContext = DiffContext(old: waypoint, new: parsed)
+            upVisitor.diffContext = DiffContext(
+                old: waypoint, new: parsed,
+                wordDiffThreshold: options.wordDiffThreshold)
         }
         upVisitor.visit(parsed.document)
         upVisitor.emitTrailingDeletions()
@@ -56,7 +58,8 @@ public enum MudCore {
             return downVisitor.highlightWithChanges(
                 new: parsed.markdown, old: waypoint.markdown,
                 matches: matches,
-                doccAlertMode: options.doccAlertMode)
+                doccAlertMode: options.doccAlertMode,
+                wordDiffThreshold: options.wordDiffThreshold)
         }
         return downVisitor.highlight(
             parsed.markdown, doccAlertMode: options.doccAlertMode)

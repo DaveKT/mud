@@ -118,6 +118,80 @@ struct WordDiffTests {
     #expect(deletedWords[0].text == "end")
   }
 
+  // MARK: - Similarity
+
+  @Test func similarityAllUnchanged() {
+    let spans = WordDiff.diff(old: "hello world", new: "hello world")
+    #expect(WordDiff.similarity(spans) == 1.0)
+  }
+
+  @Test func similarityCompletelyDifferent() {
+    // "alpha beta" → "gamma delta": all words differ, but the
+    // space between them is unchanged. Similarity should be low.
+    let spans: [WordSpan] = [
+      .deleted("alpha"), .deleted(" "),
+      .inserted("gamma"), .inserted(" "),
+      .deleted("beta"),
+      .inserted("delta"),
+    ]
+    #expect(WordDiff.similarity(spans) == 0.0)
+  }
+
+  @Test func similarityEmptySpans() {
+    #expect(WordDiff.similarity([]) == 1.0)
+  }
+
+  @Test func similarityMixedCase() {
+    // "the quick fox" → "the slow fox": 2 of 3 words unchanged.
+    let spans = WordDiff.diff(old: "the quick fox", new: "the slow fox")
+    let sim = WordDiff.similarity(spans)
+    // unchanged: "the" (3) + " " (1) + " " (1) + "fox" (3) = 8
+    // old total: 8 + "quick" (5) = 13
+    // new total: 8 + "slow" (4) = 12
+    // similarity = 8 / 13 ≈ 0.615
+    #expect(sim > 0.6)
+    #expect(sim < 0.7)
+  }
+
+  @Test func similarityAllDeleted() {
+    let spans = WordDiff.diff(old: "hello world", new: "")
+    #expect(WordDiff.similarity(spans) == 0.0)
+  }
+
+  @Test func similarityAllInserted() {
+    let spans = WordDiff.diff(old: "", new: "hello world")
+    #expect(WordDiff.similarity(spans) == 0.0)
+  }
+
+  // MARK: - hasSignificantChanges
+
+  @Test func significantChangesAllUnchanged() {
+    let spans = WordDiff.diff(old: "hello world", new: "hello world")
+    #expect(!WordDiff.hasSignificantChanges(spans, threshold: 0.25))
+  }
+
+  @Test func significantChangesBelowThreshold() {
+    // 4 of 5 words changed → low similarity → not significant.
+    let spans = WordDiff.diff(
+      old: "the quick brown fox jumps",
+      new: "the slow red dog leaps")
+    #expect(!WordDiff.hasSignificantChanges(spans, threshold: 0.25))
+  }
+
+  @Test func significantChangesAboveThreshold() {
+    // 1 of 3 words changed → high similarity → significant.
+    let spans = WordDiff.diff(old: "the quick fox", new: "the slow fox")
+    #expect(WordDiff.hasSignificantChanges(spans, threshold: 0.25))
+  }
+
+  @Test func significantChangesRespectsCustomThreshold() {
+    // 1 of 3 words changed (similarity ≈ 0.615). Passes at 0.5,
+    // fails at 0.7.
+    let spans = WordDiff.diff(old: "the quick fox", new: "the slow fox")
+    #expect(WordDiff.hasSignificantChanges(spans, threshold: 0.5))
+    #expect(!WordDiff.hasSignificantChanges(spans, threshold: 0.7))
+  }
+
   // MARK: - plainText alignment diagnostic
 
   @Test func inlineTextMatchesVisitorCharCount() {

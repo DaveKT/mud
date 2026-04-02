@@ -36,6 +36,36 @@ enum WordSpan: Equatable {
 
 /// Word-level diffing and inline structure comparison.
 enum WordDiff {
+    /// Fraction of the longer side (old or new) that is unchanged text.
+    /// Returns 1.0 when both sides are empty.
+    static func similarity(_ spans: [WordSpan]) -> Double {
+        var unchangedLen = 0, deletedLen = 0, insertedLen = 0
+        for span in spans {
+            switch span {
+            case .unchanged(let t): unchangedLen += t.count
+            case .deleted(let t):   deletedLen += t.count
+            case .inserted(let t):  insertedLen += t.count
+            }
+        }
+        let total = max(unchangedLen + deletedLen,
+                        unchangedLen + insertedLen)
+        guard total > 0 else { return 1.0 }
+        return Double(unchangedLen) / Double(total)
+    }
+
+    /// True when spans contain word-level changes worth highlighting.
+    ///
+    /// Returns `false` when all spans are unchanged (nothing to mark)
+    /// or when similarity is below the threshold (too noisy to be
+    /// useful).
+    static func hasSignificantChanges(
+        _ spans: [WordSpan], threshold: Double
+    ) -> Bool {
+        let hasChanges = spans.contains { !$0.isUnchanged }
+        guard hasChanges else { return false }
+        return similarity(spans) >= threshold
+    }
+
     /// Computes a word-level diff between two plain-text strings.
     ///
     /// The diff operates on words only — whitespace is tracked as
