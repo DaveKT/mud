@@ -65,6 +65,12 @@ class FindState: ObservableObject {
         }
     }
 
+    func clear() {
+        searchText = ""
+        lastSearchedText = ""
+        matchInfo = nil
+    }
+
     func performFind() {
         findNext()
     }
@@ -105,7 +111,6 @@ class FindState: ObservableObject {
         searchDirection = .forward
         if lastSearchedText.isEmpty || !text.hasPrefix(lastSearchedText) {
             searchOrigin = .top
-            matchInfo = nil
         } else {
             searchOrigin = .refine
         }
@@ -115,97 +120,137 @@ class FindState: ObservableObject {
 
 }
 
+// MARK: - Find Match Counter
+
+private struct FindMatchCounter: View {
+    let info: MatchInfo
+
+    var body: some View {
+        if info.total > 0, info.total <= 999 {
+            Text("\(info.current) of \(info.total)")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - Find Bar Chevron
+
+private struct FindBarChevron<S: PrimitiveButtonStyle>: View {
+    let label: String
+    let systemImage: String
+    let style: S
+    let flash: Bool
+    let disabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(label, systemImage: systemImage, action: action)
+            .labelStyle(.iconOnly)
+            .buttonStyle(style)
+            .buttonBorderShape(.circle)
+            .controlSize(.extraLarge)
+            .opacity(flash ? 0.5 : 1)
+            .disabled(disabled)
+    }
+}
+
+// MARK: - Find Bar Tahoe Helpers
+
+private extension View {
+    @ViewBuilder
+    func findBarGlass() -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(.regular, in: .capsule)
+        } else {
+            self
+                .background(.ultraThinMaterial, in: Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+        }
+    }
+}
+
 // MARK: - Find Bar View
 
 struct FindBar: View {
     @ObservedObject var state: FindState
     var isFocused: FocusState<Bool>.Binding
+    @State private var flashDirection: SearchDirection?
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .font(.system(size: 14))
+        HStack(spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.page.badge.magnifyingglass")
 
-            TextField("Find", text: $state.searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .frame(width: 180)
-                .focused(isFocused)
-                .onSubmit {
-                    state.performFind()
-                }
-                .onKeyPress(.escape) {
-                    state.close()
-                    return .handled
-                }
-
-            ZStack(alignment: .trailing) {
-                // Reserve stable width for up to 3-digit counts.
-                HStack(spacing: 8) {
-                    Text("0 of 000")
-                        .font(.system(size: 12))
-                        .monospacedDigit()
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .semibold))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .hidden()
+                TextField("Find…", text: $state.searchText)
+                    .textFieldStyle(.plain)
+                    .font(.title3)
+                    .focused(isFocused)
+                    .onSubmit { state.performFind() }
+                    .onKeyPress(.escape) {
+                        state.close()
+                        return .handled
+                    }
 
                 if let info = state.matchInfo {
-                    if info.total > 0 && info.total <= 999 {
-                        HStack(spacing: 8) {
-                            Text("\(info.current) of \(info.total)")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
+                    FindMatchCounter(info: info)
+                        .transition(.opacity)
+                }
 
-                            Button(action: { state.findPrevious() }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button(action: { state.findNext() }) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                    } else if info.total > 999 {
-                        HStack(spacing: 8) {
-                            Button(action: { state.findPrevious() }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button(action: { state.findNext() }) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                    } else {
-                        Text("No matches")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
+                if !state.searchText.isEmpty {
+                    Button("Clear", systemImage: "xmark.circle.fill", action: state.clear)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .transition(.scale.combined(with: .opacity))
                 }
             }
+            .padding(6)
+            .background(.primary.opacity(0.1), in: ContainerRelativeShape())
 
-            Button(action: { state.close() }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
+            let hasMatches = state.matchInfo.map { $0.total > 0 } ?? false
+
+            FindBarChevron(
+                label: "Find Previous", systemImage: "chevron.left",
+                style: BorderedButtonStyle(),
+                flash: flashDirection == .backward,
+                disabled: !hasMatches,
+                action: state.findPrevious
+            )
+
+            if hasMatches {
+                FindBarChevron(
+                    label: "Find Next", systemImage: "chevron.right",
+                    style: BorderedProminentButtonStyle(),
+                    flash: flashDirection == .forward,
+                    disabled: false,
+                    action: state.findNext
+                )
+            } else {
+                FindBarChevron(
+                    label: "Find Next", systemImage: "chevron.right",
+                    style: BorderedButtonStyle(),
+                    flash: false,
+                    disabled: true,
+                    action: state.findNext
+                )
             }
-            .buttonStyle(.borderless)
-            .padding(.leading, 4)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+        .padding(8)
+        .frame(maxWidth: 400)
+        .containerShape(Capsule())
+        .findBarGlass()
+        .animation(.easeInOut(duration: 0.15), value: state.searchText.isEmpty)
+        .onChange(of: state.searchID) {
+            guard state.searchOrigin == .advance else { return }
+            withAnimation(.easeIn(duration: 0.1)) {
+                flashDirection = state.searchDirection
+            } completion: {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    flashDirection = nil
+                }
+            }
+        }
     }
 }
 
