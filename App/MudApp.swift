@@ -113,7 +113,7 @@ struct MudApp: App {
                     get: { appState.viewToggles.contains(.readableColumn) },
                     set: { _ in appState.toggle(.readableColumn) }
                 ))
-                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .keyboardShortcut("r", modifiers: [.command, .control])
 
                 Divider()
 
