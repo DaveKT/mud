@@ -71,39 +71,11 @@ struct MudApp: App {
             CommandGroup(replacing: .undoRedo) { }
 
             CommandGroup(before: .toolbar) {
-                Button(appState.sidebarVisible && appState.sidebarPane == .outline
-                       ? "Hide Outline" : "Show Outline") {
-                    if appState.sidebarVisible && appState.sidebarPane == .outline {
-                        NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
-                    } else {
-                        appState.sidebarPane = .outline
-                        appState.saveSidebarPane()
-                        if !appState.sidebarVisible {
-                            NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
-                        }
-                    }
+                Button(appState.sidebarVisible
+                       ? "Hide Sidebar" : "Show Sidebar") {
+                    NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
                 }
-                .keyboardShortcut("o", modifiers: [.command, .shift])
-
-                Button(appState.trackChangesEnabled
-                       ? "Hide Changes" : "Show Changes") {
-                    if appState.trackChangesEnabled {
-                        appState.trackChangesEnabled = false
-                        appState.saveTrackChangesEnabled()
-                        if appState.sidebarVisible {
-                            NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
-                        }
-                    } else {
-                        appState.trackChangesEnabled = true
-                        appState.saveTrackChangesEnabled()
-                        appState.sidebarPane = .changes
-                        appState.saveSidebarPane()
-                        if !appState.sidebarVisible {
-                            NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
-                        }
-                    }
-                }
-                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .keyboardShortcut("s", modifiers: [.command, .control])
 
                 Divider()
 
