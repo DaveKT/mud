@@ -41,6 +41,8 @@ struct ChangesBar: View {
 
     private var activeBody: some View {
         HStack(spacing: 8) {
+            let hasChanges = !groups.isEmpty
+
             HStack(spacing: 2) {
                 ChangesBadge(count: groups.count, color: badgeColor)
 
@@ -53,12 +55,16 @@ struct ChangesBar: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
+
+                if !hasChanges {
+                    Spacer()
+                    Image(systemName: "document.badge.clock")
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.primary.opacity(0.1), in: ContainerRelativeShape())
-
-            let hasChanges = !groups.isEmpty
 
             if groups.count >= 2 {
                 Button("Previous Change", systemImage: "chevron.left", action: previousGroup)
@@ -74,9 +80,6 @@ struct ChangesBar: View {
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
                     .controlSize(.extraLarge)
-            }
-
-            if hasChanges {
                 Button("Accept Changes", systemImage: "checkmark", action: changeTracker.accept)
                     .labelStyle(.iconOnly)
                     .buttonBorderShape(.circle)
