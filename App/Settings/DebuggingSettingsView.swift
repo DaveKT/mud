@@ -15,7 +15,7 @@ struct DebuggingSettingsView: View {
                 }
             }
 
-            Section {
+            Section("Change tracking") {
                 Toggle(isOn: Binding(
                     get: { appState.inlineDeletions },
                     set: { newValue in
@@ -25,6 +25,24 @@ struct DebuggingSettingsView: View {
                 )) {
                     Text("Inline deletions")
                     Text("Show replaced words with strikethrough alongside new words in changed blocks.")
+                }
+                Slider(
+                    value: Binding(
+                        get: { appState.wordDiffThreshold },
+                        set: { newValue in
+                            appState.wordDiffThreshold = newValue
+                            appState.saveWordDiffThreshold()
+                        }
+                    ),
+                    in: 0.0...1.0,
+                    step: 0.05
+                ) {
+                    Text("Word diff threshold")
+                    Text("How much can a block change before word highlights are hidden?")
+                } minimumValueLabel: {
+                    Text("0%")
+                } maximumValueLabel: {
+                    Text("100%")
                 }
             }
 

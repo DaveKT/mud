@@ -20,7 +20,7 @@ class AppState: ObservableObject {
     @Published var doccAlertMode: DocCAlertMode
     @Published var useHeadingAsTitle: Bool
     var openSettingsAction: (() -> Void)?
-    let wordDiffThreshold: Double
+    @Published var wordDiffThreshold: Double
 
     private static let lightingKey = "Mud-Lighting"
     private static let themeKey = "Mud-Theme"
@@ -112,6 +112,10 @@ class AppState: ObservableObject {
 
     func saveUseHeadingAsTitle() {
         UserDefaults.standard.set(useHeadingAsTitle, forKey: Self.useHeadingAsTitleKey)
+    }
+
+    func saveWordDiffThreshold() {
+        UserDefaults.standard.set(wordDiffThreshold, forKey: Self.wordDiffThresholdKey)
     }
 
     func toggle(_ option: ViewToggle) {
