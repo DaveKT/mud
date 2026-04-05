@@ -153,6 +153,7 @@ struct ChangeGroup: Identifiable {
 
 private struct ChangeGroupRow: View {
     let group: ChangeGroup
+    @ObservedObject private var appState = AppState.shared
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
@@ -228,7 +229,9 @@ private struct ChangeGroupRow: View {
             Text(member.type == .insertion ? "+" : "−")
                 .fontWeight(.bold)
                 .foregroundStyle(
-                    member.type == .insertion ? .green : .red
+                    member.type == .insertion
+                        ? changeColor("change-ins")
+                        : changeColor("change-del")
                 )
                 .frame(width: 10, alignment: .center)
             Text(member.summary.isEmpty ? "—" : member.summary)
@@ -255,16 +258,26 @@ private struct ChangeGroupRow: View {
     private var groupBadge: some View {
         Text("\(group.groupIndex)")
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(
+                appState.lighting.isDark() ? .black : .white
+            )
             .frame(minWidth: 18, minHeight: 18)
             .background(badgeColor, in: Circle())
     }
 
     private var badgeColor: Color {
-        if group.isMixed { return .blue }
+        if group.isMixed { return changeColor("change-mix") }
         switch group.type {
-        case .insertion: return .green
-        case .deletion:  return .red
+        case .insertion: return changeColor("change-ins")
+        case .deletion:  return changeColor("change-del")
         }
+    }
+
+    private func changeColor(_ key: String) -> Color {
+        let colors = Color.cssProperties(
+            from: HTMLTemplate.changesCSS,
+            dark: appState.lighting.isDark()
+        )
+        return Color(cssHex: colors[key])
     }
 }
