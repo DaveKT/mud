@@ -326,10 +326,6 @@ extension DocumentWindowController: NSWindowDelegate {
         AppState.shared.modeInActiveTab = state.mode
     }
 
-    func windowDidResignMain(_ notification: Notification) {
-        state.find.close()
-    }
-
     func windowWillClose(_ notification: Notification) {
         // Save window frame for next launch
         if let frame = window?.frame {
