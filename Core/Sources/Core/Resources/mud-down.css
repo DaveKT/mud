@@ -5,7 +5,8 @@
 
 .down-mode-output {
     margin: 0 auto;
-    box-sizing: content-box;
+    min-height: 100%;
+    box-sizing: border-box;
     background: var(--bg-color);
     overflow-x: auto;
     overscroll-behavior-x: none;

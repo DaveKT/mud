@@ -3,7 +3,7 @@
 .up-mode-output {
     margin: 0 auto;
     padding: 2em;
-    box-sizing: content-box;
+    box-sizing: border-box;
     background: var(--bg-color);
     overflow-x: hidden;
 }
