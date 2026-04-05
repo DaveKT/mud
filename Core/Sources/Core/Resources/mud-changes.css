@@ -79,6 +79,7 @@
     cursor: pointer;
     pointer-events: auto;
     transform: translateY(-50%);
+    transform-origin: center;
 }
 
 .mud-overlay-ins > .mud-expando { background-color: var(--change-ins); }
@@ -144,10 +145,6 @@
 
 /* ── Up mode: active highlight ────────────────────────────────── */
 
-.mud-overlay.mud-change-active {
-    animation: overlay-flash 1s ease-out forwards;
-}
-
 .mud-overlay-cont {
   border-bottom: 0;
 }
@@ -157,9 +154,15 @@
   border-top-style: dashed;
 }
 
-@keyframes overlay-flash {
-    0%   { opacity: 0.5; }
-    100% { opacity: 1; }
+.mud-expando.mud-change-active {
+    animation: expando-ripple 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+}
+
+@keyframes expando-ripple {
+  0%   { transform: translateY(-50%) scale(1); }
+  40%  { transform: translateY(-50%) scale(1.5); }
+  70%  { transform: translateY(-50%) scale(0.8); }
+  100% { transform: translateY(-50%) scale(1); }
 }
 
 

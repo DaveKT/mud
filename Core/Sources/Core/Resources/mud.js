@@ -565,23 +565,34 @@
       first.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
-    // Flash the overlay (or sub-overlays) for the group.
+    // Ripple the expando button for the group.
     if (!gid) return;
-    var targets = [];
-    if (_overlays[gid] && _overlays[gid].style.display !== "none") {
-      targets.push(_overlays[gid]);
+
+    // Clear any leftover active state from a previous navigation.
+    var stale = document.querySelectorAll(".mud-expando.mud-change-active");
+    for (var s = 0; s < stale.length; s++) {
+      stale[s].classList.remove("mud-change-active");
     }
-    for (var i = 0; i < _subOverlays.length; i++) {
-      if (_subOverlays[i].groupId === gid) targets.push(_subOverlays[i].overlay);
+
+    var btn = null;
+    if (_overlays[gid]) {
+      btn = _overlays[gid].querySelector(".mud-expando");
     }
-    for (var j = 0; j < targets.length; j++) {
-      targets[j].classList.add("mud-change-active");
-    }
-    setTimeout(function () {
-      for (var k = 0; k < targets.length; k++) {
-        targets[k].classList.remove("mud-change-active");
+    if (!btn) {
+      for (var i = 0; i < _subOverlays.length; i++) {
+        if (_subOverlays[i].groupId === gid) {
+          btn = _subOverlays[i].overlay.querySelector(".mud-expando");
+          if (btn) break;
+        }
       }
-    }, 2000);
+    }
+    if (btn) {
+      void btn.offsetWidth;
+      btn.classList.add("mud-change-active");
+      btn.addEventListener("animationend", function () {
+        btn.classList.remove("mud-change-active");
+      }, { once: true });
+    }
   }
 
   // -- Body classes ---------------------------------------------------------
