@@ -58,6 +58,26 @@ final class ReselectMonitorView: NSView {
         }
     }
 
+    // MARK: - Row hit-testing
+
+    /// Returns `true` when the click landed on an `NSTableRowView`
+    /// that is currently selected. Walks from the hit-tested view up
+    /// to the first row view. Returns `false` for clicks on empty
+    /// space, scrollbars, or unselected rows.
+    private func clickedSelectedRow(event: NSEvent) -> Bool {
+        guard let hit = window?.contentView?.hitTest(
+            event.locationInWindow
+        ) else { return false }
+        var view: NSView? = hit
+        while let v = view {
+            if let row = v as? NSTableRowView {
+                return row.isSelected
+            }
+            view = v.superview
+        }
+        return false
+    }
+
     // MARK: - Private
 
     private func installMonitor() {
@@ -79,8 +99,11 @@ final class ReselectMonitorView: NSView {
               event.window === window
         else { return }
 
-        let pointInView = convert(event.locationInWindow, from: nil)
-        guard bounds.contains(pointInView) else { return }
+        // Only proceed if the click landed on the selected row.
+        // Hit-test the window to find the NSTableRowView under the
+        // click point — this rejects clicks on empty space, scrollbars,
+        // and unselected rows without relying on the async timing.
+        guard clickedSelectedRow(event: event) else { return }
 
         let selBefore = currentSelection
         let guardBefore = guardValue
