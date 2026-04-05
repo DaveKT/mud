@@ -113,7 +113,14 @@ struct DocumentContentView: View {
         .focusable()
         .focusEffectDisabled()
         .focused($contentFocused)
-        .findOverlay(state: findState)
+        .floatingBarsOverlay(
+            findState: findState,
+            changeTracker: changeTracker,
+            onSelectChange: { changeIDs in
+                state.changeScrollTarget = ChangeScrollTarget(
+                    id: UUID(), changeIDs: changeIDs)
+            }
+        )
         .frame(minWidth: 500, minHeight: 400)
 
         .onKeyPress(.space) {

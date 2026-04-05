@@ -134,32 +134,11 @@ private struct FindMatchCounter: View {
     }
 }
 
-// MARK: - Find Bar Chevron
+// MARK: - Floating Bar Tahoe Helpers
 
-private struct FindBarChevron<S: PrimitiveButtonStyle>: View {
-    let label: String
-    let systemImage: String
-    let style: S
-    let flash: Bool
-    let disabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(label, systemImage: systemImage, action: action)
-            .labelStyle(.iconOnly)
-            .buttonStyle(style)
-            .buttonBorderShape(.circle)
-            .controlSize(.extraLarge)
-            .opacity(flash ? 0.5 : 1)
-            .disabled(disabled)
-    }
-}
-
-// MARK: - Find Bar Tahoe Helpers
-
-private extension View {
+extension View {
     @ViewBuilder
-    func findBarGlass() -> some View {
+    func floatingBarGlass() -> some View {
         if #available(macOS 26, *) {
             self.glassEffect(.regular, in: .capsule)
         } else {
@@ -168,6 +147,7 @@ private extension View {
                 .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
         }
     }
+
 }
 
 // MARK: - Find Bar View
@@ -175,10 +155,11 @@ private extension View {
 struct FindBar: View {
     @ObservedObject var state: FindState
     var isFocused: FocusState<Bool>.Binding
+    @Environment(\.controlActiveState) private var controlActiveState
     @State private var flashDirection: SearchDirection?
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "text.page.badge.magnifyingglass")
 
@@ -210,36 +191,31 @@ struct FindBar: View {
 
             let hasMatches = state.matchInfo.map { $0.total > 0 } ?? false
 
-            FindBarChevron(
-                label: "Find Previous", systemImage: "chevron.left",
-                style: BorderedButtonStyle(),
-                flash: flashDirection == .backward,
-                disabled: !hasMatches,
-                action: state.findPrevious
-            )
+            Button("Find Previous", systemImage: "chevron.left", action: state.findPrevious)
+                .labelStyle(.iconOnly)
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .controlSize(.extraLarge)
+                .opacity(flashDirection == .backward ? 0.5 : 1)
+                .disabled(!hasMatches)
 
-            if hasMatches {
-                FindBarChevron(
-                    label: "Find Next", systemImage: "chevron.right",
-                    style: BorderedProminentButtonStyle(),
-                    flash: flashDirection == .forward,
-                    disabled: false,
-                    action: state.findNext
-                )
-            } else {
-                FindBarChevron(
-                    label: "Find Next", systemImage: "chevron.right",
-                    style: BorderedButtonStyle(),
-                    flash: false,
-                    disabled: true,
-                    action: state.findNext
-                )
-            }
+            Button("Find Next", systemImage: "chevron.right", action: state.findNext)
+                .labelStyle(.iconOnly)
+                .buttonBorderShape(.circle)
+                .controlSize(.extraLarge)
+                .opacity(hasMatches && flashDirection == .forward ? 0.5 : 1)
+                .disabled(!hasMatches)
+                .modify { button in
+                    if hasMatches && controlActiveState == .key {
+                        button.buttonStyle(.borderedProminent)
+                    } else {
+                        button.buttonStyle(.bordered)
+                    }
+                }
         }
         .padding(8)
-        .frame(maxWidth: 400)
+        .frame(maxWidth: 360)
         .containerShape(Capsule())
-        .findBarGlass()
         .animation(.easeInOut(duration: 0.15), value: state.searchText.isEmpty)
         .onChange(of: state.searchID) {
             guard state.searchOrigin == .advance else { return }
@@ -254,30 +230,71 @@ struct FindBar: View {
     }
 }
 
-// MARK: - Find Overlay Modifier
+// MARK: - Floating Bars Overlay
 
-struct FindOverlay: ViewModifier {
-    @ObservedObject var state: FindState
-    @FocusState private var isFocused: Bool
+struct FloatingBarsOverlay: ViewModifier {
+    @ObservedObject var findState: FindState
+    @ObservedObject var changeTracker: ChangeTracker
+    @ObservedObject private var appState = AppState.shared
+    @FocusState private var isFindFocused: Bool
+    var onSelectChange: ([String]) -> Void
+
+    private var changesBarVisible: Bool {
+        changeTracker.isBarVisible && appState.trackChangesEnabled
+    }
 
     func body(content: Content) -> some View {
         content
             .overlay(alignment: .topTrailing) {
-                if state.isVisible {
-                    FindBar(state: state, isFocused: $isFocused)
-                        .padding(12)
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                }
+                floatingBars
+                    .padding(12)
             }
-            .animation(.easeOut(duration: 0.15), value: state.isVisible)
-            .onChange(of: state.isVisible) { _, isVisible in
-                if isVisible { isFocused = true }
+            .animation(.easeOut(duration: 0.15), value: findState.isVisible)
+            .animation(.easeOut(duration: 0.15), value: changesBarVisible)
+            .onChange(of: findState.isVisible) { _, isVisible in
+                if isVisible { isFindFocused = true }
             }
+    }
+
+    @ViewBuilder
+    private var floatingBars: some View {
+        let showFind = findState.isVisible
+        let showChanges = changesBarVisible
+        if showFind || showChanges {
+            floatingBarStack(showFind: showFind, showChanges: showChanges)
+        }
+    }
+
+    @ViewBuilder
+    private func floatingBarStack(showFind: Bool, showChanges: Bool) -> some View {
+        VStack(spacing: 10) {
+            if showChanges {
+                ChangesBar(
+                    changeTracker: changeTracker,
+                    onSelectChange: onSelectChange
+                )
+                .floatingBarGlass()
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+            if showFind {
+                FindBar(state: findState, isFocused: $isFindFocused)
+                    .floatingBarGlass()
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
     }
 }
 
 extension View {
-    func findOverlay(state: FindState) -> some View {
-        modifier(FindOverlay(state: state))
+    func floatingBarsOverlay(
+        findState: FindState,
+        changeTracker: ChangeTracker,
+        onSelectChange: @escaping ([String]) -> Void
+    ) -> some View {
+        modifier(FloatingBarsOverlay(
+            findState: findState,
+            changeTracker: changeTracker,
+            onSelectChange: onSelectChange
+        ))
     }
 }

@@ -11,6 +11,7 @@ class DocumentWindowController: NSWindowController {
     private var lightingButton: NSButton?
     private var modeButton: NSButton?
     private var findButton: NSButton?
+    private var changesButton: NSButton?
     private var readableColumnButton: NSButton?
     private var zoomControl: NSSegmentedControl?
 
@@ -159,6 +160,12 @@ class DocumentWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
+        state.changeTracker.$isBarVisible
+            .sink { [weak self] visible in
+                self?.updateChangesButton(visible)
+            }
+            .store(in: &cancellables)
+
         // Track sidebar collapse state for persistence
         if let sidebarItem = splitVC?.splitViewItems.first {
             sidebarItem.publisher(for: \.isCollapsed)
@@ -182,6 +189,11 @@ class DocumentWindowController: NSWindowController {
     private func updateFindButton(_ visible: Bool) {
         let symbol = visible ? "magnifyingglass.circle.fill" : "magnifyingglass.circle"
         findButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+    }
+
+    private func updateChangesButton(_ visible: Bool) {
+        let symbol = visible ? "document.badge.clock.fill" : "document.badge.clock"
+        changesButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
     }
 
     private func updateModeButton(_ mode: Mode) {
@@ -287,6 +299,14 @@ class DocumentWindowController: NSWindowController {
         }
     }
 
+    @objc func toggleChangesBar(_ sender: Any?) {
+        if state.changeTracker.isBarVisible {
+            state.changeTracker.hideBar()
+        } else {
+            state.changeTracker.showBar()
+        }
+    }
+
     @objc func findNext(_ sender: Any?) {
         state.find.findNext()
     }
@@ -347,6 +367,7 @@ extension DocumentWindowController: NSToolbarDelegate {
             .toggleSidebar,
             .sidebarTrackingSeparator,
             .flexibleSpace,
+            .toggleChanges,
             .toggleFind,
             .space,
             .toggleMode
@@ -362,6 +383,7 @@ extension DocumentWindowController: NSToolbarDelegate {
             .zoom,
             .toggleReadableColumn,
             .toggleLighting,
+            .toggleChanges,
             .toggleFind,
             .toggleMode,
             .settings
@@ -384,6 +406,14 @@ extension DocumentWindowController: NSToolbarDelegate {
             modeButton = button
             item.view = button
             item.label = "Mode"
+            return item
+
+        case .toggleChanges:
+            let button = makeToolbarButton(symbolName: "document.badge.clock", action: #selector(toggleChangesBar(_:)))
+            changesButton = button
+            updateChangesButton(state.changeTracker.isBarVisible)
+            item.view = button
+            item.label = "Changes"
             return item
 
         case .toggleFind:
@@ -438,5 +468,6 @@ extension NSToolbarItem.Identifier {
     static let toggleReadableColumn = NSToolbarItem.Identifier("toggleReadableColumn")
     static let toggleLighting = NSToolbarItem.Identifier("toggleLighting")
     static let toggleMode = NSToolbarItem.Identifier("toggleMode")
+    static let toggleChanges = NSToolbarItem.Identifier("toggleChanges")
     static let toggleFind = NSToolbarItem.Identifier("find")
 }

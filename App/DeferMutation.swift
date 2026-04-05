@@ -7,7 +7,7 @@ import Foundation
 /// inside them triggers "Publishing changes from within view updates."
 /// Wrapping the mutation in `deferMutation` moves it to the next run-loop
 /// iteration, avoiding the warning and undefined behavior.
-/// 
+///
 func deferMutation(_ work: @escaping () -> Void) {
     DispatchQueue.main.async(execute: work)
 }

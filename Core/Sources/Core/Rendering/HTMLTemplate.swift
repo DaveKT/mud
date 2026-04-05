@@ -51,7 +51,7 @@ public enum HTMLTemplate {
         loadResource("mud-down", type: "css") ?? ""
     }
 
-    private static var changesCSS: String {
+    public static var changesCSS: String {
         loadResource("mud-changes", type: "css") ?? ""
     }
 

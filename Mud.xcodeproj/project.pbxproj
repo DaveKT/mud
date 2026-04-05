@@ -13,6 +13,8 @@
 		7C0A000A2F5B0005001C3BB7 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 7C0A00092F5B0005001C3BB7 /* README.md */; };
 		7C0A000C2F5B0006001C3BB7 /* Doc in Resources */ = {isa = PBXBuildFile; fileRef = 7C0A000B2F5B0006001C3BB7 /* Doc */; };
 		7C1238782F5FB22900F384B2 /* CSSColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1238772F5FB22900F384B2 /* CSSColors.swift */; };
+		7C134FC22F813A010020BF91 /* ChangesFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C134FC12F813A010020BF91 /* ChangesFeature.swift */; };
+		7C134FC42F813A020020BF91 /* View+Modify.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C134FC32F813A020020BF91 /* View+Modify.swift */; };
 		7C1FD9812F44FAC200BB4076 /* LocalFileSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1FD9802F44FAC200BB4076 /* LocalFileSchemeHandler.swift */; };
 		7C2665942F3D6216004C8D74 /* DocumentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C2665932F3D6216004C8D74 /* DocumentState.swift */; };
 		7C282AD82F4F542E00611919 /* ThemePreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C282AD52F4F542E00611919 /* ThemePreviewCard.swift */; };
@@ -96,6 +98,8 @@
 		7C0A00092F5B0005001C3BB7 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		7C0A000B2F5B0006001C3BB7 /* Doc */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Doc; sourceTree = "<group>"; };
 		7C1238772F5FB22900F384B2 /* CSSColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSColors.swift; sourceTree = "<group>"; };
+		7C134FC12F813A010020BF91 /* ChangesFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesFeature.swift; sourceTree = "<group>"; };
+		7C134FC32F813A020020BF91 /* View+Modify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Modify.swift"; sourceTree = "<group>"; };
 		7C1FD9802F44FAC200BB4076 /* LocalFileSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFileSchemeHandler.swift; sourceTree = "<group>"; };
 		7C2665932F3D6216004C8D74 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
 		7C282AD22F4F542E00611919 /* DownModeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownModeSettingsView.swift; sourceTree = "<group>"; };
@@ -244,6 +248,7 @@
 				7C3640B42F60DC2C00364BEC /* AppState.swift */,
 				7CC975842F340FD2001C3BB7 /* FileWatcher.swift */,
 				7C6B316D2F3A228000F6A4E8 /* DeferMutation.swift */,
+				7C134FC32F813A020020BF91 /* View+Modify.swift */,
 				7C2665932F3D6216004C8D74 /* DocumentState.swift */,
 				7C442A642F3457C20046E0CD /* DocumentController.swift */,
 				7C442A672F34BB7E0046E0CD /* DocumentWindowController.swift */,
@@ -255,6 +260,7 @@
 				7C0A00012F3E0001001C3BB7 /* Theme.swift */,
 				7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */,
 				7C8D102F2F34CF0400F359C8 /* FindFeature.swift */,
+				7C134FC12F813A010020BF91 /* ChangesFeature.swift */,
 				7C7A73212F67057900A4A7FB /* SidebarView.swift */,
 				7C0A00032F5B0001001C3BB7 /* OutlineNode.swift */,
 				7C0A00052F5B0002001C3BB7 /* OutlineSidebarView.swift */,
@@ -490,6 +496,7 @@
 				7CC975892F341A75001C3BB7 /* Lighting.swift in Sources */,
 				7C0A00022F3E0001001C3BB7 /* Theme.swift in Sources */,
 				7C8D10302F34CF0400F359C8 /* FindFeature.swift in Sources */,
+				7C134FC22F813A010020BF91 /* ChangesFeature.swift in Sources */,
 				7CA119812F3CC5110098484A /* Mode.swift in Sources */,
 				7CC975672F340904001C3BB7 /* WebView.swift in Sources */,
 				7CD093082F587185003E4037 /* ErrorPage.swift in Sources */,
@@ -517,6 +524,7 @@
 				7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */,
 				7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */,
 				7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */,
+				7C134FC42F813A020020BF91 /* View+Modify.swift in Sources */,
 				7CC6E6E52F6595F900FE7D66 /* CheckForUpdatesView.swift in Sources */,
 				7C442A692F34BB7E0046E0CD /* DocumentContentView.swift in Sources */,
 				7C1238782F5FB22900F384B2 /* CSSColors.swift in Sources */,

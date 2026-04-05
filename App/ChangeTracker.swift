@@ -17,6 +17,7 @@ class ChangeTracker: ObservableObject {
     @Published private(set) var changes: [DocumentChange] = []
     @Published var selectedChangeID: String?
     @Published var isPaused: Bool = false
+    @Published var isBarVisible: Bool = false
 
     /// The most recent content passed to `update(_:)`.
     private(set) var currentParsed: ParsedMarkdown?
@@ -51,5 +52,17 @@ class ChangeTracker: ObservableObject {
         waypoints.append(Waypoint(parsed: current, timestamp: Date()))
         changes = []
         selectedChangeID = nil
+    }
+
+    func showBar() {
+        deferMutation { [self] in
+            isBarVisible = true
+        }
+    }
+
+    func hideBar() {
+        deferMutation { [self] in
+            isBarVisible = false
+        }
     }
 }
