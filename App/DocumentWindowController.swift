@@ -10,9 +10,8 @@ class DocumentWindowController: NSWindowController {
 
     private var lightingButton: NSButton?
     private var modeButton: NSButton?
+    private var findButton: NSButton?
     private var readableColumnButton: NSButton?
-    // private var lineNumbersButton: NSButton?
-    // private var wordWrapButton: NSButton?
     private var zoomControl: NSSegmentedControl?
 
     private var splitVC: NSSplitViewController?
@@ -139,8 +138,6 @@ class DocumentWindowController: NSWindowController {
         AppState.shared.$viewToggles
             .sink { [weak self] toggles in
                 self?.updateReadableColumnButton(toggles.contains(.readableColumn))
-                // self?.updateToggleButton(self?.lineNumbersButton, on: toggles.contains(.lineNumbers))
-                // self?.updateToggleButton(self?.wordWrapButton, on: toggles.contains(.wordWrap))
             }
             .store(in: &cancellables)
 
@@ -153,6 +150,12 @@ class DocumentWindowController: NSWindowController {
                 } else {
                     window.title = self.fileURL.lastPathComponent
                 }
+            }
+            .store(in: &cancellables)
+
+        state.find.$isVisible
+            .sink { [weak self] visible in
+                self?.updateFindButton(visible)
             }
             .store(in: &cancellables)
 
@@ -176,8 +179,13 @@ class DocumentWindowController: NSWindowController {
         lightingButton?.image = NSImage(systemSymbolName: lighting.isDark() ? "moon" : "sun.max", accessibilityDescription: nil)
     }
 
+    private func updateFindButton(_ visible: Bool) {
+        let symbol = visible ? "magnifyingglass.circle.fill" : "magnifyingglass.circle"
+        findButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+    }
+
     private func updateModeButton(_ mode: Mode) {
-        let symbol = mode == .down ? "arrow.uturn.down.circle.fill" : "arrow.uturn.up.circle.fill"
+        let symbol = mode == .down ? "arrow.uturn.down.circle.fill" : "arrow.uturn.up.circle"
         modeButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
     }
 
@@ -200,14 +208,6 @@ class DocumentWindowController: NSWindowController {
 
     @objc func toggleReadableColumn(_ sender: Any?) {
         AppState.shared.toggle(.readableColumn)
-    }
-
-    @objc func toggleLineNumbers(_ sender: Any?) {
-        AppState.shared.toggle(.lineNumbers)
-    }
-
-    @objc func toggleWordWrap(_ sender: Any?) {
-        AppState.shared.toggle(.wordWrap)
     }
 
     @objc func zoomAction(_ sender: NSSegmentedControl) {
@@ -280,7 +280,11 @@ class DocumentWindowController: NSWindowController {
     }
 
     @objc func performFindAction(_ sender: Any?) {
-        state.find.show()
+        if state.find.isVisible {
+            state.find.close()
+        } else {
+            state.find.show()
+        }
     }
 
     @objc func findNext(_ sender: Any?) {
@@ -339,12 +343,29 @@ extension DocumentWindowController: NSWindowDelegate {
 
 extension DocumentWindowController: NSToolbarDelegate {
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, .toggleMode]
+        [
+            .toggleSidebar,
+            .sidebarTrackingSeparator,
+            .flexibleSpace,
+            .toggleFind,
+            .space,
+            .toggleMode
+        ]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, .space, .toggleLighting, .toggleMode,
-         .toggleReadableColumn, /* .toggleLineNumbers, .toggleWordWrap, */ .zoom, .settings]
+        [
+            .toggleSidebar,
+            .sidebarTrackingSeparator,
+            .flexibleSpace,
+            .space,
+            .zoom,
+            .toggleReadableColumn,
+            .toggleLighting,
+            .toggleFind,
+            .toggleMode,
+            .settings
+        ]
     }
 
     func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
@@ -359,10 +380,18 @@ extension DocumentWindowController: NSToolbarDelegate {
             return item
 
         case .toggleMode:
-            let button = makeToolbarButton(symbolName: "arrow.uturn.up.circle.fill", action: #selector(toggleMode(_:)))
+            let button = makeToolbarButton(symbolName: "arrow.uturn.up.circle", action: #selector(toggleMode(_:)))
             modeButton = button
             item.view = button
             item.label = "Mode"
+            return item
+
+        case .toggleFind:
+            let button = makeToolbarButton(symbolName: "magnifyingglass.circle", action: #selector(performFindAction(_:)))
+            findButton = button
+            updateFindButton(state.find.isVisible)
+            item.view = button
+            item.label = "Find"
             return item
 
         case .toggleReadableColumn:
@@ -372,22 +401,6 @@ extension DocumentWindowController: NSToolbarDelegate {
             item.view = button
             item.label = "Column"
             return item
-
-        // case .toggleLineNumbers:
-        //     let button = makeToolbarButton(symbolName: "list.number", action: #selector(toggleLineNumbers(_:)), toggle: true)
-        //     lineNumbersButton = button
-        //     updateToggleButton(button, on: AppState.shared.viewToggles.contains(.lineNumbers))
-        //     item.view = button
-        //     item.label = "Numbers"
-        //     return item
-
-        // case .toggleWordWrap:
-        //     let button = makeToolbarButton(symbolName: "text.word.spacing", action: #selector(toggleWordWrap(_:)), toggle: true)
-        //     wordWrapButton = button
-        //     updateToggleButton(button, on: AppState.shared.viewToggles.contains(.wordWrap))
-        //     item.view = button
-        //     item.label = "Wrap"
-        //     return item
 
         case .zoom:
             let control = NSSegmentedControl()
@@ -420,11 +433,10 @@ extension DocumentWindowController: NSToolbarDelegate {
 }
 
 extension NSToolbarItem.Identifier {
-    static let toggleLighting = NSToolbarItem.Identifier("toggleLighting")
-    static let toggleMode = NSToolbarItem.Identifier("toggleMode")
-    static let toggleReadableColumn = NSToolbarItem.Identifier("toggleReadableColumn")
-    static let toggleLineNumbers = NSToolbarItem.Identifier("toggleLineNumbers")
-    static let toggleWordWrap = NSToolbarItem.Identifier("toggleWordWrap")
     static let zoom = NSToolbarItem.Identifier("zoom")
     static let settings = NSToolbarItem.Identifier("settings")
+    static let toggleReadableColumn = NSToolbarItem.Identifier("toggleReadableColumn")
+    static let toggleLighting = NSToolbarItem.Identifier("toggleLighting")
+    static let toggleMode = NSToolbarItem.Identifier("toggleMode")
+    static let toggleFind = NSToolbarItem.Identifier("find")
 }
