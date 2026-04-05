@@ -50,7 +50,7 @@ class AppState: ObservableObject {
         let paneRaw = defaults.string(forKey: Self.sidebarPaneKey) ?? ""
         self.sidebarPane = SidebarPane(rawValue: paneRaw) ?? .outline
         self.trackChangesEnabled = defaults.object(forKey: Self.trackChangesEnabledKey) as? Bool ?? true
-        self.inlineDeletions = defaults.object(forKey: Self.inlineDeletionsKey) as? Bool ?? true
+        self.inlineDeletions = defaults.object(forKey: Self.inlineDeletionsKey) as? Bool ?? false
         self.quitOnClose = defaults.object(forKey: Self.quitOnCloseKey) as? Bool ?? true
         self.allowRemoteContent = defaults.object(forKey: Self.allowRemoteContentKey) as? Bool ?? true
         let allExtensions = Set(RenderExtension.registry.keys)

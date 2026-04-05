@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DebuggingSettingsView: View {
+    @ObservedObject private var appState = AppState.shared
     @State private var showingConfirmation = false
     @State private var didReset = false
 
@@ -11,6 +12,19 @@ struct DebuggingSettingsView: View {
                     Image(systemName: "circle.fill")
                         .foregroundStyle(isSandboxed ? .green : .red)
                         .font(.system(size: 8))
+                }
+            }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { appState.inlineDeletions },
+                    set: { newValue in
+                        appState.inlineDeletions = newValue
+                        appState.saveInlineDeletions()
+                    }
+                )) {
+                    Text("Inline deletions")
+                    Text("Show replaced words with strikethrough alongside new words in changed blocks.")
                 }
             }
 

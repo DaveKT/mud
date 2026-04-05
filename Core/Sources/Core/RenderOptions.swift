@@ -23,7 +23,7 @@ public struct RenderOptions: Sendable, Equatable {
 
     // Change tracking
     public var waypoint: ParsedMarkdown?
-    public var showInlineDeletions: Bool = true
+    public var showInlineDeletions: Bool = false
     public var wordDiffThreshold: Double = 0.25
 
     public init() {}

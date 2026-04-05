@@ -34,29 +34,6 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle(isOn: Binding(
-                    get: { appState.trackChangesEnabled },
-                    set: { newValue in
-                        appState.trackChangesEnabled = newValue
-                        appState.saveTrackChangesEnabled()
-                    }
-                )) {
-                    Text("Show changes to documents")
-                    Text("Highlight insertions, deletions, and modifications since the document was opened.")
-                }
-                Toggle(isOn: Binding(
-                    get: { appState.inlineDeletions },
-                    set: { newValue in
-                        appState.inlineDeletions = newValue
-                        appState.saveInlineDeletions()
-                    }
-                )) {
-                    Text("Inline deletions")
-                    Text("Show replaced words with strikethrough alongside new words in changed blocks.")
-                }
-            }
-
-            Section {
                 Toggle("Quit when last window closes", isOn: Binding(
                     get: { appState.quitOnClose },
                     set: { newValue in

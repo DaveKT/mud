@@ -36,7 +36,7 @@ struct UpHTMLVisitor: MarkupWalker {
 
     /// When false, non-consuming `<del>` spans in paired insertion
     /// blocks are silently skipped instead of emitted inline.
-    var showInlineDeletions = true
+    var showInlineDeletions = false
 
     /// Change IDs already emitted by peek-ahead in `visitListItem`,
     /// preventing double emission in `emitPrecedingDeletions`.
