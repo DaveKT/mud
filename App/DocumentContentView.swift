@@ -44,7 +44,7 @@ struct DocumentContentView: View {
         opts.zoomLevel = modeZoomLevel
         opts.showInlineDeletions = appState.inlineDeletions
         opts.wordDiffThreshold = appState.wordDiffThreshold
-        if appState.trackChangesEnabled && !changeTracker.isPaused && !changeTracker.changes.isEmpty {
+        if appState.trackChangesEnabled && !changeTracker.changes.isEmpty {
             opts.waypoint = changeTracker.activeWaypoint
         }
         return opts

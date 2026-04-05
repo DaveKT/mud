@@ -9,8 +9,6 @@ struct ChangesSidebarView: View {
     var body: some View {
         if !appState.trackChangesEnabled {
             disabledState
-        } else if changeTracker.isPaused {
-            pausedState
         } else if changeTracker.changes.isEmpty {
             emptyState
         } else {
@@ -55,42 +53,38 @@ struct ChangesSidebarView: View {
         }
     }
 
-    // MARK: - Empty state (0 changes, not paused)
+    // MARK: - Empty state
 
     private var emptyState: some View {
         VStack {
-            Spacer()
-            Text("No changes")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-    }
-
-    // MARK: - Disabled state (global toggle off)
-
-    private var disabledState: some View {
-        VStack {
             ContentUnavailableView(
-                "Changes Hidden",
-                systemImage: "eye.slash",
-                description: Text("Enable in\nMud > Settings > General.")
+                "No Changes",
+                systemImage: "checkmark.circle",
+                description: Text("Changes will appear when the file is modified.")
             )
             Spacer()
         }
         .padding(.top, 16)
     }
 
-    // MARK: - Paused state (per-document)
+    // MARK: - Disabled state (global toggle off)
 
-    private var pausedState: some View {
+    private var disabledState: some View {
         VStack {
-            Spacer()
-            Text("Track Changes is paused")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            ContentUnavailableView {
+                Label("Changes Hidden", systemImage: "eye.slash")
+            } description: {
+                HStack(spacing: 0) {
+                    Button("Show changes") {
+                        appState.trackChangesEnabled = true
+                    }
+                    .buttonStyle(.link)
+                    Text(" in document.")
+                }
+            }
             Spacer()
         }
+        .padding(.top, 16)
     }
 
 }

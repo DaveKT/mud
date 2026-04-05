@@ -154,18 +154,6 @@ class DocumentWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
-        state.find.$isVisible
-            .sink { [weak self] visible in
-                self?.updateFindButton(visible)
-            }
-            .store(in: &cancellables)
-
-        state.changeTracker.$isBarVisible
-            .sink { [weak self] visible in
-                self?.updateChangesButton(visible)
-            }
-            .store(in: &cancellables)
-
         // Track sidebar collapse state for persistence
         if let sidebarItem = splitVC?.splitViewItems.first {
             sidebarItem.publisher(for: \.isCollapsed)
@@ -300,11 +288,7 @@ class DocumentWindowController: NSWindowController {
     }
 
     @objc func toggleChangesBar(_ sender: Any?) {
-        if state.changeTracker.isBarVisible {
-            state.changeTracker.hideBar()
-        } else {
-            state.changeTracker.showBar()
-        }
+        AppState.shared.trackChangesEnabled.toggle()
     }
 
     @objc func findNext(_ sender: Any?) {
@@ -411,7 +395,6 @@ extension DocumentWindowController: NSToolbarDelegate {
         case .toggleChanges:
             let button = makeToolbarButton(symbolName: "document.badge.clock", action: #selector(toggleChangesBar(_:)))
             changesButton = button
-            updateChangesButton(state.changeTracker.isBarVisible)
             item.view = button
             item.label = "Changes"
             return item
@@ -419,7 +402,6 @@ extension DocumentWindowController: NSToolbarDelegate {
         case .toggleFind:
             let button = makeToolbarButton(symbolName: "magnifyingglass.circle", action: #selector(performFindAction(_:)))
             findButton = button
-            updateFindButton(state.find.isVisible)
             item.view = button
             item.label = "Find"
             return item

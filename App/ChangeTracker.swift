@@ -16,9 +16,6 @@ class ChangeTracker: ObservableObject {
     @Published private(set) var waypoints: [Waypoint] = []
     @Published private(set) var changes: [DocumentChange] = []
     @Published var selectedChangeID: String?
-    @Published var isPaused: Bool = false
-    @Published var isBarVisible: Bool = false
-
     /// The most recent content passed to `update(_:)`.
     private(set) var currentParsed: ParsedMarkdown?
 
@@ -37,7 +34,6 @@ class ChangeTracker: ObservableObject {
     /// active waypoint and updates the change list.
     func update(_ parsed: ParsedMarkdown) {
         currentParsed = parsed
-        guard !isPaused else { return }
         if waypoints.isEmpty {
             waypoints.append(Waypoint(parsed: parsed, timestamp: Date()))
         } else if let old = activeWaypoint {
@@ -54,15 +50,4 @@ class ChangeTracker: ObservableObject {
         selectedChangeID = nil
     }
 
-    func showBar() {
-        deferMutation { [self] in
-            isBarVisible = true
-        }
-    }
-
-    func hideBar() {
-        deferMutation { [self] in
-            isBarVisible = false
-        }
-    }
 }

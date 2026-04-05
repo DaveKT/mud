@@ -240,7 +240,7 @@ struct FloatingBarsOverlay: ViewModifier {
     var onSelectChange: ([String]) -> Void
 
     private var changesBarVisible: Bool {
-        changeTracker.isBarVisible && appState.trackChangesEnabled
+        appState.trackChangesEnabled
     }
 
     func body(content: Content) -> some View {

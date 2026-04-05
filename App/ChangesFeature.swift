@@ -36,11 +36,7 @@ struct ChangesBar: View {
     }
 
     var body: some View {
-        if changeTracker.isPaused {
-            pausedBody
-        } else {
-            activeBody
-        }
+        activeBody
     }
 
     private var activeBody: some View {
@@ -81,41 +77,19 @@ struct ChangesBar: View {
                     .controlSize(.extraLarge)
             }
 
-            Button("Accept Changes", systemImage: "checkmark", action: changeTracker.accept)
-                .labelStyle(.iconOnly)
-                .buttonBorderShape(.circle)
-                .controlSize(.extraLarge)
-                .disabled(!hasChanges)
-                .modify { button in
-                    if hasChanges && controlActiveState == .key {
-                        button.buttonStyle(.borderedProminent)
-                    } else {
-                        button.buttonStyle(.bordered)
+            if hasChanges {
+                Button("Accept Changes", systemImage: "checkmark", action: changeTracker.accept)
+                    .labelStyle(.iconOnly)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.extraLarge)
+                    .modify { button in
+                        if controlActiveState == .key {
+                            button.buttonStyle(.borderedProminent)
+                        } else {
+                            button.buttonStyle(.bordered)
+                        }
                     }
-                }
-        }
-        .padding(8)
-        .containerShape(Capsule())
-        .frame(maxWidth: 360)
-        .animation(.easeInOut(duration: 0.15), value: groups.count)
-    }
-
-    private var pausedBody: some View {
-        HStack(spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "pause.circle.fill")
-                    .foregroundStyle(.secondary)
-                Text("Paused")
-                    .font(.title3)
             }
-            .padding(6)
-            .background(.primary.opacity(0.1), in: ContainerRelativeShape())
-
-            Button("Resume") {
-                changeTracker.isPaused = false
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
         }
         .padding(8)
         .containerShape(Capsule())
