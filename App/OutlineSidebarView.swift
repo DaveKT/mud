@@ -20,7 +20,7 @@ struct OutlineSidebarView: View {
                 VStack {
                     ContentUnavailableView(
                         "No Headings",
-                        systemImage: "list.bullet.circle",
+                        systemImage: "text.document",
                         description: Text("This document has no headings.")
                     )
                     Spacer()

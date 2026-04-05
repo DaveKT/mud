@@ -59,7 +59,7 @@ struct ChangesSidebarView: View {
         VStack {
             ContentUnavailableView(
                 "No Changes",
-                systemImage: "checkmark.circle",
+                systemImage: "document.badge.clock",
                 description: Text("Changes will appear when the file is modified.")
             )
             Spacer()

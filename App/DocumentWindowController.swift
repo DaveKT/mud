@@ -383,14 +383,14 @@ extension DocumentWindowController: NSToolbarDelegate {
             return item
 
         case .toggleChanges:
-            let button = makeToolbarButton(symbolName: "checkmark.circle", action: #selector(toggleChangesBar(_:)))
+            let button = makeToolbarButton(symbolName: "document.badge.clock", action: #selector(toggleChangesBar(_:)))
             changesButton = button
             item.view = button
             item.label = "Changes"
             return item
 
         case .toggleFind:
-            let button = makeToolbarButton(symbolName: "magnifyingglass.circle", action: #selector(performFindAction(_:)))
+            let button = makeToolbarButton(symbolName: "text.page.badge.magnifyingglass", action: #selector(performFindAction(_:)))
             findButton = button
             item.view = button
             item.label = "Find"
