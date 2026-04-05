@@ -174,16 +174,6 @@ class DocumentWindowController: NSWindowController {
         lightingButton?.image = NSImage(systemSymbolName: lighting.isDark() ? "moon" : "sun.max", accessibilityDescription: nil)
     }
 
-    private func updateFindButton(_ visible: Bool) {
-        let symbol = visible ? "magnifyingglass.circle.fill" : "magnifyingglass.circle"
-        findButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-    }
-
-    private func updateChangesButton(_ visible: Bool) {
-        let symbol = visible ? "document.badge.clock.fill" : "document.badge.clock"
-        changesButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-    }
-
     private func updateModeButton(_ mode: Mode) {
         let symbol = mode == .down ? "arrow.uturn.down.circle.fill" : "arrow.uturn.up.circle"
         modeButton?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
@@ -351,8 +341,8 @@ extension DocumentWindowController: NSToolbarDelegate {
             .toggleSidebar,
             .sidebarTrackingSeparator,
             .flexibleSpace,
-            .toggleChanges,
             .toggleFind,
+            .toggleChanges,
             .space,
             .toggleMode
         ]
@@ -367,8 +357,8 @@ extension DocumentWindowController: NSToolbarDelegate {
             .zoom,
             .toggleReadableColumn,
             .toggleLighting,
-            .toggleChanges,
             .toggleFind,
+            .toggleChanges,
             .toggleMode,
             .settings
         ]
@@ -393,7 +383,7 @@ extension DocumentWindowController: NSToolbarDelegate {
             return item
 
         case .toggleChanges:
-            let button = makeToolbarButton(symbolName: "document.badge.clock", action: #selector(toggleChangesBar(_:)))
+            let button = makeToolbarButton(symbolName: "checkmark.circle", action: #selector(toggleChangesBar(_:)))
             changesButton = button
             item.view = button
             item.label = "Changes"

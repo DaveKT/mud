@@ -50,7 +50,6 @@ struct ChangesBar: View {
                     }
                 } label: {
                     Text(statusText)
-                        .font(.title3)
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
@@ -93,6 +92,8 @@ struct ChangesBar: View {
         }
         .padding(8)
         .containerShape(Capsule())
+        .frame(maxWidth: 320)
+        .animation(.easeInOut(duration: 0.15), value: groups.count)
     }
 
     // MARK: - Navigation

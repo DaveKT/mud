@@ -214,7 +214,7 @@ struct FindBar: View {
                 }
         }
         .padding(8)
-        .frame(maxWidth: 360)
+        .frame(maxWidth: 320)
         .containerShape(Capsule())
         .animation(.easeInOut(duration: 0.15), value: state.searchText.isEmpty)
         .onChange(of: state.searchID) {
@@ -245,7 +245,7 @@ struct FloatingBarsOverlay: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .bottomTrailing) {
                 floatingBars
                     .padding(12)
             }
@@ -268,6 +268,11 @@ struct FloatingBarsOverlay: ViewModifier {
     @ViewBuilder
     private func floatingBarStack(showFind: Bool, showChanges: Bool) -> some View {
         VStack(spacing: 10) {
+            if showFind {
+                FindBar(state: findState, isFocused: $isFindFocused)
+                    .floatingBarGlass()
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
             if showChanges {
                 ChangesBar(
                     changeTracker: changeTracker,
@@ -275,11 +280,6 @@ struct FloatingBarsOverlay: ViewModifier {
                 )
                 .floatingBarGlass()
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-            if showFind {
-                FindBar(state: findState, isFocused: $isFindFocused)
-                    .floatingBarGlass()
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
     }
