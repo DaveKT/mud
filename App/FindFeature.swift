@@ -162,10 +162,10 @@ struct FindBar: View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "text.page.badge.magnifyingglass")
+                    .foregroundStyle(.secondary)
 
                 TextField("Find…", text: $state.searchText)
                     .textFieldStyle(.plain)
-                    .font(.title3)
                     .focused(isFocused)
                     .onSubmit { state.performFind() }
                     .onKeyPress(.escape) {
@@ -187,7 +187,7 @@ struct FindBar: View {
                 }
             }
             .padding(6)
-            .background(.primary.opacity(0.1), in: ContainerRelativeShape())
+            .background(.primary.opacity(1/6), in: ContainerRelativeShape())
 
             let hasMatches = state.matchInfo.map { $0.total > 0 } ?? false
 

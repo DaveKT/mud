@@ -64,7 +64,7 @@ struct ChangesBar: View {
             }
             .padding(6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.primary.opacity(0.1), in: ContainerRelativeShape())
+            .background(.primary.opacity(1/6), in: ContainerRelativeShape())
 
             if groups.count >= 2 {
                 Button("Previous Change", systemImage: "chevron.left", action: previousGroup)
@@ -148,7 +148,7 @@ struct ChangesBar: View {
 
     private var badgeColor: Color {
         if groups.isEmpty {
-            return .secondary.opacity(0.5)
+            return .secondary.opacity(1/3)
         }
         let hasInsertions = changeTracker.changes.contains {
             $0.type == .insertion
