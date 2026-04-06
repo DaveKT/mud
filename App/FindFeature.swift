@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import MudCore
 
 // MARK: - Search Types
 
@@ -268,11 +269,6 @@ struct FloatingBarsOverlay: ViewModifier {
     @ViewBuilder
     private func floatingBarStack(showFind: Bool, showChanges: Bool) -> some View {
         VStack(spacing: 10) {
-            if showFind {
-                FindBar(state: findState, isFocused: $isFindFocused)
-                    .floatingBarGlass()
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
             if showChanges {
                 ChangesBar(
                     changeTracker: changeTracker,
@@ -280,6 +276,11 @@ struct FloatingBarsOverlay: ViewModifier {
                 )
                 .floatingBarGlass()
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+            if showFind {
+                FindBar(state: findState, isFocused: $isFindFocused)
+                    .floatingBarGlass()
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
     }

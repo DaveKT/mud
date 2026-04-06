@@ -24,6 +24,8 @@ struct ChangesBar: View {
     @Environment(\.controlActiveState) private var controlActiveState
     var onSelectChange: ([String]) -> Void
 
+    @State private var showMenu = false
+
     private var groups: [ChangeGroup] {
         ChangeGroup.build(from: changeTracker.changes)
     }
@@ -36,35 +38,33 @@ struct ChangesBar: View {
     }
 
     var body: some View {
-        activeBody
-    }
-
-    private var activeBody: some View {
         HStack(spacing: 8) {
             let hasChanges = !groups.isEmpty
 
-            HStack(spacing: 2) {
-                ChangesBadge(count: groups.count, color: badgeColor)
-
-                Menu {
-                    if let time = formattedTimestamp {
-                        Text("Since \(time)")
-                    }
-                } label: {
+            Button { showMenu.toggle() } label: {
+                HStack(spacing: 4) {
+                    ChangesBadge(count: groups.count, color: badgeColor)
                     Text(statusText)
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-
-                if !hasChanges {
+                        .fixedSize()
                     Spacer()
-                    Image(systemName: "document.badge.clock")
-                        .foregroundStyle(.secondary)
+
+                    if !hasChanges {
+                        Image(systemName: "document.badge.clock")
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .padding(6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.primary.opacity(1/6), in: ContainerRelativeShape())
+                .contentShape(ContainerRelativeShape())
             }
-            .padding(6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.primary.opacity(1/6), in: ContainerRelativeShape())
+            .buttonStyle(.plain)
+            .popover(isPresented: $showMenu) {
+                ChangesSincePopover(
+                    changeTracker: changeTracker,
+                    changeColors: changeColors,
+                    isPresented: $showMenu)
+            }
 
             if groups.count >= 2 {
                 Button("Previous Change", systemImage: "chevron.left", action: previousGroup)
@@ -133,7 +133,8 @@ struct ChangesBar: View {
 
     private var statusText: String {
         let noun = groups.count == 1 ? "change" : "changes"
-        if let time = formattedTimestamp {
+        if let time = changeTracker.activeWaypointTimestamp
+            .map(\.shortTimestamp) {
             return "\(noun) since \(time)"
         }
         return "\(noun)"
@@ -165,24 +166,120 @@ struct ChangesBar: View {
         }
         return Color(cssHex: colors["change-ins"])
     }
-
-    private var formattedTimestamp: String? {
-        guard let date = changeTracker.activeWaypointTimestamp else {
-            return nil
-        }
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "h:mma"
-            return formatter.string(from: date).lowercased()
-        } else if calendar.isDateInYesterday(date) {
-            return "yesterday"
-        } else {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            formatter.timeStyle = .short
-            return formatter.string(from: date)
-        }
-    }
 }
 
+// MARK: - Changes Since Popover
+
+private struct ChangesSincePopover: View {
+    @ObservedObject var changeTracker: ChangeTracker
+    let changeColors: [String: String]
+    @Binding var isPresented: Bool
+
+    private var items: [ChangeMenuItem] {
+        changeTracker.menuItems()
+    }
+
+    /// Primary item (first): "since last accepted" or "since document opened".
+    private var primaryItem: ChangeMenuItem? {
+        items.first
+    }
+
+    /// Time-bucketed reload waypoints (middle section).
+    private var timeBucketItems: [ChangeMenuItem] {
+        items.dropFirst().filter { $0.label != "since document opened" }
+    }
+
+    /// "Since document opened" at the bottom, when distinct from primary.
+    private var documentOpenedItem: ChangeMenuItem? {
+        guard items.count >= 2 else { return nil }
+        let last = items.last!
+        return last.label == "since document opened" ? last : nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let item = primaryItem {
+                menuItemRow(item)
+            }
+
+            if !timeBucketItems.isEmpty {
+                Divider()
+                    .padding(.vertical, 4)
+                ForEach(Array(timeBucketItems.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        Spacer()
+                            .frame(height: 4)
+                    }
+                    menuItemRow(item)
+                }
+            }
+
+            if let item = documentOpenedItem {
+                Divider()
+                    .padding(.vertical, 4)
+                menuItemRow(item)
+            }
+        }
+        .padding(12)
+        .frame(width: 300)
+    }
+
+    // MARK: - Menu item row
+
+    @ViewBuilder
+    private func menuItemRow(_ item: ChangeMenuItem) -> some View {
+        if item.isActive {
+            menuItemContent(item)
+        } else {
+            Button {
+                changeTracker.selectBaseline(item.id)
+                isPresented = false
+            } label: {
+                menuItemContent(item)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func menuItemContent(_ item: ChangeMenuItem) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            ChangesBadge(
+                count: item.changeCount,
+                color: badgeColor(for: item))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.label)
+                    .font(.callout)
+                Text("… at \(item.timestamp.shortTimestamp)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 3)
+
+            Spacer()
+
+            if item.isActive {
+                Image(systemName: "checkmark")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 5)
+            }
+        }
+        .contentShape(Rectangle())
+        .padding(.vertical, 4)
+        .padding(.horizontal, 4)
+    }
+
+    private func badgeColor(for item: ChangeMenuItem) -> Color {
+        if item.changeCount == 0 {
+            return .secondary.opacity(1/3)
+        }
+        if item.hasInsertions && item.hasDeletions {
+            return Color(cssHex: changeColors["change-mix"])
+        }
+        if item.hasDeletions {
+            return Color(cssHex: changeColors["change-del"])
+        }
+        return Color(cssHex: changeColors["change-ins"])
+    }
+}
