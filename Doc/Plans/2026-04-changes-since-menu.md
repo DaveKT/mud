@@ -1,7 +1,7 @@
 Plan: Changes Since Menu
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
 
 
 ## Goal
@@ -116,15 +116,21 @@ scattered throughout:
 
 ## Implementation
 
-### Step 0: Move ChangeTracker to Core
+### Step 0: Move ChangeTracker and ChangeGroup to Core
 
 Move `App/ChangeTracker.swift` into `Core/Sources/Core/`. It depends only on
 `ParsedMarkdown` and `MudCore.computeChanges` (both Core) plus `Combine`
 (`ObservableObject`, `@Published`), which is available on all Apple platforms.
 No AppKit or SwiftUI dependencies.
 
-In the App layer, `DocumentContentView` continues to instantiate and observe
-`ChangeTracker` as before — the only change is the import.
+Move `ChangeGroup` and `ChangeGroup.build` from `App/ChangesSidebarView.swift`
+into `Core/Sources/Core/Diff/ChangeGroup.swift`. The struct and its `build`
+method are pure logic over `DocumentChange` and `ChangeType` (both Core). The
+SwiftUI view (`ChangeGroupRow`) stays in App. This lets `ChangeTracker` use
+`ChangeGroup.build` directly for menu item change counts.
+
+In the App layer, `DocumentContentView`, `ChangesBar`, and `ChangesSidebarView`
+continue to use these types as before — the only change is the import path.
 
 
 ### Step 1: Expand waypoint storage in ChangeTracker
@@ -195,10 +201,10 @@ func menuItems() -> [ChangeMenuItem] {
 Both `update(_:)` and `accept()` set `cachedMenuItems = nil`.
 
 
-### Step 4: Menu UI
+### Step 4: Xcode integration and menu UI
 
-Replace the stub `Menu` in `ChangesBar` with the real picker. Each item is a
-`Button` that sets `changeTracker.activeBaselineID`. The active item gets a
+Replace the stub `Menu` in `ChangesBar` with the real picker. Each item is
+a `Button` that sets `changeTracker.activeBaselineID`. The active item gets a
 checkmark.
 
 Layout per item:
