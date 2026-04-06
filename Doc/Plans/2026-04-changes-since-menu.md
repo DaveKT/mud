@@ -137,9 +137,10 @@ continue to use these types as before — the only change is the import path.
 
 - Add `Kind` enum to `Waypoint` (`.initial`, `.reload`, `.accept`).
 - In `update(_:)`, append a waypoint (`.initial` on first call, `.reload` on
-  subsequent calls) — but if the most recent `.reload` waypoint is less than 60
-  seconds old, replace it instead of appending. This prevents rapid saves from
-  flooding the waypoint list while always keeping the latest content.
+  subsequent calls) — but skip if the most recent `.reload` waypoint is less
+  than 60 seconds old. The existing waypoint keeps its original content and
+  timestamp, aging naturally into time buckets. (Replacing instead of skipping
+  would cause the reload to slide forward indefinitely with frequent saves.)
 - Prune `.reload` waypoints older than 15 minutes (they're beyond the last time
   bucket and no longer useful).
 - Never drop the `.initial` waypoint. Never drop the `.accept` waypoint — but
@@ -203,8 +204,8 @@ Both `update(_:)` and `accept()` set `cachedMenuItems = nil`.
 
 ### Step 4: Xcode integration and menu UI
 
-Replace the stub `Menu` in `ChangesBar` with the real picker. Each item is
-a `Button` that sets `changeTracker.activeBaselineID`. The active item gets a
+Replace the stub `Menu` in `ChangesBar` with the real picker. Each item is a
+`Button` that sets `changeTracker.activeBaselineID`. The active item gets a
 checkmark.
 
 Layout per item:

@@ -74,6 +74,11 @@ MVP plan.
 
 - `FindFeature.swift` — Search state and UI
 
+- `ChangesFeature.swift` — Floating Changes bar and overlay
+
+- `FloatingControlsPosition.swift` — Top right / bottom right / bottom center
+  enum for floating bar placement
+
 - `FileWatcher.swift` — DispatchSource file monitoring
 
 - `CommandLineInstaller.swift` — CLI symlink creation with elevation support
@@ -163,6 +168,10 @@ MVP plan.
 - `Diff/WordPairing.swift` — Best-match pairing of deleted/inserted lines by
   word overlap (greedy algorithm)
 - `Diff/ChangeList.swift` — Sidebar change list computed from `DiffContext`
+- `Diff/ChangeGroup.swift` — Group consecutive changes by `groupID` for
+  navigation and counts
+- `ChangeTracker.swift` — Waypoint history, active baseline selection, menu
+  item computation with caching
 
 **Resources:**
 
