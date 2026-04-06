@@ -4,7 +4,7 @@
 :root {
     --change-ins: #1a7f37;
     --change-del: #cf222e;
-    --change-mix: #0969da;
+    --change-mix: #e89530;
     --change-ins-ln: #aceebb;
     --change-del-ln: #ffcecb;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 10%, white);
@@ -16,7 +16,7 @@
 :root {
     --change-ins: #3fb950;
     --change-del: #f85149;
-    --change-mix: #58a6ff;
+    --change-mix: #d29922;
     --change-ins-ln: #12572f;
     --change-del-ln: #490400;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 10%, black);
