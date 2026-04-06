@@ -55,6 +55,7 @@
 		7CC975892F341A75001C3BB7 /* Lighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975872F341A75001C3BB7 /* Lighting.swift */; };
 		7CD093082F587185003E4037 /* ErrorPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD093072F587185003E4037 /* ErrorPage.swift */; };
 		7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */; };
+		7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -140,6 +141,7 @@
 		7CC975872F341A75001C3BB7 /* Lighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lighting.swift; sourceTree = "<group>"; };
 		7CD093072F587185003E4037 /* ErrorPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorPage.swift; sourceTree = "<group>"; };
 		7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightingPreviewCard.swift; sourceTree = "<group>"; };
+		7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -267,6 +269,7 @@
 				7C5A00032F4800020046E0CD /* CommandLineInstaller.swift */,
 				7CC6E6E42F6595F900FE7D66 /* CheckForUpdatesView.swift */,
 				7CD093072F587185003E4037 /* ErrorPage.swift */,
+				7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -518,6 +521,7 @@
 				7C3640C52F60FCF400364BEC /* MarkdownSettingsView.swift in Sources */,
 				7C3640B52F60DC2C00364BEC /* AppState.swift in Sources */,
 				7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */,
+				7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */,
 				7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */,
 				7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */,
 				7C134FC42F813A020020BF91 /* View+Modify.swift in Sources */,
