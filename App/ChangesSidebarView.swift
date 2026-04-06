@@ -60,7 +60,7 @@ struct ChangesSidebarView: View {
             ContentUnavailableView(
                 "No Changes",
                 systemImage: "document.badge.clock",
-                description: Text("Changes will appear when the file is modified.")
+                description: Text("Changes will appear when\nthe file is modified.")
             )
             Spacer()
         }

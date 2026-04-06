@@ -45,8 +45,7 @@ struct ChangesBar: View {
                 HStack(spacing: 4) {
                     ChangesBadge(count: groups.count, color: badgeColor)
                     Text(statusText)
-                        .fixedSize()
-                    Spacer()
+                    Spacer(minLength: 0)
 
                     if !hasChanges {
                         Image(systemName: "document.badge.clock")
@@ -54,7 +53,6 @@ struct ChangesBar: View {
                     }
                 }
                 .padding(6)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(.primary.opacity(1/6), in: ContainerRelativeShape())
                 .contentShape(ContainerRelativeShape())
             }
@@ -95,8 +93,8 @@ struct ChangesBar: View {
         }
         .padding(8)
         .containerShape(Capsule())
-        .frame(maxWidth: 320)
-        .animation(.easeInOut(duration: 0.15), value: groups.count)
+        .frame(minWidth: 320)
+        .fixedSize()
     }
 
     // MARK: - Navigation
@@ -149,7 +147,7 @@ struct ChangesBar: View {
 
     private var badgeColor: Color {
         if groups.isEmpty {
-            return .secondary.opacity(1/3)
+            return .gray
         }
         let hasInsertions = changeTracker.changes.contains {
             $0.type == .insertion
@@ -246,6 +244,7 @@ private struct ChangesSincePopover: View {
         }
         .padding(12)
         .frame(width: 300)
+        .background(.background)
     }
 
     // MARK: - Menu item row
@@ -275,13 +274,21 @@ private struct ChangesSincePopover: View {
                 Text(item.label)
                     .font(.callout)
                 if let detail = item.detail {
-                    Text("… \(detail)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text("… at \(item.timestamp.shortTimestamp)")
+                    HStack(spacing: 4) {
+                        Image(systemName: "bubble")
+                        Text(detail)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                    Text(item.timestamp.shortTimestamp)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .padding(.vertical, 3)
 
@@ -301,7 +308,7 @@ private struct ChangesSincePopover: View {
 
     private func badgeColor(for item: ChangeMenuItem) -> Color {
         if item.changeCount == 0 {
-            return .secondary.opacity(1/3)
+            return .gray
         }
         if item.hasInsertions && item.hasDeletions {
             return Color(cssHex: changeColors["change-mix"])

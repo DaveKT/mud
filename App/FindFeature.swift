@@ -256,6 +256,10 @@ struct FloatingBarsOverlay: ViewModifier {
         appState.floatingControlsPosition == .topRight
     }
 
+    private var isRight: Bool {
+        appState.floatingControlsPosition != .bottomCenter
+    }
+
     func body(content: Content) -> some View {
         content
             .overlay(alignment: overlayAlignment) {
@@ -281,7 +285,7 @@ struct FloatingBarsOverlay: ViewModifier {
 
     @ViewBuilder
     private func floatingBarStack(showFind: Bool, showChanges: Bool) -> some View {
-        VStack(spacing: 10) {
+        VStack(alignment: isRight ? .trailing : .center, spacing: 10) {
             if isTop {
                 findBarIfVisible(showFind)
                 changesBarIfVisible(showChanges)
