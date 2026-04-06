@@ -19,6 +19,8 @@ public struct ChangeMenuItem: Identifiable {
     public let timestamp: Date
     public let changeCount: Int
     public let isActive: Bool
+    public let hasInsertions: Bool
+    public let hasDeletions: Bool
 }
 
 // MARK: - Change Tracker
@@ -27,7 +29,7 @@ public class ChangeTracker: ObservableObject {
     @Published public private(set) var waypoints: [Waypoint] = []
     @Published public private(set) var changes: [DocumentChange] = []
     @Published public var selectedChangeID: String?
-    @Published public var activeBaselineID: UUID?
+    @Published public private(set) var activeBaselineID: UUID?
 
     /// The most recent content passed to `update(_:)`.
     public private(set) var currentParsed: ParsedMarkdown?
@@ -91,12 +93,15 @@ public class ChangeTracker: ObservableObject {
             waypoints.append(Waypoint(
                 parsed: parsed, timestamp: now, kind: .initial))
         } else {
-            // Coalesce: replace the last .reload if < 60s old.
-            if let lastIndex = waypoints.lastIndex(where: { $0.kind == .reload }),
-               now.timeIntervalSince(waypoints[lastIndex].timestamp) < Self.reloadCoalesceInterval {
-                waypoints[lastIndex] = Waypoint(
-                    parsed: parsed, timestamp: now, kind: .reload)
-            } else {
+            // Skip if content is identical to any existing waypoint.
+            let isDuplicate = waypoints.contains { $0.parsed == parsed }
+
+            // Throttle: skip if the most recent .reload is < 60s old.
+            let tooSoon = waypoints.last(where: { $0.kind == .reload })
+                .map { now.timeIntervalSince($0.timestamp) < Self.reloadCoalesceInterval }
+                ?? false
+
+            if !isDuplicate && !tooSoon {
                 waypoints.append(Waypoint(
                     parsed: parsed, timestamp: now, kind: .reload))
             }
@@ -112,6 +117,20 @@ public class ChangeTracker: ObservableObject {
                 changes = MudCore.computeChanges(old: baseline, new: parsed)
             }
         }
+    }
+
+    // MARK: - Select baseline
+
+    /// Selects a waypoint as the diff baseline and recomputes changes.
+    public func selectBaseline(_ id: UUID?) {
+        activeBaselineID = id
+        cachedMenuItems = nil
+        if let current = currentParsed, let baseline = activeBaseline {
+            changes = MudCore.computeChanges(old: baseline, new: current)
+        } else {
+            changes = []
+        }
+        selectedChangeID = nil
     }
 
     // MARK: - Accept
@@ -175,10 +194,13 @@ public class ChangeTracker: ObservableObject {
         if let wp = primaryWaypoint {
             let label = acceptWaypoint != nil
                 ? "since last accepted" : "since document opened"
-            let count = changeCount(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current)
             items.append(ChangeMenuItem(
                 id: wp.id, label: label, timestamp: wp.timestamp,
-                changeCount: count, isActive: isActiveBaseline(wp)))
+                changeCount: diff.groupCount,
+                isActive: isActiveBaseline(wp),
+                hasInsertions: diff.hasInsertions,
+                hasDeletions: diff.hasDeletions))
             usedWaypointIDs.insert(wp.id)
         }
 
@@ -199,32 +221,46 @@ public class ChangeTracker: ObservableObject {
             guard !usedWaypointIDs.contains(wp.id) else { continue }
 
             let label = "since \(minutes) minute\(minutes == 1 ? "" : "s") ago"
-            let count = changeCount(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current)
             items.append(ChangeMenuItem(
                 id: wp.id, label: label, timestamp: wp.timestamp,
-                changeCount: count, isActive: isActiveBaseline(wp)))
+                changeCount: diff.groupCount,
+                isActive: isActiveBaseline(wp),
+                hasInsertions: diff.hasInsertions,
+                hasDeletions: diff.hasDeletions))
             usedWaypointIDs.insert(wp.id)
         }
 
         // 3. "Since document opened" at the bottom (if distinct from primary)
         if acceptWaypoint != nil, let wp = initialWaypoint,
            wp.id != primaryWaypoint?.id {
-            let count = changeCount(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current)
             items.append(ChangeMenuItem(
                 id: wp.id, label: "since document opened",
-                timestamp: wp.timestamp, changeCount: count,
-                isActive: isActiveBaseline(wp)))
+                timestamp: wp.timestamp, changeCount: diff.groupCount,
+                isActive: isActiveBaseline(wp),
+                hasInsertions: diff.hasInsertions,
+                hasDeletions: diff.hasDeletions))
         }
 
         return items
     }
 
-    private func changeCount(
+    private struct DiffSummary {
+        let groupCount: Int
+        let hasInsertions: Bool
+        let hasDeletions: Bool
+    }
+
+    private func diffSummary(
         from old: ParsedMarkdown, to new: ParsedMarkdown
-    ) -> Int {
-        ChangeGroup.build(
-            from: MudCore.computeChanges(old: old, new: new)
-        ).count
+    ) -> DiffSummary {
+        let changes = MudCore.computeChanges(old: old, new: new)
+        let groups = ChangeGroup.build(from: changes)
+        return DiffSummary(
+            groupCount: groups.count,
+            hasInsertions: changes.contains { $0.type == .insertion },
+            hasDeletions: changes.contains { $0.type == .deletion })
     }
 
     private func isActiveBaseline(_ waypoint: Waypoint) -> Bool {

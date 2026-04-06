@@ -41,22 +41,44 @@ struct ChangeTrackerTests {
         #expect(t.waypoints[1].kind == .reload)
     }
 
-    @Test func reloadCoalescing() {
+    @Test func reloadThrottling() {
         let t0 = Date()
         let t = tracker(at: t0)
 
-        // Two updates within 60s — second replaces first.
+        // Two updates within 60s — second is skipped, first is kept.
         t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(30))
         #expect(t.waypoints.count == 2)
         let firstReloadID = t.waypoints[1].id
 
         t.update(ParsedMarkdown("V3.\n"), at: t0.addingTimeInterval(50))
         #expect(t.waypoints.count == 2)
-        #expect(t.waypoints[1].id != firstReloadID)
-        #expect(t.waypoints[1].kind == .reload)
+        // The original reload is preserved (not replaced).
+        #expect(t.waypoints[1].id == firstReloadID)
+        #expect(t.waypoints[1].parsed.markdown == "V2.\n")
     }
 
-    @Test func reloadNotCoalescedAfter60s() {
+    @Test func duplicateContentSkipped() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+
+        // Reload with different content — stored.
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+        #expect(t.waypoints.count == 2)
+
+        // Reload with same content as initial — skipped.
+        t.update(ParsedMarkdown("V1.\n"), at: t0.addingTimeInterval(180))
+        #expect(t.waypoints.count == 2)
+
+        // Reload with same content as the reload — skipped.
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(270))
+        #expect(t.waypoints.count == 2)
+
+        // Reload with new content — stored.
+        t.update(ParsedMarkdown("V3.\n"), at: t0.addingTimeInterval(360))
+        #expect(t.waypoints.count == 3)
+    }
+
+    @Test func reloadStoredAfter60s() {
         let t0 = Date()
         let t = tracker(at: t0)
 
@@ -168,7 +190,7 @@ struct ChangeTrackerTests {
 
         t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
         let reloadID = t.waypoints.first { $0.kind == .reload }!.id
-        t.activeBaselineID = reloadID
+        t.selectBaseline(reloadID)
 
         #expect(t.activeBaseline?.markdown == "V2.\n")
     }
@@ -179,7 +201,7 @@ struct ChangeTrackerTests {
 
         t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
         let reloadID = t.waypoints.first { $0.kind == .reload }!.id
-        t.activeBaselineID = reloadID
+        t.selectBaseline(reloadID)
 
         t.acceptAt(t0.addingTimeInterval(90))
         #expect(t.activeBaselineID == nil)
@@ -298,7 +320,7 @@ struct ChangeTrackerTests {
         let target = t.waypoints.first {
             $0.kind == .reload && $0.parsed.markdown == "V2.\n"
         }!
-        t.activeBaselineID = target.id
+        t.selectBaseline(target.id)
 
         let items = t.menuItems(at: now)
         let activeItems = items.filter(\.isActive)
