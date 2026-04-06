@@ -2,7 +2,7 @@
 
 .up-mode-output {
     margin: 0 auto;
-    padding: 2em;
+    padding: 2em 2em 6em; /* space for floating bars beneath */
     box-sizing: border-box;
     background: var(--bg-color);
     overflow-x: hidden;

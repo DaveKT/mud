@@ -244,14 +244,27 @@ struct FloatingBarsOverlay: ViewModifier {
         appState.trackChangesEnabled
     }
 
+    private var overlayAlignment: Alignment {
+        switch appState.floatingControlsPosition {
+        case .topRight: return .topTrailing
+        case .bottomRight: return .bottomTrailing
+        case .bottomCenter: return .bottom
+        }
+    }
+
+    private var isTop: Bool {
+        appState.floatingControlsPosition == .topRight
+    }
+
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .bottomTrailing) {
+            .overlay(alignment: overlayAlignment) {
                 floatingBars
                     .padding(12)
             }
             .animation(.easeOut(duration: 0.15), value: findState.isVisible)
             .animation(.easeOut(duration: 0.15), value: changesBarVisible)
+            .animation(.easeOut(duration: 0.15), value: appState.floatingControlsPosition)
             .onChange(of: findState.isVisible) { _, isVisible in
                 if isVisible { isFindFocused = true }
             }
@@ -269,19 +282,34 @@ struct FloatingBarsOverlay: ViewModifier {
     @ViewBuilder
     private func floatingBarStack(showFind: Bool, showChanges: Bool) -> some View {
         VStack(spacing: 10) {
-            if showChanges {
-                ChangesBar(
-                    changeTracker: changeTracker,
-                    onSelectChange: onSelectChange
-                )
+            if isTop {
+                findBarIfVisible(showFind)
+                changesBarIfVisible(showChanges)
+            } else {
+                changesBarIfVisible(showChanges)
+                findBarIfVisible(showFind)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func findBarIfVisible(_ visible: Bool) -> some View {
+        if visible {
+            FindBar(state: findState, isFocused: $isFindFocused)
                 .floatingBarGlass()
                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-            if showFind {
-                FindBar(state: findState, isFocused: $isFindFocused)
-                    .floatingBarGlass()
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
+        }
+    }
+
+    @ViewBuilder
+    private func changesBarIfVisible(_ visible: Bool) -> some View {
+        if visible {
+            ChangesBar(
+                changeTracker: changeTracker,
+                onSelectChange: onSelectChange
+            )
+            .floatingBarGlass()
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
         }
     }
 }

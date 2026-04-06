@@ -56,6 +56,7 @@
 		7CD093082F587185003E4037 /* ErrorPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD093072F587185003E4037 /* ErrorPage.swift */; };
 		7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */; };
 		7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */; };
+		7CE6B5AA2F83D28B006A9BCA /* FloatingControlsPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -142,6 +143,7 @@
 		7CD093072F587185003E4037 /* ErrorPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorPage.swift; sourceTree = "<group>"; };
 		7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightingPreviewCard.swift; sourceTree = "<group>"; };
 		7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
+		7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingControlsPosition.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -259,6 +261,7 @@
 				7CC975872F341A75001C3BB7 /* Lighting.swift */,
 				7C0A00012F3E0001001C3BB7 /* Theme.swift */,
 				7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */,
+				7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */,
 				7C8D102F2F34CF0400F359C8 /* FindFeature.swift */,
 				7C134FC12F813A010020BF91 /* ChangesFeature.swift */,
 				7C7A73212F67057900A4A7FB /* SidebarView.swift */,
@@ -514,6 +517,7 @@
 				7CA1197F2F3CC4D00098484A /* ViewToggle.swift in Sources */,
 				7C2665942F3D6216004C8D74 /* DocumentState.swift in Sources */,
 				7CC9753D2F340286001C3BB7 /* MudApp.swift in Sources */,
+				7CE6B5AA2F83D28B006A9BCA /* FloatingControlsPosition.swift in Sources */,
 				7C282ADF2F50063900611919 /* CommandLineSettingsView.swift in Sources */,
 				7C442A652F3457C20046E0CD /* DocumentController.swift in Sources */,
 				7CC48AFC2F79D3BE00DA8118 /* ReselectMonitor.swift in Sources */,

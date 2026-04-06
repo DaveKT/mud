@@ -21,6 +21,7 @@ class AppState: ObservableObject {
     @Published var useHeadingAsTitle: Bool
     var openSettingsAction: (() -> Void)?
     @Published var wordDiffThreshold: Double
+    @Published var floatingControlsPosition: FloatingControlsPosition
 
     private static let lightingKey = "Mud-Lighting"
     private static let themeKey = "Mud-Theme"
@@ -36,6 +37,7 @@ class AppState: ObservableObject {
     private static let doccAlertModeKey = "Mud-DoccAlertMode"
     private static let useHeadingAsTitleKey = "Mud-UseHeadingAsTitle"
     private static let wordDiffThresholdKey = "Mud-WordDiffThreshold"
+    private static let floatingControlsPositionKey = "Mud-FloatingControlsPosition"
 
     private init() {
         let raw = UserDefaults.standard.string(forKey: Self.lightingKey) ?? ""
@@ -63,6 +65,8 @@ class AppState: ObservableObject {
         self.doccAlertMode = DocCAlertMode(rawValue: doccRaw) ?? .extended
         self.useHeadingAsTitle = defaults.object(forKey: Self.useHeadingAsTitleKey) as? Bool ?? true
         self.wordDiffThreshold = defaults.object(forKey: Self.wordDiffThresholdKey) as? Double ?? 0.25
+        let posRaw = defaults.string(forKey: Self.floatingControlsPositionKey) ?? ""
+        self.floatingControlsPosition = FloatingControlsPosition(rawValue: posRaw) ?? .topRight
     }
 
     func saveLighting(_ lighting: Lighting) {
@@ -116,6 +120,10 @@ class AppState: ObservableObject {
 
     func saveWordDiffThreshold() {
         UserDefaults.standard.set(wordDiffThreshold, forKey: Self.wordDiffThresholdKey)
+    }
+
+    func saveFloatingControlsPosition() {
+        UserDefaults.standard.set(floatingControlsPosition.rawValue, forKey: Self.floatingControlsPositionKey)
     }
 
     func toggle(_ option: ViewToggle) {

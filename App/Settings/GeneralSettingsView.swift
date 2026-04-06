@@ -24,6 +24,23 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                Picker("Floating controls", selection: Binding(
+                    get: { appState.floatingControlsPosition },
+                    set: { newValue in
+                        appState.floatingControlsPosition = newValue
+                        appState.saveFloatingControlsPosition()
+                    }
+                )) {
+                    ForEach(FloatingControlsPosition.allCases, id: \.self) { position in
+                        Text(position.label).tag(position)
+                    }
+                }
+                Text("Window location where the Find bar and Changes bar appear.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle(isOn: Binding(
                     get: { appState.viewToggles.contains(.readableColumn) },
                     set: { _ in appState.toggle(.readableColumn) }

@@ -40,7 +40,7 @@
 
 .down-lines > .dl:last-child > *,
 .down-lines > .dc-scroll:last-child > .dl:last-child > * {
-  padding-bottom: 2rem;
+  padding-bottom: 6rem; /* Space for floating bars beneath */
 }
 
 /* Line numbers */
