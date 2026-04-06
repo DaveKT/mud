@@ -89,66 +89,6 @@ struct ChangesSidebarView: View {
 
 }
 
-// MARK: - Change group
-
-/// A group of consecutive changes with no unchanged block between them.
-struct ChangeGroup: Identifiable {
-    /// The first change's ID (used as the group's stable identity).
-    let id: String
-    /// All change IDs in this group.
-    let changeIDs: [String]
-    /// The primary change type in the group.
-    let type: ChangeType
-    /// True when the group contains both insertions and deletions.
-    let isMixed: Bool
-    /// 1-based group index, matching the overlay badge number.
-    let groupIndex: Int
-    /// Per-change summaries and types, for multi-line display.
-    let members: [MemberInfo]
-
-    /// Number of individual changes in this group.
-    var count: Int { members.count }
-
-    /// A single change within a group.
-    struct MemberInfo {
-        let type: ChangeType
-        let summary: String
-    }
-
-    static func build(from changes: [DocumentChange]) -> [ChangeGroup] {
-        // Group by the pre-computed groupID from DiffContext.
-        // Preserve document order (first occurrence of each groupID).
-        var order: [String] = []
-        var buckets: [String: [DocumentChange]] = [:]
-
-        for change in changes {
-            if buckets[change.groupID] == nil {
-                order.append(change.groupID)
-            }
-            buckets[change.groupID, default: []].append(change)
-        }
-
-        return order.compactMap { gid in
-            guard let members = buckets[gid], let first = members.first
-            else { return nil }
-            let hasIns = members.contains { $0.type == .insertion }
-            let hasDel = members.contains { $0.type == .deletion }
-            let isMixed = (hasIns && hasDel)
-                || members.contains(where: \.isMixed)
-            return ChangeGroup(
-                id: gid,
-                changeIDs: members.map(\.id),
-                type: hasIns ? .insertion : .deletion,
-                isMixed: isMixed,
-                groupIndex: first.groupIndex,
-                members: members.map {
-                    MemberInfo(type: $0.type, summary: $0.summary)
-                }
-            )
-        }
-    }
-}
-
 // MARK: - Change group row
 
 private struct ChangeGroupRow: View {
