@@ -435,6 +435,7 @@ struct UpModeChangeTrackingTests {
     let new = "The fox.\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = true
     let html = MudCore.renderUpToHTML(new, options: opts)
     let insBlock = extractBlock(html, class: "mud-change-ins")
     #expect(insBlock != nil)
@@ -482,6 +483,7 @@ struct UpModeChangeTrackingTests {
     let new = "Hello *italic* world.\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = true
     let html = MudCore.renderUpToHTML(new, options: opts)
     let insBlock = extractBlock(html, class: "mud-change-ins")
     #expect(insBlock != nil)
@@ -516,6 +518,7 @@ struct UpModeChangeTrackingTests {
     let new = "The *slow* fox.\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = true
     let html = MudCore.renderUpToHTML(new, options: opts)
     let insBlock = extractBlock(html, class: "mud-change-ins")
     #expect(insBlock != nil)
@@ -732,6 +735,7 @@ struct UpModeChangeTrackingTests {
     let new = "- The slow fox\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = true
     let html = MudCore.renderUpToHTML(new, options: opts)
     let insBlock = extractBlock(html, class: "mud-change-ins")
     #expect(insBlock != nil)
@@ -750,6 +754,7 @@ struct UpModeChangeTrackingTests {
     let new = "1. The slow fox\n"
     var opts = RenderOptions()
     opts.waypoint = ParsedMarkdown(old)
+    opts.showInlineDeletions = true
     let html = MudCore.renderUpToHTML(new, options: opts)
     let insBlock = extractBlock(html, class: "mud-change-ins")
     #expect(insBlock != nil)
