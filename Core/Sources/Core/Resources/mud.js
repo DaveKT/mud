@@ -339,7 +339,20 @@
       var prevRect = prev.getBoundingClientRect();
       top = (prevRect.bottom - containerRect.top) / zoom + scrollTop;
     } else {
-      top = 0;
+      // No previous visible sibling — find the next visible sibling instead
+      // and position at its top edge.
+      var next = els[els.length - 1].nextElementSibling;
+      while (next && next.offsetParent === null) {
+        next = next.nextElementSibling;
+      }
+      if (next) {
+        var nextRect = next.getBoundingClientRect();
+        top = (nextRect.top - containerRect.top) / zoom + scrollTop;
+      } else {
+        // No visible siblings at all — use the parent's top edge.
+        var parentRect = first.parentElement.getBoundingClientRect();
+        top = (parentRect.top - containerRect.top) / zoom + scrollTop;
+      }
     }
     overlay.style.display = "";
     overlay.style.top = top + "px";
