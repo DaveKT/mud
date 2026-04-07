@@ -65,7 +65,7 @@ because I can have Claude Code running in a terminal on the right half of my
 screen, and Mud displaying the plan on the left half of my screen. As Claude
 Code writes and rewrites the plan, it updates immediately in Mud.
 
-![Mud & Claude side-by-side](plan-workflows-side-by-side.png)
+![Mud & Claude side-by-side](plan-workflows-assets/side-by-side.png)
 
 
 ## Resources
