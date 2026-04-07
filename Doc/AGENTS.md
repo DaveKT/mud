@@ -79,6 +79,9 @@ MVP plan.
 - `FloatingControlsPosition.swift` — Top right / bottom right / bottom center
   enum for floating bar placement
 
+- `GitProvider.swift` — Git history queries for external waypoints
+  (`#if GIT_PROVIDER`)
+
 - `FileWatcher.swift` — DispatchSource file monitoring
 
 - `CommandLineInstaller.swift` — CLI symlink creation with elevation support
@@ -96,6 +99,17 @@ MVP plan.
 - `ViewToggle.swift` — readableColumn/lineNumbers/wordWrap toggles
 
 - `ErrorPage.swift` — Error-page HTML generator (renders Markdown via MudCore)
+
+- `ChangesSidebarView.swift` — Changes pane listing tracked changes
+
+- `SidebarView.swift` — Sidebar tab container (outline vs changes panes)
+
+- `ReselectMonitor.swift` — NSViewRepresentable that detects clicks on
+  already-selected List rows
+
+- `View+Modify.swift` — SwiftUI `modify(_:)` view modifier helper
+
+- `Date+Formatting.swift` — `shortTimestamp` formatting extension
 
 - `CheckForUpdatesView.swift` — SparkleController (static updater owner),
   CheckForUpdatesViewModel (KVO observer), and menu button (`#if SPARKLE`)
@@ -133,6 +147,13 @@ MVP plan.
 - `UpdateSettingsView.swift` — Updates pane: auto-update radio group, Check
   Now, release notes link (`#if SPARKLE`)
 
+- `SettingsWindowController.swift` — Settings window lifecycle (singleton
+  NSWindowController)
+
+- `CSSColors.swift` — CSS hex color parsing extension on `Color`
+
+- `LightingPreviewCard.swift` — Lighting selection preview card
+
 - `DebuggingSettingsView.swift` — Debugging pane (debug builds only; reset
   preferences)
 
@@ -152,6 +173,11 @@ MVP plan.
 - `Rendering/HeadingExtractor.swift` — Heading extraction for sidebar
 - `Rendering/CodeHighlighter.swift` — Syntax highlighting via highlight.js
 - `Rendering/EmojiShortcodes.swift` — `:shortcode:` → emoji replacement
+- `Rendering/AlertDetector.swift` — GFM alert and DocC aside detection and
+  rendering
+- `Rendering/HTMLEscaping.swift` — Shared HTML entity escaping utilities
+- `Rendering/HTMLLineSplitter.swift` — Splits HTML by line while preserving
+  `<span>` tag balance (for diff display)
 - `Rendering/ImageDataURI.swift` — Image encoding for browser export
 - `OutlineHeading.swift` — Heading model shared between Core and App
 - `Diff/BlockMatcher.swift` — Block-level diff: leaf block collection,
