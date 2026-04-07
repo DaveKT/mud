@@ -57,6 +57,7 @@
 		7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */; };
 		7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */; };
 		7CE6B5AA2F83D28B006A9BCA /* FloatingControlsPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */; };
+		7CE6B5B02F83E899006A9BCA /* GitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -144,6 +145,7 @@
 		7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightingPreviewCard.swift; sourceTree = "<group>"; };
 		7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
 		7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingControlsPosition.swift; sourceTree = "<group>"; };
+		7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -256,6 +258,7 @@
 				7C442A672F34BB7E0046E0CD /* DocumentWindowController.swift */,
 				7C442A662F34BB7E0046E0CD /* DocumentContentView.swift */,
 				7C1FD9802F44FAC200BB4076 /* LocalFileSchemeHandler.swift */,
+				7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */,
 				7CC975652F340904001C3BB7 /* WebView.swift */,
 				7CA119802F3CC50F0098484A /* Mode.swift */,
 				7CC975872F341A75001C3BB7 /* Lighting.swift */,
@@ -523,6 +526,7 @@
 				7CC48AFC2F79D3BE00DA8118 /* ReselectMonitor.swift in Sources */,
 				7C56C3F32F55166800F922B5 /* SettingsWindowController.swift in Sources */,
 				7C3640C52F60FCF400364BEC /* MarkdownSettingsView.swift in Sources */,
+				7CE6B5B02F83E899006A9BCA /* GitProvider.swift in Sources */,
 				7C3640B52F60DC2C00364BEC /* AppState.swift in Sources */,
 				7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */,
 				7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */,
@@ -683,7 +687,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SPARKLE $(inherited)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SPARKLE GIT_PROVIDER $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -802,7 +806,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SPARKLE $(inherited)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SPARKLE GIT_PROVIDER $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;

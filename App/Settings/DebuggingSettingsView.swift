@@ -26,6 +26,18 @@ struct DebuggingSettingsView: View {
                     Text("Inline deletions")
                     Text("Show replaced words with strikethrough alongside new words in changed blocks.")
                 }
+                #if GIT_PROVIDER
+                Toggle(isOn: Binding(
+                    get: { appState.showGitWaypoints },
+                    set: { newValue in
+                        appState.showGitWaypoints = newValue
+                        appState.saveShowGitWaypoints()
+                    }
+                )) {
+                    Text("Git waypoints")
+                    Text("Show comparisons against git history in the changes menu.")
+                }
+                #endif
                 Slider(
                     value: Binding(
                         get: { appState.wordDiffThreshold },

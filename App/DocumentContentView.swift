@@ -167,6 +167,17 @@ struct DocumentContentView: View {
         .onChange(of: state.openInBrowserID) { _, id in
             if id != nil { openInBrowser() }
         }
+        #if GIT_PROVIDER
+        .onChange(of: appState.showGitWaypoints) { _, enabled in
+            if enabled {
+                if case .parsed(let parsed) = content {
+                    refreshGitWaypoints(for: parsed.markdown)
+                }
+            } else {
+                changeTracker.setExternalWaypoints([])
+            }
+        }
+        #endif
     }
 
     private func setupFileWatcher() {
@@ -186,12 +197,33 @@ struct DocumentContentView: View {
             state.outlineHeadings = parsed.headings
             state.contentTitle = parsed.title
             changeTracker.update(parsed)
+            #if GIT_PROVIDER
+            refreshGitWaypoints(for: text)
+            #endif
         } catch let cocoaError as CocoaError where cocoaError.code == .fileReadNoSuchFile {
             content = .error(ErrorPage.fileNotFound(error: cocoaError))
         } catch {
             content = .error(ErrorPage.filePermissionDenied(path: fileURL.path, error: error))
         }
     }
+
+    #if GIT_PROVIDER
+    private func refreshGitWaypoints(for text: String) {
+        guard appState.showGitWaypoints,
+              !fileURL.isBundleResource else {
+            changeTracker.setExternalWaypoints([])
+            return
+        }
+        let url = fileURL
+        let tracker = changeTracker
+        Task {
+            let waypoints = await Task.detached {
+                GitProvider(fileURL: url).queryWaypoints(currentContent: text)
+            }.value
+            tracker.setExternalWaypoints(waypoints)
+        }
+    }
+    #endif
 
     private func openInBrowser() {
         guard case .parsed(let parsed) = content else { return }

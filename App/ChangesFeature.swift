@@ -184,16 +184,28 @@ private struct ChangesSincePopover: View {
         items.first
     }
 
+    /// Non-external items only (for sections 1–3).
+    private var nonExternalItems: [ChangeMenuItem] {
+        items.filter { !$0.isExternal }
+    }
+
     /// Time-bucketed reload waypoints (middle section).
     private var timeBucketItems: [ChangeMenuItem] {
-        items.dropFirst().filter { $0.label != "since document opened" }
+        nonExternalItems.dropFirst().filter {
+            $0.label != "since document opened"
+        }
     }
 
     /// "Since document opened" at the bottom, when distinct from primary.
     private var documentOpenedItem: ChangeMenuItem? {
-        guard items.count >= 2 else { return nil }
-        let last = items.last!
+        guard nonExternalItems.count >= 2 else { return nil }
+        let last = nonExternalItems.last!
         return last.label == "since document opened" ? last : nil
+    }
+
+    /// External waypoints (e.g. git history).
+    private var gitItems: [ChangeMenuItem] {
+        items.filter { $0.isExternal }
     }
 
     var body: some View {
@@ -218,6 +230,18 @@ private struct ChangesSincePopover: View {
                 Divider()
                     .padding(.vertical, 4)
                 menuItemRow(item)
+            }
+
+            if !gitItems.isEmpty {
+                Divider()
+                    .padding(.vertical, 4)
+                ForEach(Array(gitItems.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        Spacer()
+                            .frame(height: 4)
+                    }
+                    menuItemRow(item)
+                }
             }
         }
         .padding(12)
@@ -250,6 +274,11 @@ private struct ChangesSincePopover: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.label)
                     .font(.callout)
+                if let detail = item.detail {
+                    Text("… \(detail)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Text("… at \(item.timestamp.shortTimestamp)")
                     .font(.caption)
                     .foregroundStyle(.secondary)

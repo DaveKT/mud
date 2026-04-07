@@ -22,6 +22,7 @@ class AppState: ObservableObject {
     var openSettingsAction: (() -> Void)?
     @Published var wordDiffThreshold: Double
     @Published var floatingControlsPosition: FloatingControlsPosition
+    @Published var showGitWaypoints: Bool
 
     private static let lightingKey = "Mud-Lighting"
     private static let themeKey = "Mud-Theme"
@@ -38,6 +39,7 @@ class AppState: ObservableObject {
     private static let useHeadingAsTitleKey = "Mud-UseHeadingAsTitle"
     private static let wordDiffThresholdKey = "Mud-WordDiffThreshold"
     private static let floatingControlsPositionKey = "Mud-FloatingControlsPosition"
+    private static let showGitWaypointsKey = "Mud-ShowGitWaypoints"
 
     private init() {
         let raw = UserDefaults.standard.string(forKey: Self.lightingKey) ?? ""
@@ -67,6 +69,7 @@ class AppState: ObservableObject {
         self.wordDiffThreshold = defaults.object(forKey: Self.wordDiffThresholdKey) as? Double ?? 0.25
         let posRaw = defaults.string(forKey: Self.floatingControlsPositionKey) ?? ""
         self.floatingControlsPosition = FloatingControlsPosition(rawValue: posRaw) ?? .topRight
+        self.showGitWaypoints = defaults.object(forKey: Self.showGitWaypointsKey) as? Bool ?? false
     }
 
     func saveLighting(_ lighting: Lighting) {
@@ -124,6 +127,10 @@ class AppState: ObservableObject {
 
     func saveFloatingControlsPosition() {
         UserDefaults.standard.set(floatingControlsPosition.rawValue, forKey: Self.floatingControlsPositionKey)
+    }
+
+    func saveShowGitWaypoints() {
+        UserDefaults.standard.set(showGitWaypoints, forKey: Self.showGitWaypointsKey)
     }
 
     func toggle(_ option: ViewToggle) {
