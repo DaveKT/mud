@@ -3,12 +3,22 @@ import Combine
 
 // MARK: - Waypoint
 
-public struct Waypoint: Identifiable {
-    public enum Kind { case initial, reload, accept }
+public struct Waypoint: Identifiable, Sendable {
+    public enum Kind: Equatable, Sendable {
+        case initial, reload, accept
+        /// A waypoint injected from outside the normal reload flow (e.g. git).
+        case external(label: String, detail: String?)
+    }
     public let id = UUID()
     public let parsed: ParsedMarkdown
     public let timestamp: Date
     public let kind: Kind
+
+    public init(parsed: ParsedMarkdown, timestamp: Date, kind: Kind) {
+        self.parsed = parsed
+        self.timestamp = timestamp
+        self.kind = kind
+    }
 }
 
 // MARK: - Change Menu Item
@@ -21,6 +31,24 @@ public struct ChangeMenuItem: Identifiable {
     public let isActive: Bool
     public let hasInsertions: Bool
     public let hasDeletions: Bool
+    public let detail: String?
+    public let isExternal: Bool
+
+    public init(
+        id: UUID, label: String, timestamp: Date, changeCount: Int,
+        isActive: Bool, hasInsertions: Bool, hasDeletions: Bool,
+        detail: String? = nil, isExternal: Bool = false
+    ) {
+        self.id = id
+        self.label = label
+        self.timestamp = timestamp
+        self.changeCount = changeCount
+        self.isActive = isActive
+        self.hasInsertions = hasInsertions
+        self.hasDeletions = hasDeletions
+        self.detail = detail
+        self.isExternal = isExternal
+    }
 }
 
 // MARK: - Change Tracker
@@ -161,6 +189,23 @@ public class ChangeTracker: ObservableObject {
         cachedMenuItems = nil
     }
 
+    // MARK: - External waypoints
+
+    /// Replaces all external waypoints (e.g. from git) with the given set.
+    /// If the active baseline pointed to a now-removed external waypoint,
+    /// resets to the default baseline.
+    public func setExternalWaypoints(_ waypoints: [Waypoint]) {
+        self.waypoints.removeAll { if case .external = $0.kind { true } else { false } }
+        self.waypoints.append(contentsOf: waypoints)
+        cachedMenuItems = nil
+
+        // Reset baseline if it pointed to a removed external waypoint.
+        if let id = activeBaselineID,
+           !self.waypoints.contains(where: { $0.id == id }) {
+            selectBaseline(nil)
+        }
+    }
+
     // MARK: - Menu items
 
     /// Time thresholds for bucketed menu entries (in minutes).
@@ -214,9 +259,10 @@ public class ChangeTracker: ObservableObject {
         for minutes in Self.timeThresholds {
             let threshold = now.addingTimeInterval(
                 -TimeInterval(minutes * 60))
-            // Most recent waypoint older than the threshold.
+            // Most recent non-external waypoint older than the threshold.
             guard let wp = waypoints.last(where: {
-                $0.timestamp <= threshold
+                if case .external = $0.kind { return false }
+                return $0.timestamp <= threshold
             }) else { continue }
             guard !usedWaypointIDs.contains(wp.id) else { continue }
 
@@ -241,6 +287,24 @@ public class ChangeTracker: ObservableObject {
                 isActive: isActiveBaseline(wp),
                 hasInsertions: diff.hasInsertions,
                 hasDeletions: diff.hasDeletions))
+        }
+
+        // 4. External waypoints (e.g. git). Only shown when they have changes.
+        let externals = waypoints.filter {
+            if case .external = $0.kind { true } else { false }
+        }
+        for wp in externals {
+            guard case .external(let label, let detail) = wp.kind else {
+                continue
+            }
+            let diff = diffSummary(from: wp.parsed, to: current)
+            items.append(ChangeMenuItem(
+                id: wp.id, label: label, timestamp: wp.timestamp,
+                changeCount: diff.groupCount,
+                isActive: isActiveBaseline(wp),
+                hasInsertions: diff.hasInsertions,
+                hasDeletions: diff.hasDeletions,
+                detail: detail, isExternal: true))
         }
 
         return items

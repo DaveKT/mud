@@ -380,4 +380,176 @@ struct ChangeTrackerTests {
         // After accept, the primary entry should be "since last accepted".
         #expect(items[0].label == "since last accepted")
     }
+
+    // MARK: - External waypoints
+
+    private func externalWaypoint(
+        content: String,
+        label: String = "since commit abc1234",
+        detail: String? = "Fix heading levels",
+        at time: Date = Date()
+    ) -> Waypoint {
+        Waypoint(
+            parsed: ParsedMarkdown(content),
+            timestamp: time,
+            kind: .external(label: label, detail: detail))
+    }
+
+    @Test func setExternalWaypointsAddsToList() {
+        let t = tracker(initial: "V1.\n")
+        let ext = externalWaypoint(content: "Old.\n")
+        t.setExternalWaypoints([ext])
+
+        #expect(t.waypoints.contains { $0.id == ext.id })
+    }
+
+    @Test func setExternalWaypointsReplacesExisting() {
+        let t = tracker(initial: "V1.\n")
+        let ext1 = externalWaypoint(content: "Old.\n", label: "first")
+        t.setExternalWaypoints([ext1])
+
+        let ext2 = externalWaypoint(content: "Older.\n", label: "second")
+        t.setExternalWaypoints([ext2])
+
+        let externals = t.waypoints.filter {
+            if case .external = $0.kind { true } else { false }
+        }
+        #expect(externals.count == 1)
+        #expect(externals[0].id == ext2.id)
+    }
+
+    @Test func setExternalWaypointsEmptyArrayClears() {
+        let t = tracker(initial: "V1.\n")
+        t.setExternalWaypoints([externalWaypoint(content: "Old.\n")])
+        t.setExternalWaypoints([])
+
+        let externals = t.waypoints.filter {
+            if case .external = $0.kind { true } else { false }
+        }
+        #expect(externals.isEmpty)
+    }
+
+    @Test func setExternalWaypointsPreservesNonExternalWaypoints() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+        let waypointCountBefore = t.waypoints.count
+
+        t.setExternalWaypoints([externalWaypoint(content: "Old.\n")])
+        t.setExternalWaypoints([])
+
+        #expect(t.waypoints.count == waypointCountBefore)
+    }
+
+    @Test func setExternalWaypointsResetsOrphanedBaseline() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        let ext = externalWaypoint(content: "Old.\n")
+        t.setExternalWaypoints([ext])
+        t.selectBaseline(ext.id)
+        #expect(t.activeBaselineID == ext.id)
+
+        // Replacing externals removes the selected one — baseline resets.
+        t.setExternalWaypoints([])
+        #expect(t.activeBaselineID == nil)
+    }
+
+    @Test func setExternalWaypointsKeepsBaselineIfStillPresent() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        let ext = externalWaypoint(content: "Old.\n")
+        t.setExternalWaypoints([ext])
+        t.selectBaseline(ext.id)
+
+        // Re-set with the same waypoint still present — baseline stays.
+        t.setExternalWaypoints([ext])
+        #expect(t.activeBaselineID == ext.id)
+    }
+
+    @Test func externalBaselineWorksForDiff() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        let ext = externalWaypoint(content: "Something else.\n")
+        t.setExternalWaypoints([ext])
+        t.selectBaseline(ext.id)
+
+        #expect(t.activeBaseline?.markdown == "Something else.\n")
+        #expect(!t.changes.isEmpty)
+    }
+
+    @Test func menuIncludesExternalWaypointsWithChanges() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        let ext = externalWaypoint(
+            content: "Different.\n",
+            label: "since commit abc1234",
+            detail: "Fix heading levels")
+        t.setExternalWaypoints([ext])
+
+        let items = t.menuItems(at: t0.addingTimeInterval(90))
+        let externalItems = items.filter(\.isExternal)
+        #expect(externalItems.count == 1)
+        #expect(externalItems[0].label == "since commit abc1234")
+        #expect(externalItems[0].detail == "Fix heading levels")
+        #expect(externalItems[0].changeCount > 0)
+    }
+
+    @Test func menuIncludesExternalWaypointsWithNoChanges() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        // External waypoint with same content as current — no changes,
+        // but still shown so users aren't surprised by missing commits.
+        let ext = externalWaypoint(content: "V2.\n")
+        t.setExternalWaypoints([ext])
+
+        let items = t.menuItems(at: t0.addingTimeInterval(90))
+        let externalItems = items.filter(\.isExternal)
+        #expect(externalItems.count == 1)
+        #expect(externalItems[0].changeCount == 0)
+    }
+
+    @Test func menuExternalItemShowsActiveFlag() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        let ext = externalWaypoint(content: "Different.\n")
+        t.setExternalWaypoints([ext])
+        t.selectBaseline(ext.id)
+
+        let items = t.menuItems(at: t0.addingTimeInterval(90))
+        let externalItems = items.filter(\.isExternal)
+        #expect(externalItems.count == 1)
+        #expect(externalItems[0].isActive)
+
+        // Non-external items should not be active.
+        let nonExternalActive = items.filter { !$0.isExternal && $0.isActive }
+        #expect(nonExternalActive.isEmpty)
+    }
+
+    @Test func setExternalWaypointsInvalidatesMenuCache() {
+        let t0 = Date()
+        let t = tracker(initial: "V1.\n", at: t0)
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(90))
+
+        let items1 = t.menuItems(at: t0.addingTimeInterval(90))
+        let externalCount1 = items1.filter(\.isExternal).count
+
+        t.setExternalWaypoints([externalWaypoint(content: "Different.\n")])
+        let items2 = t.menuItems(at: t0.addingTimeInterval(90))
+        let externalCount2 = items2.filter(\.isExternal).count
+
+        #expect(externalCount1 == 0)
+        #expect(externalCount2 == 1)
+    }
 }
