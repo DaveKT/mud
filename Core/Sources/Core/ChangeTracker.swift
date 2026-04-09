@@ -66,8 +66,9 @@ public class ChangeTracker: ObservableObject {
     /// change; time-bucket assignment and labels are recomputed every call.
     private var diffCache: [UUID: DiffSummary] = [:]
 
-    /// Minimum interval between stored `.reload` waypoints.
-    static let reloadCoalesceInterval: TimeInterval = 60
+    /// Recent `.reload` waypoints within this window are replaced when a
+    /// new reload arrives — collapses rapid-fire saves into one snapshot.
+    static let reloadCoalesceInterval: TimeInterval = 5
 
     /// Maximum age for `.reload` waypoints before pruning.
     static let reloadMaxAge: TimeInterval = 15 * 60
@@ -126,12 +127,14 @@ public class ChangeTracker: ObservableObject {
             // Skip if content is identical to any existing waypoint.
             let isDuplicate = waypoints.contains { $0.parsed == parsed }
 
-            // Throttle: skip if the most recent .reload is < 60s old.
-            let tooSoon = waypoints.last(where: { $0.kind == .reload })
-                .map { now.timeIntervalSince($0.timestamp) < Self.reloadCoalesceInterval }
-                ?? false
-
-            if !isDuplicate && !tooSoon {
+            if !isDuplicate {
+                // Drop recent .reload waypoints superseded by this one.
+                let coalesceThreshold = now.addingTimeInterval(
+                    -Self.reloadCoalesceInterval)
+                waypoints.removeAll { waypoint in
+                    waypoint.kind == .reload
+                        && waypoint.timestamp >= coalesceThreshold
+                }
                 waypoints.append(Waypoint(
                     parsed: parsed, timestamp: now, kind: .reload))
             }

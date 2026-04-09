@@ -41,20 +41,30 @@ struct ChangeTrackerTests {
         #expect(t.waypoints[1].kind == .reload)
     }
 
-    @Test func reloadThrottling() {
+    @Test func rapidReloadsCoalesced() {
         let t0 = Date()
         let t = tracker(at: t0)
 
-        // Two updates within 60s — second is skipped, first is kept.
-        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(30))
-        #expect(t.waypoints.count == 2)
-        let firstReloadID = t.waypoints[1].id
+        // Saves within 5s are coalesced — only the latest survives.
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(1))
+        t.update(ParsedMarkdown("V3.\n"), at: t0.addingTimeInterval(2))
+        t.update(ParsedMarkdown("V4.\n"), at: t0.addingTimeInterval(3))
 
-        t.update(ParsedMarkdown("V3.\n"), at: t0.addingTimeInterval(50))
-        #expect(t.waypoints.count == 2)
-        // The original reload is preserved (not replaced).
-        #expect(t.waypoints[1].id == firstReloadID)
+        #expect(t.waypoints.count == 2) // initial + latest reload
+        #expect(t.waypoints[1].parsed.markdown == "V4.\n")
+    }
+
+    @Test func reloadsOlderThanCoalesceWindowSurvive() {
+        let t0 = Date()
+        let t = tracker(at: t0)
+
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(10))
+        t.update(ParsedMarkdown("V3.\n"), at: t0.addingTimeInterval(20))
+
+        // V2 is 10s before V3, outside the 5s window — both kept.
+        #expect(t.waypoints.count == 3)
         #expect(t.waypoints[1].parsed.markdown == "V2.\n")
+        #expect(t.waypoints[2].parsed.markdown == "V3.\n")
     }
 
     @Test func duplicateContentSkipped() {
@@ -78,16 +88,15 @@ struct ChangeTrackerTests {
         #expect(t.waypoints.count == 3)
     }
 
-    @Test func reloadStoredAfter60s() {
+    @Test func duplicateContentSkippedEvenWhenRapid() {
         let t0 = Date()
-        let t = tracker(at: t0)
+        let t = tracker(initial: "V1.\n", at: t0)
 
-        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(30))
-        t.update(ParsedMarkdown("V3.\n"), at: t0.addingTimeInterval(91))
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(1))
+        t.update(ParsedMarkdown("V2.\n"), at: t0.addingTimeInterval(2))
 
-        #expect(t.waypoints.count == 3)
-        #expect(t.waypoints[1].kind == .reload)
-        #expect(t.waypoints[2].kind == .reload)
+        // Second update is a duplicate — only one reload stored.
+        #expect(t.waypoints.count == 2)
     }
 
     @Test func pruningRemovesOldReloads() {
