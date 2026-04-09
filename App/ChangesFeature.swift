@@ -177,28 +177,19 @@ private struct ChangesSincePopover: View {
         changeTracker.menuItems()
     }
 
-    /// Primary item (first): "since last accepted" or "since document opened".
-    private var primaryItem: ChangeMenuItem? {
-        items.first
-    }
-
-    /// Non-external items only (for sections 1–3).
-    private var nonExternalItems: [ChangeMenuItem] {
-        items.filter { !$0.isExternal }
-    }
-
-    /// Time-bucketed reload waypoints (middle section).
-    private var timeBucketItems: [ChangeMenuItem] {
-        nonExternalItems.dropFirst().filter {
-            $0.label != "since document opened"
+    /// Milestone items: "since last accepted" and/or "since document opened".
+    private var milestoneItems: [ChangeMenuItem] {
+        let nonExternal = items.filter { !$0.isExternal }
+        return nonExternal.filter {
+            $0.label == "since last accepted"
+                || $0.label == "since document opened"
         }
     }
 
-    /// "Since document opened" at the bottom, when distinct from primary.
-    private var documentOpenedItem: ChangeMenuItem? {
-        guard nonExternalItems.count >= 2 else { return nil }
-        let last = nonExternalItems.last!
-        return last.label == "since document opened" ? last : nil
+    /// Time-bucketed reload waypoints.
+    private var recentItems: [ChangeMenuItem] {
+        let nonExternal = items.filter { !$0.isExternal }
+        return nonExternal.filter { $0.label.contains("minute") }
     }
 
     /// External waypoints (e.g. git history).
@@ -208,35 +199,35 @@ private struct ChangesSincePopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let item = primaryItem {
-                menuItemRow(item)
-            }
-
-            if !timeBucketItems.isEmpty {
-                Divider()
-                    .padding(.vertical, 4)
-                ForEach(Array(timeBucketItems.enumerated()), id: \.element.id) { index, item in
+            if !milestoneItems.isEmpty {
+                sectionHeading("Milestones")
+                ForEach(Array(milestoneItems.enumerated()), id: \.element.id) { index, item in
                     if index > 0 {
-                        Spacer()
-                            .frame(height: 4)
+                        Spacer().frame(height: 4)
                     }
                     menuItemRow(item)
                 }
             }
 
-            if let item = documentOpenedItem {
-                Divider()
-                    .padding(.vertical, 4)
-                menuItemRow(item)
+            if !recentItems.isEmpty {
+                if !milestoneItems.isEmpty { Divider().padding(.vertical, 4) }
+                sectionHeading("Recent")
+                ForEach(Array(recentItems.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        Spacer().frame(height: 4)
+                    }
+                    menuItemRow(item)
+                }
             }
 
             if !gitItems.isEmpty {
-                Divider()
-                    .padding(.vertical, 4)
+                if !milestoneItems.isEmpty || !recentItems.isEmpty {
+                    Divider().padding(.vertical, 4)
+                }
+                sectionHeading("Git")
                 ForEach(Array(gitItems.enumerated()), id: \.element.id) { index, item in
                     if index > 0 {
-                        Spacer()
-                            .frame(height: 4)
+                        Spacer().frame(height: 4)
                     }
                     menuItemRow(item)
                 }
@@ -245,6 +236,14 @@ private struct ChangesSincePopover: View {
         .padding(12)
         .frame(width: 300)
         .background(.background)
+    }
+
+    private func sectionHeading(_ title: String) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 4)
     }
 
     // MARK: - Menu item row
