@@ -154,6 +154,13 @@ class DocumentWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
+        AppState.shared.$trackChanges
+            .dropFirst()
+            .sink { value in
+                AppState.shared.saveTrackChanges(value)
+            }
+            .store(in: &cancellables)
+
         // Track sidebar collapse state for persistence
         if let sidebarItem = splitVC?.splitViewItems.first {
             sidebarItem.publisher(for: \.isCollapsed)
@@ -278,7 +285,7 @@ class DocumentWindowController: NSWindowController {
     }
 
     @objc func toggleChangesBar(_ sender: Any?) {
-        AppState.shared.trackChangesEnabled.toggle()
+        AppState.shared.trackChanges.toggle()
     }
 
     @objc func findNext(_ sender: Any?) {

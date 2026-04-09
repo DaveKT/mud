@@ -241,7 +241,7 @@ struct FloatingBarsOverlay: ViewModifier {
     var onSelectChange: ([String]) -> Void
 
     private var changesBarVisible: Bool {
-        appState.trackChangesEnabled
+        appState.trackChanges
     }
 
     private var overlayAlignment: Alignment {

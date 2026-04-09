@@ -76,8 +76,8 @@ struct MudApp: App {
                 }
                 .keyboardShortcut("s", modifiers: [.command, .control])
 
-                Button(appState.trackChangesEnabled ? "Hide Changes" : "Show Changes") {
-                    appState.trackChangesEnabled.toggle()
+                Button(appState.trackChanges ? "Hide Changes" : "Show Changes") {
+                    appState.trackChanges.toggle()
                 }
                 .keyboardShortcut("c", modifiers: [.command, .control])
 

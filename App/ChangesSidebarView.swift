@@ -7,7 +7,7 @@ struct ChangesSidebarView: View {
     var onSelectChange: ([String]) -> Void
 
     var body: some View {
-        if !appState.trackChangesEnabled {
+        if !appState.trackChanges {
             disabledState
         } else if changeTracker.changes.isEmpty {
             emptyState
@@ -76,7 +76,7 @@ struct ChangesSidebarView: View {
             } description: {
                 HStack(spacing: 0) {
                     Button("Show changes") {
-                        appState.trackChangesEnabled = true
+                        appState.trackChanges = true
                     }
                     .buttonStyle(.link)
                     Text(" in document.")
