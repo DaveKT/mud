@@ -62,7 +62,9 @@ public class ChangeTracker: ObservableObject {
     /// The most recent content passed to `update(_:)`.
     public private(set) var currentParsed: ParsedMarkdown?
 
-    private var cachedMenuItems: [ChangeMenuItem]?
+    /// Per-waypoint diff summary cache. Cleared when content or waypoints
+    /// change; time-bucket assignment and labels are recomputed every call.
+    private var diffCache: [UUID: DiffSummary] = [:]
 
     /// Minimum interval between stored `.reload` waypoints.
     static let reloadCoalesceInterval: TimeInterval = 60
@@ -115,7 +117,7 @@ public class ChangeTracker: ObservableObject {
     /// Testable variant that accepts a timestamp.
     func update(_ parsed: ParsedMarkdown, at now: Date) {
         currentParsed = parsed
-        cachedMenuItems = nil
+        diffCache = [:]
 
         if waypoints.isEmpty {
             waypoints.append(Waypoint(
@@ -152,7 +154,6 @@ public class ChangeTracker: ObservableObject {
     /// Selects a waypoint as the diff baseline and recomputes changes.
     public func selectBaseline(_ id: UUID?) {
         activeBaselineID = id
-        cachedMenuItems = nil
         if let current = currentParsed, let baseline = activeBaseline {
             changes = MudCore.computeChanges(old: baseline, new: current)
         } else {
@@ -186,7 +187,7 @@ public class ChangeTracker: ObservableObject {
         changes = []
         selectedChangeID = nil
         activeBaselineID = nil
-        cachedMenuItems = nil
+        diffCache = [:]
     }
 
     // MARK: - External waypoints
@@ -197,7 +198,7 @@ public class ChangeTracker: ObservableObject {
     public func setExternalWaypoints(_ waypoints: [Waypoint]) {
         self.waypoints.removeAll { if case .external = $0.kind { true } else { false } }
         self.waypoints.append(contentsOf: waypoints)
-        cachedMenuItems = nil
+        diffCache = [:]
 
         // Reset baseline if it pointed to a removed external waypoint.
         if let id = activeBaselineID,
@@ -212,17 +213,15 @@ public class ChangeTracker: ObservableObject {
     static let timeThresholds: [Int] = [1, 2, 3, 4, 5, 10, 15]
 
     /// Returns menu items for the "Changes since…" picker.
-    /// Results are cached until the next `update()` or `accept()`.
+    /// Time-bucket assignment is recomputed each call so relative labels
+    /// stay accurate; per-waypoint diffs are cached until content changes.
     public func menuItems() -> [ChangeMenuItem] {
         menuItems(at: Date())
     }
 
     /// Testable variant that accepts a timestamp.
     func menuItems(at now: Date) -> [ChangeMenuItem] {
-        if let cached = cachedMenuItems { return cached }
-        let items = computeMenuItems(at: now)
-        cachedMenuItems = items
-        return items
+        computeMenuItems(at: now)
     }
 
     private func computeMenuItems(at now: Date) -> [ChangeMenuItem] {
@@ -239,7 +238,7 @@ public class ChangeTracker: ObservableObject {
         if let wp = primaryWaypoint {
             let label = acceptWaypoint != nil
                 ? "since last accepted" : "since document opened"
-            let diff = diffSummary(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current, waypointID: wp.id)
             items.append(ChangeMenuItem(
                 id: wp.id, label: label, timestamp: wp.timestamp,
                 changeCount: diff.groupCount,
@@ -255,8 +254,10 @@ public class ChangeTracker: ObservableObject {
             usedWaypointIDs.insert(wp.id)
         }
 
-        // 2. Time-bucketed waypoints
-        for minutes in Self.timeThresholds {
+        // 2. Time-bucketed waypoints (iterate high-to-low so each waypoint
+        //    is claimed by its most accurate bucket, not the smallest one).
+        let timeBucketStart = items.count
+        for minutes in Self.timeThresholds.reversed() {
             let threshold = now.addingTimeInterval(
                 -TimeInterval(minutes * 60))
             // Most recent non-external waypoint older than the threshold.
@@ -267,7 +268,7 @@ public class ChangeTracker: ObservableObject {
             guard !usedWaypointIDs.contains(wp.id) else { continue }
 
             let label = "since \(minutes) minute\(minutes == 1 ? "" : "s") ago"
-            let diff = diffSummary(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current, waypointID: wp.id)
             items.append(ChangeMenuItem(
                 id: wp.id, label: label, timestamp: wp.timestamp,
                 changeCount: diff.groupCount,
@@ -276,11 +277,13 @@ public class ChangeTracker: ObservableObject {
                 hasDeletions: diff.hasDeletions))
             usedWaypointIDs.insert(wp.id)
         }
+        // Reverse so the menu shows smallest-to-largest.
+        items[timeBucketStart...].reverse()
 
         // 3. "Since document opened" at the bottom (if distinct from primary)
         if acceptWaypoint != nil, let wp = initialWaypoint,
            wp.id != primaryWaypoint?.id {
-            let diff = diffSummary(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current, waypointID: wp.id)
             items.append(ChangeMenuItem(
                 id: wp.id, label: "since document opened",
                 timestamp: wp.timestamp, changeCount: diff.groupCount,
@@ -297,7 +300,7 @@ public class ChangeTracker: ObservableObject {
             guard case .external(let label, let detail) = wp.kind else {
                 continue
             }
-            let diff = diffSummary(from: wp.parsed, to: current)
+            let diff = diffSummary(from: wp.parsed, to: current, waypointID: wp.id)
             items.append(ChangeMenuItem(
                 id: wp.id, label: label, timestamp: wp.timestamp,
                 changeCount: diff.groupCount,
@@ -317,14 +320,18 @@ public class ChangeTracker: ObservableObject {
     }
 
     private func diffSummary(
-        from old: ParsedMarkdown, to new: ParsedMarkdown
+        from old: ParsedMarkdown, to new: ParsedMarkdown,
+        waypointID: UUID
     ) -> DiffSummary {
+        if let cached = diffCache[waypointID] { return cached }
         let changes = MudCore.computeChanges(old: old, new: new)
         let groups = ChangeGroup.build(from: changes)
-        return DiffSummary(
+        let summary = DiffSummary(
             groupCount: groups.count,
             hasInsertions: changes.contains { $0.type == .insertion },
             hasDeletions: changes.contains { $0.type == .deletion })
+        diffCache[waypointID] = summary
+        return summary
     }
 
     private func isActiveBaseline(_ waypoint: Waypoint) -> Bool {
