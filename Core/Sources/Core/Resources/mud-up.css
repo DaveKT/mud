@@ -265,6 +265,7 @@ th, td {
     padding: 8px 12px;
     border: 1px solid var(--border-color);
     text-align: left;
+    vertical-align: top;
 }
 
 th {
@@ -291,4 +292,77 @@ tr:nth-child(even) {
 img {
     max-width: min(800px, 100%);
     height: auto;
+}
+
+/* Frontmatter */
+.mud-frontmatter {
+    margin-bottom: 1.5em;
+    border-radius: 3px;
+    overflow: hidden;
+    color: var(--blockquote-color);
+    border: 1px solid var(--border-color);
+}
+
+.mud-frontmatter summary {
+    font-size: 70%;
+    padding: 1em;
+    cursor: pointer;
+    font-weight: 500;
+    text-transform: uppercase;
+    user-select: none;
+    -webkit-user-select: none;
+    background-color: var(--code-bg);
+}
+
+.mud-frontmatter[open] summary {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mud-frontmatter pre {
+    margin: 0;
+    border-radius: 0 0 6px 6px;
+}
+
+.mud-frontmatter-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 75%;
+}
+
+.mud-frontmatter table tr {
+    background: none;
+}
+
+.mud-frontmatter-table tr > * {
+    vertical-align: top;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mud-frontmatter-table tr:last-child > * {
+    border-bottom: none;
+}
+
+.mud-frontmatter-table th {
+    width: 20%;
+    padding: 6px 1em;
+    text-align: right;
+    font-weight: 600;
+    white-space: nowrap;
+    border-right: 1px solid var(--border-color);
+}
+
+.mud-frontmatter-table td {
+    padding: 7px 1em;
+    color: var(--text-color);
+}
+
+.mud-frontmatter-table pre {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    background: transparent;
+    color: var(--syntax-string);
 }

@@ -158,3 +158,15 @@ html:not(.has-word-wrap) .down-lines {
 .md-alert-caution .md-alert-tag   { color: var(--alert-caution-border);   font-style: normal; font-weight: bold; }
 .md-hr          { color: var(--syntax-comment); }
 .md-html        { color: var(--syntax-keyword); }
+
+
+/* Frontmatter — styled like a code block fenced with --- */
+
+.fm-fence .lc,
+.fm-code .lc {
+    background: var(--code-bg);
+}
+
+.fm-fence .lc {
+    opacity: 0.5;
+}

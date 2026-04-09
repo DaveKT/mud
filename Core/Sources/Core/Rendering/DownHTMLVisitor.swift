@@ -14,11 +14,13 @@ public struct DownHTMLVisitor: Sendable {
     /// spans, and scrollable code-block regions.
     public func highlight(
         _ markdown: String,
-        doccAlertMode: DocCAlertMode = .extended
+        doccAlertMode: DocCAlertMode = .extended,
+        frontMatterRendered: [String] = []
     ) -> String {
         let result = highlightLines(markdown, doccAlertMode: doccAlertMode)
         return buildLayout(
-            result.rendered, codeBlocks: result.codeBlocks)
+            result.rendered, codeBlocks: result.codeBlocks,
+            frontMatterRendered: frontMatterRendered)
     }
 
     /// Renders with change-tracking markers for Down mode.
@@ -32,7 +34,8 @@ public struct DownHTMLVisitor: Sendable {
         old oldMarkdown: String,
         matches: [BlockMatch],
         doccAlertMode: DocCAlertMode = .extended,
-        wordDiffThreshold: Double = 0.25
+        wordDiffThreshold: Double = 0.25,
+        frontMatterRendered: [String] = []
     ) -> String {
         let newResult = highlightLines(
             newMarkdown, doccAlertMode: doccAlertMode)
@@ -45,7 +48,8 @@ public struct DownHTMLVisitor: Sendable {
             newResult.rendered,
             codeBlocks: newResult.codeBlocks,
             diffMap: diffMap,
-            oldRendered: oldResult.rendered)
+            oldRendered: oldResult.rendered,
+            frontMatterRendered: frontMatterRendered)
     }
 
     // MARK: - Phase 1+2: Highlight lines
@@ -599,44 +603,34 @@ public struct DownHTMLVisitor: Sendable {
     /// `.dc-scroll` wrappers around code block regions.
     private func buildLayout(
         _ rendered: [String],
-        codeBlocks: [CodeBlockInfo]
+        codeBlocks: [CodeBlockInfo],
+        frontMatterRendered: [String] = []
     ) -> String {
-        // Build a lookup of line roles from code block metadata.
-        let roles = lineRoles(
-            lineCount: rendered.count, codeBlocks: codeBlocks)
+        let allRendered = frontMatterRendered + rendered
+        let allRoles = Self.frontMatterRoles(
+            count: frontMatterRendered.count)
+            + lineRoles(lineCount: rendered.count, codeBlocks: codeBlocks)
 
         var html = "<div class=\"down-lines\">"
         var inScroll = false
 
-        for (i, content) in rendered.enumerated() {
-            let lineNum = i + 1
-            let role = roles[i]
+        for (i, content) in allRendered.enumerated() {
+            let role = allRoles[i]
 
-            // Open dc-scroll wrapper before the first fence/code line.
-            if (role == .fence || role == .code) && !inScroll {
+            if role.isScrollable && !inScroll {
                 html += "<div class=\"dc-scroll\">"
                 inScroll = true
             }
 
-            // Line div with role-specific class.
-            switch role {
-            case .regular:
-                html += "<div class=\"dl\">"
-            case .fence:
-                html += "<div class=\"dl dc-fence\">"
-            case .code:
-                html += "<div class=\"dl dc-code\">"
-            }
-
-            html += "<span class=\"ln\">\(lineNum)</span>"
+            html += "<div class=\"\(role.cssClass)\">"
+            html += "<span class=\"ln\">\(i + 1)</span>"
             html += "<span class=\"lc\">\(content)</span>"
             html += "</div>"
 
-            // Close dc-scroll wrapper after the last fence/code line.
             if inScroll {
-                let nextRole = i + 1 < roles.count
-                    ? roles[i + 1] : .regular
-                if nextRole != .fence && nextRole != .code {
+                let next = i + 1 < allRoles.count
+                    ? allRoles[i + 1] : .regular
+                if !next.isScrollable {
                     html += "</div>"
                     inScroll = false
                 }
@@ -648,7 +642,34 @@ public struct DownHTMLVisitor: Sendable {
     }
 
     private enum LineRole {
-        case regular, fence, code
+        case regular, fence, code, fmFence, fmCode
+
+        /// CSS class(es) for this role's line div.
+        var cssClass: String {
+            switch self {
+            case .regular: "dl"
+            case .fence:   "dl dc-fence"
+            case .code:    "dl dc-code"
+            case .fmFence: "dl fm-fence"
+            case .fmCode:  "dl fm-code"
+            }
+        }
+
+        /// Whether this role participates in `dc-scroll` wrapping.
+        var isScrollable: Bool {
+            self == .fence || self == .code
+        }
+    }
+
+    /// Builds line roles for frontmatter lines: first and last
+    /// are fences, everything between is code.
+    private static func frontMatterRoles(
+        count: Int
+    ) -> [LineRole] {
+        guard count > 0 else { return [] }
+        return (0..<count).map { i in
+            (i == 0 || i == count - 1) ? .fmFence : .fmCode
+        }
     }
 
     /// Classifies each source line based on code block metadata.
@@ -688,22 +709,37 @@ public struct DownHTMLVisitor: Sendable {
         _ rendered: [String],
         codeBlocks: [CodeBlockInfo],
         diffMap: LineDiffMap,
-        oldRendered: [String]
+        oldRendered: [String],
+        frontMatterRendered: [String] = []
     ) -> String {
         let roles = lineRoles(
             lineCount: rendered.count, codeBlocks: codeBlocks)
+        let fmCount = frontMatterRendered.count
+        let fmRoles = Self.frontMatterRoles(
+            count: fmCount)
 
         var html = "<div class=\"down-lines\">"
+
+        // Emit frontmatter lines (no change tracking).
+        for (i, content) in frontMatterRendered.enumerated() {
+            html += "<div class=\"\(fmRoles[i].cssClass)\">"
+            html += "<span class=\"ln\">\(i + 1)</span>"
+            html += "<span class=\"lc\">\(content)</span>"
+            html += "</div>"
+        }
+
         var inScroll = false
         var groupIdx = 0
 
         for (i, var content) in rendered.enumerated() {
-            let lineNum = i + 1
+            let lineNum = i + 1 + fmCount
+            let bodyLineNum = i + 1  // 1-based body line for diff lookup
             let role = roles[i]
 
-            // Emit deletion groups that precede this line.
+            // Emit deletion groups that precede this body line.
             while groupIdx < diffMap.deletionGroups.count,
-                  diffMap.deletionGroups[groupIdx].beforeNewLine <= lineNum
+                  diffMap.deletionGroups[groupIdx].beforeNewLine
+                      <= bodyLineNum
             {
                 emitDeletionGroup(
                     diffMap.deletionGroups[groupIdx],
@@ -712,46 +748,39 @@ public struct DownHTMLVisitor: Sendable {
                 groupIdx += 1
             }
 
-            // Open dc-scroll wrapper before the first fence/code line.
-            if (role == .fence || role == .code) && !inScroll {
+            if role.isScrollable && !inScroll {
                 html += "<div class=\"dc-scroll\">"
                 inScroll = true
             }
 
-            // Line div: combine role class with optional change class.
-            let roleClass: String
-            switch role {
-            case .regular: roleClass = "dl"
-            case .fence:   roleClass = "dl dc-fence"
-            case .code:    roleClass = "dl dc-code"
-            }
-
-            if let annotation = diffMap.annotation(forLine: lineNum) {
-                html += "<div class=\"\(roleClass) dl-ins\""
+            if let annotation = diffMap.annotation(
+                forLine: bodyLineNum)
+            {
+                html += "<div class=\"\(role.cssClass) dl-ins\""
                 html += " data-change-id=\"\(annotation.changeID)\">"
                 // Word-level markers for paired insertion lines.
                 if let wd = diffMap.insertionWordData(
-                    for: annotation.changeID, line: lineNum) {
+                    for: annotation.changeID, line: bodyLineNum)
+                {
                     let markers = Self.wordMarkers(
-                        from: wd, forLine: lineNum)
+                        from: wd, forLine: bodyLineNum)
                     if !markers.isEmpty {
                         content = Self.injectMarkers(
                             into: content, markers: markers)
                     }
                 }
             } else {
-                html += "<div class=\"\(roleClass)\">"
+                html += "<div class=\"\(role.cssClass)\">"
             }
 
             html += "<span class=\"ln\">\(lineNum)</span>"
             html += "<span class=\"lc\">\(content)</span>"
             html += "</div>"
 
-            // Close dc-scroll wrapper after the last fence/code line.
             if inScroll {
-                let nextRole = i + 1 < roles.count
+                let next = i + 1 < roles.count
                     ? roles[i + 1] : .regular
-                if nextRole != .fence && nextRole != .code {
+                if !next.isScrollable {
                     html += "</div>"
                     inScroll = false
                 }
@@ -888,6 +917,57 @@ public struct DownHTMLVisitor: Sendable {
     /// To prevent markers from crossing HTML tag boundaries (which
     /// causes invalid nesting and layout breakage), the marker is
     /// closed before each HTML tag and reopened after it.
+    // MARK: - Frontmatter line rendering
+
+    /// Renders frontmatter lines from the original source with YAML
+    /// syntax highlighting via `CodeHighlighter`.
+    ///
+    /// Returns an array of HTML content strings (one per
+    /// frontmatter source line) ready for use in `buildLayout`.
+    /// The input `markdown` should already be `\r\n`-normalized
+    /// (see `ParsedMarkdown.init`).
+    func renderFrontMatterLines(
+        markdown: String, lineCount: Int
+    ) -> [String] {
+        guard lineCount > 0 else { return [] }
+
+        let allLines = markdown.split(
+            separator: "\n", omittingEmptySubsequences: false)
+        guard allLines.count >= lineCount else { return [] }
+
+        var rendered = [String]()
+        rendered.reserveCapacity(lineCount)
+
+        // First and last lines are the `---` delimiters.
+        let openingDelimiter = HTMLEscaping.escape(String(allLines[0]))
+        rendered.append(
+            "<span class=\"md-code-fence\">\(openingDelimiter)</span>")
+
+        // YAML content lines (between delimiters).
+        if lineCount > 2 {
+            let yamlLines = allLines[1..<(lineCount - 1)]
+            let yamlText = yamlLines.joined(separator: "\n")
+
+            if let highlighted = CodeHighlighter.highlight(
+                yamlText, language: "yaml")
+            {
+                rendered += HTMLLineSplitter.splitByLine(highlighted)
+            } else {
+                for line in yamlLines {
+                    rendered.append(HTMLEscaping.escape(String(line)))
+                }
+            }
+        }
+
+        // Closing delimiter.
+        let closingDelimiter = HTMLEscaping.escape(
+            String(allLines[lineCount - 1]))
+        rendered.append(
+            "<span class=\"md-code-fence\">\(closingDelimiter)</span>")
+
+        return rendered
+    }
+
     static func injectMarkers(
         into html: String, markers: [WordMarker]
     ) -> String {

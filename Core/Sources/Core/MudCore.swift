@@ -28,6 +28,10 @@ public enum MudCore {
         }
         upVisitor.visit(parsed.document)
         upVisitor.emitTrailingDeletions()
+
+        if let yaml = parsed.frontMatter {
+            return renderFrontMatterHTML(yaml) + upVisitor.result
+        }
         return upVisitor.result
     }
 
@@ -53,16 +57,21 @@ public enum MudCore {
         _ parsed: ParsedMarkdown,
         options: RenderOptions = .init()
     ) -> String {
+        let fmRendered = downVisitor.renderFrontMatterLines(
+            markdown: parsed.markdown,
+            lineCount: parsed.frontMatterLineCount)
         if let waypoint = options.waypoint {
             let matches = BlockMatcher.match(old: waypoint, new: parsed)
             return downVisitor.highlightWithChanges(
-                new: parsed.markdown, old: waypoint.markdown,
+                new: parsed.body, old: waypoint.body,
                 matches: matches,
                 doccAlertMode: options.doccAlertMode,
-                wordDiffThreshold: options.wordDiffThreshold)
+                wordDiffThreshold: options.wordDiffThreshold,
+                frontMatterRendered: fmRendered)
         }
         return downVisitor.highlight(
-            parsed.markdown, doccAlertMode: options.doccAlertMode)
+            parsed.body, doccAlertMode: options.doccAlertMode,
+            frontMatterRendered: fmRendered)
     }
 
     /// Renders a parsed Markdown document to a complete HTML document
@@ -122,12 +131,7 @@ public enum MudCore {
         _ text: String,
         options: RenderOptions = .init()
     ) -> String {
-        if options.waypoint != nil {
-            return renderDownToHTML(
-                ParsedMarkdown(text), options: options)
-        }
-        return downVisitor.highlight(
-            text, doccAlertMode: options.doccAlertMode)
+        renderDownToHTML(ParsedMarkdown(text), options: options)
     }
 
     /// Renders Markdown text to a complete HTML document for Down mode.
@@ -136,5 +140,46 @@ public enum MudCore {
         options: RenderOptions = .init()
     ) -> String {
         renderDownModeDocument(ParsedMarkdown(text), options: options)
+    }
+
+    // MARK: - Frontmatter rendering
+
+    /// Renders YAML frontmatter as a collapsible HTML block for
+    /// Up mode. Parses top-level keys into a table; falls back to
+    /// a raw code block if no keys are found.
+    private static func renderFrontMatterHTML(_ yaml: String) -> String {
+        let keys = FrontMatterExtractor.parseTopLevelKeys(yaml)
+
+        var html = "<details class=\"mud-frontmatter\">"
+        html += "<summary>Frontmatter</summary>"
+
+        if keys.isEmpty {
+            html += "<pre><code class=\"language-yaml\">"
+            html += HTMLEscaping.escape(yaml)
+            html += "</code></pre>"
+        } else {
+            html += "<table class=\"mud-frontmatter-table\">"
+            for kv in keys {
+                html += "<tr>"
+                html += "<th class=\"fm-key\">"
+                html += HTMLEscaping.escape(kv.key)
+                html += "</th><td>"
+                switch kv.value {
+                case .scalar(let v):
+                    html += HTMLEscaping.escape(v)
+                case .inlineArray(let items):
+                    html += HTMLEscaping.escape(items.joined(separator: ", "))
+                case .block(let raw):
+                    html += "<pre>"
+                    html += HTMLEscaping.escape(raw)
+                    html += "</pre>"
+                }
+                html += "</td></tr>"
+            }
+            html += "</table>"
+        }
+
+        html += "</details>"
+        return html
     }
 }

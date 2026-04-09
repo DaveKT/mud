@@ -57,4 +57,40 @@ struct ParsedMarkdownTests {
         let parsed = ParsedMarkdown(source)
         #expect(parsed.markdown == source)
     }
+
+    // MARK: - Frontmatter
+
+    @Test func frontMatterPopulated() {
+        let source = "---\ntitle: Hello\n---\n\n# Heading\n\nBody"
+        let parsed = ParsedMarkdown(source)
+        #expect(parsed.frontMatter == "title: Hello")
+    }
+
+    @Test func bodyExcludesFrontMatter() {
+        let source = "---\ntitle: Hello\n---\n\n# Heading\n\nBody"
+        let parsed = ParsedMarkdown(source)
+        #expect(parsed.body == "\n# Heading\n\nBody")
+        #expect(parsed.body != parsed.markdown)
+    }
+
+    @Test func titleFromBodyNotFrontMatter() {
+        let source = "---\ntitle: YAML Title\n---\n\n# Real Heading"
+        let parsed = ParsedMarkdown(source)
+        #expect(parsed.title == "Real Heading")
+    }
+
+    @Test func noFrontMatterIsNil() {
+        let source = "# Heading\n\nBody text."
+        let parsed = ParsedMarkdown(source)
+        #expect(parsed.frontMatter == nil)
+        #expect(parsed.body == source)
+    }
+
+    @Test func headingsUnaffectedByFrontMatter() {
+        let withFM = ParsedMarkdown("---\ntitle: X\n---\n\n# One\n\n## Two")
+        let withoutFM = ParsedMarkdown("# One\n\n## Two")
+        #expect(withFM.headings.count == withoutFM.headings.count)
+        #expect(withFM.headings[0].text == "One")
+        #expect(withFM.headings[1].text == "Two")
+    }
 }
