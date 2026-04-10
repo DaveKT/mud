@@ -68,7 +68,7 @@ class AppState: ObservableObject {
         self.useHeadingAsTitle = defaults.object(forKey: Self.useHeadingAsTitleKey) as? Bool ?? true
         self.wordDiffThreshold = defaults.object(forKey: Self.wordDiffThresholdKey) as? Double ?? 0.25
         let posRaw = defaults.string(forKey: Self.floatingControlsPositionKey) ?? ""
-        self.floatingControlsPosition = FloatingControlsPosition(rawValue: posRaw) ?? .topRight
+        self.floatingControlsPosition = FloatingControlsPosition(rawValue: posRaw) ?? .bottomCenter
         self.showGitWaypoints = defaults.object(forKey: Self.showGitWaypointsKey) as? Bool ?? false
     }
 
