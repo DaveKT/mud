@@ -77,15 +77,38 @@ enum WordDiff {
     /// Concatenating all non-deleted spans reproduces the new text;
     /// concatenating all non-inserted spans reproduces the old text.
     static func diff(old: String, new: String) -> [WordSpan] {
-        let oldParts = extractWords(tokenize(old))
-        let newParts = extractWords(tokenize(new))
+        // Preserve leading spaces/tabs as explicit spans so that
+        // callers tracking position through the result (e.g. Down
+        // mode's word-marker injection) stay aligned with the source
+        // text. `extractWords` discards leading whitespace, which
+        // otherwise causes every marker to shift left by the indent
+        // width on indented list-item continuation lines and similar.
+        let (oldLead, oldRest) = splitLeadingIndent(old)
+        let (newLead, newRest) = splitLeadingIndent(new)
 
-        guard !oldParts.isEmpty || !newParts.isEmpty else { return [] }
+        var leadSpans: [WordSpan] = []
+        if oldLead == newLead {
+            if !oldLead.isEmpty {
+                leadSpans.append(.unchanged(oldLead))
+            }
+        } else {
+            if !oldLead.isEmpty { leadSpans.append(.deleted(oldLead)) }
+            if !newLead.isEmpty { leadSpans.append(.inserted(newLead)) }
+        }
+
+        let oldParts = extractWords(tokenize(oldRest))
+        let newParts = extractWords(tokenize(newRest))
+
+        guard !oldParts.isEmpty || !newParts.isEmpty else {
+            return leadSpans
+        }
         if oldParts.isEmpty {
-            return newParts.flatMap { emitWord($0, as: .inserted) }
+            return leadSpans
+                + newParts.flatMap { emitWord($0, as: .inserted) }
         }
         if newParts.isEmpty {
-            return oldParts.flatMap { emitWord($0, as: .deleted) }
+            return leadSpans
+                + oldParts.flatMap { emitWord($0, as: .deleted) }
         }
 
         // Diff on word content only (whitespace is not diffed).
@@ -113,7 +136,7 @@ enum WordDiff {
         }
 
         // Build result: deletions before insertions within each gap.
-        var result: [WordSpan] = []
+        var result: [WordSpan] = leadSpans
 
         let boundaries =
             [(-1, -1)]
@@ -267,6 +290,20 @@ enum WordDiff {
     }
 
     // MARK: - Tokenization
+
+    /// Returns the run of leading spaces/tabs from `text` and the
+    /// remainder. Newlines are not considered indent.
+    private static func splitLeadingIndent(
+        _ text: String
+    ) -> (leading: String, rest: String) {
+        var idx = text.startIndex
+        while idx < text.endIndex,
+              text[idx] == " " || text[idx] == "\t" {
+            idx = text.index(after: idx)
+        }
+        if idx == text.startIndex { return ("", text) }
+        return (String(text[..<idx]), String(text[idx...]))
+    }
 
     /// Splits text into alternating word and whitespace tokens.
     /// For example, `"the quick fox"` becomes `["the", " ", "quick", " ", "fox"]`.

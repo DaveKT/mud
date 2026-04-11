@@ -444,6 +444,24 @@ struct DownModeChangeTrackingTests {
     #expect(delCount == 1)
   }
 
+  @Test func wordMarkersAlignOnIndentedListContinuation() {
+    // Regression: leading indent on a list-item continuation line
+    // must not shift word markers. Previously `WordDiff` discarded
+    // leading whitespace, so <ins>/<del> landed two columns too early
+    // (marking "se" instead of "SE" on this fixture).
+    let old = "- First line\n  second line\n  third line\n"
+    let new = "- First line\n  SECOND line\n  third line\n"
+    var opts = RenderOptions()
+    opts.waypoint = ParsedMarkdown(old)
+    let html = MudCore.renderDownToHTML(new, options: opts)
+    // The marker must cover the whole changed word, not a
+    // column-shifted prefix.
+    #expect(html.contains("<ins>SECOND</ins>"),
+      "Insertion marker should cover exactly 'SECOND'")
+    #expect(html.contains("<del>second</del>"),
+      "Deletion marker should cover exactly 'second'")
+  }
+
   @Test func linesAddedWithinPairedBlock() {
     // Old paragraph: 2 lines. New: 3 lines (one inserted).
     // Only the new line should be marked. No deletions.
