@@ -23,6 +23,7 @@
 		7C282ADB2F4F542E00611919 /* ThemeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C282AD62F4F542E00611919 /* ThemeSettingsView.swift */; };
 		7C282ADC2F4F542E00611919 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C282AD32F4F542E00611919 /* GeneralSettingsView.swift */; };
 		7C282ADD2F4F542E00611919 /* DownModeSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C282AD22F4F542E00611919 /* DownModeSettingsView.swift */; };
+		7CCH00000000000000000002 /* ChangesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCH00000000000000000001 /* ChangesSettingsView.swift */; };
 		7C282ADF2F50063900611919 /* CommandLineSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C282ADE2F50063900611919 /* CommandLineSettingsView.swift */; };
 		7C3640B52F60DC2C00364BEC /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3640B42F60DC2C00364BEC /* AppState.swift */; };
 		7C3640C52F60FCF400364BEC /* MarkdownSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3640C42F60FCF400364BEC /* MarkdownSettingsView.swift */; };
@@ -105,6 +106,7 @@
 		7C1FD9802F44FAC200BB4076 /* LocalFileSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFileSchemeHandler.swift; sourceTree = "<group>"; };
 		7C2665932F3D6216004C8D74 /* DocumentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentState.swift; sourceTree = "<group>"; };
 		7C282AD22F4F542E00611919 /* DownModeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownModeSettingsView.swift; sourceTree = "<group>"; };
+		7CCH00000000000000000001 /* ChangesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesSettingsView.swift; sourceTree = "<group>"; };
 		7C282AD32F4F542E00611919 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		7C282AD42F4F542E00611919 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		7C282AD52F4F542E00611919 /* ThemePreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePreviewCard.swift; sourceTree = "<group>"; };
@@ -199,6 +201,7 @@
 				7C282AD62F4F542E00611919 /* ThemeSettingsView.swift */,
 				7C282AD72F4F542E00611919 /* UpModeSettingsView.swift */,
 				7C282AD22F4F542E00611919 /* DownModeSettingsView.swift */,
+				7CCH00000000000000000001 /* ChangesSettingsView.swift */,
 				7C282ADE2F50063900611919 /* CommandLineSettingsView.swift */,
 				7CC6E6E22F6595BD00FE7D66 /* UpdateSettingsView.swift */,
 				7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */,
@@ -515,6 +518,7 @@
 				7C282ADB2F4F542E00611919 /* ThemeSettingsView.swift in Sources */,
 				7C282ADC2F4F542E00611919 /* GeneralSettingsView.swift in Sources */,
 				7C282ADD2F4F542E00611919 /* DownModeSettingsView.swift in Sources */,
+				7CCH00000000000000000002 /* ChangesSettingsView.swift in Sources */,
 				7CC6E6B72F657A2200FE7D66 /* DebuggingSettingsView.swift in Sources */,
 				7C442A622F3450190046E0CD /* AppDelegate.swift in Sources */,
 				7CA1197F2F3CC4D00098484A /* ViewToggle.swift in Sources */,

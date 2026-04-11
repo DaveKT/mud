@@ -142,6 +142,9 @@ MVP plan.
 
 - `DownModeSettingsView.swift` — Down Mode settings pane
 
+- `ChangesSettingsView.swift` — Changes settings pane (inline deletions, git
+  waypoints toggle)
+
 - `CommandLineSettingsView.swift` — Command Line settings pane
 
 - `UpdateSettingsView.swift` — Updates pane: auto-update radio group, Check

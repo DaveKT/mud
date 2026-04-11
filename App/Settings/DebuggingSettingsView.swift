@@ -15,29 +15,7 @@ struct DebuggingSettingsView: View {
                 }
             }
 
-            Section("Change tracking") {
-                Toggle(isOn: Binding(
-                    get: { appState.inlineDeletions },
-                    set: { newValue in
-                        appState.inlineDeletions = newValue
-                        appState.saveInlineDeletions()
-                    }
-                )) {
-                    Text("Inline deletions")
-                    Text("Show replaced words with strikethrough alongside new words in changed blocks.")
-                }
-                #if GIT_PROVIDER
-                Toggle(isOn: Binding(
-                    get: { appState.showGitWaypoints },
-                    set: { newValue in
-                        appState.showGitWaypoints = newValue
-                        appState.saveShowGitWaypoints()
-                    }
-                )) {
-                    Text("Git waypoints")
-                    Text("Show comparisons against git history in the changes menu.")
-                }
-                #endif
+            Section("Change Tracking") {
                 Slider(
                     value: Binding(
                         get: { appState.wordDiffThreshold },
@@ -58,7 +36,7 @@ struct DebuggingSettingsView: View {
                 }
             }
 
-            Section {
+            Section("Application Data") {
                 Text("Remove all saved preferences and restore factory defaults. The app will quit so changes take full effect.")
                     .foregroundStyle(.secondary)
 
