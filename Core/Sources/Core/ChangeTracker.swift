@@ -66,12 +66,10 @@ public class ChangeTracker: ObservableObject {
     /// change; time-bucket assignment and labels are recomputed every call.
     private var diffCache: [UUID: DiffSummary] = [:]
 
-    /// Recent `.reload` waypoints within this window are replaced when a
-    /// new reload arrives — collapses rapid-fire saves into one snapshot.
-    static let reloadCoalesceInterval: TimeInterval = 5
-
-    /// Maximum age for `.reload` waypoints before pruning.
-    static let reloadMaxAge: TimeInterval = 15 * 60
+    /// Maximum number of `.reload` waypoints to retain. Older reloads are
+    /// pruned once this cap is exceeded; `.initial` and `.accept` waypoints
+    /// don't count toward the cap and are never pruned.
+    static let maxReloadCount = 10
 
     public init() {}
 
@@ -108,6 +106,30 @@ public class ChangeTracker: ObservableObject {
 
     // MARK: - Update
 
+    /// Returns true when a save should be treated as a no-op and not
+    /// stored as its own waypoint. Catches two cases:
+    ///
+    /// 1. Raw-text duplicates of any existing waypoint
+    ///    (`ParsedMarkdown ==` is byte-for-byte).
+    /// 2. Saves that are AST-equivalent to the most recent non-external
+    ///    waypoint — e.g. a save that only edits blank lines. Without
+    ///    this, the menu would later render a redundant gap entry.
+    ///
+    /// The cheap raw-text check runs first so the AST diff is only
+    /// computed when necessary.
+    private func isRedundantSave(_ parsed: ParsedMarkdown) -> Bool {
+        if waypoints.contains(where: { $0.parsed == parsed }) {
+            return true
+        }
+        let mostRecent = waypoints.last { wp in
+            if case .external = wp.kind { return false }
+            return true
+        }
+        guard let mostRecent else { return false }
+        return MudCore.computeChanges(
+            old: mostRecent.parsed, new: parsed).isEmpty
+    }
+
     /// Called on each file load. On the first call, creates the initial
     /// waypoint (no changes). On subsequent calls, diffs against the
     /// active baseline and updates the change list.
@@ -124,25 +146,34 @@ public class ChangeTracker: ObservableObject {
             waypoints.append(Waypoint(
                 parsed: parsed, timestamp: now, kind: .initial))
         } else {
-            // Skip if content is identical to any existing waypoint.
-            let isDuplicate = waypoints.contains { $0.parsed == parsed }
-
-            if !isDuplicate {
-                // Drop recent .reload waypoints superseded by this one.
-                let coalesceThreshold = now.addingTimeInterval(
-                    -Self.reloadCoalesceInterval)
+            if !isRedundantSave(parsed) {
+                // Coalesce: keep at most one .reload per absolute minute
+                // (the most recent). Drop any existing reload that shares
+                // the new save's minute, then append.
+                let nowMinute = Self.absoluteMinute(now)
                 waypoints.removeAll { waypoint in
                     waypoint.kind == .reload
-                        && waypoint.timestamp >= coalesceThreshold
+                        && Self.absoluteMinute(waypoint.timestamp) == nowMinute
                 }
                 waypoints.append(Waypoint(
                     parsed: parsed, timestamp: now, kind: .reload))
-            }
 
-            // Prune .reload waypoints older than 15 minutes.
-            waypoints.removeAll { waypoint in
-                waypoint.kind == .reload
-                    && now.timeIntervalSince(waypoint.timestamp) > Self.reloadMaxAge
+                // Cap reload waypoints. Drop oldest first.
+                let reloads = waypoints
+                    .filter { $0.kind == .reload }
+                    .sorted { $0.timestamp < $1.timestamp }
+                if reloads.count > Self.maxReloadCount {
+                    let dropCount = reloads.count - Self.maxReloadCount
+                    let dropIDs = Set(reloads.prefix(dropCount).map(\.id))
+                    waypoints.removeAll { dropIDs.contains($0.id) }
+
+                    // If pruning removed the user's selected baseline,
+                    // fall back to the default.
+                    if let id = activeBaselineID,
+                       !waypoints.contains(where: { $0.id == id }) {
+                        selectBaseline(nil)
+                    }
+                }
             }
 
             // Diff against the active baseline.
@@ -212,12 +243,9 @@ public class ChangeTracker: ObservableObject {
 
     // MARK: - Menu items
 
-    /// Time thresholds for bucketed menu entries (in minutes).
-    static let timeThresholds: [Int] = [1, 2, 3, 4, 5, 10, 15]
-
     /// Returns menu items for the "Changes since…" picker.
-    /// Time-bucket assignment is recomputed each call so relative labels
-    /// stay accurate; per-waypoint diffs are cached until content changes.
+    /// Gap labels are recomputed each call so relative times stay accurate;
+    /// per-waypoint diffs are cached until content changes.
     public func menuItems() -> [ChangeMenuItem] {
         menuItems(at: Date())
     }
@@ -257,31 +285,44 @@ public class ChangeTracker: ObservableObject {
             usedWaypointIDs.insert(wp.id)
         }
 
-        // 2. Time-bucketed waypoints (iterate high-to-low so each waypoint
-        //    is claimed by its most accurate bucket, not the smallest one).
-        let timeBucketStart = items.count
-        for minutes in Self.timeThresholds.reversed() {
-            let threshold = now.addingTimeInterval(
-                -TimeInterval(minutes * 60))
-            // Most recent non-external waypoint older than the threshold.
-            guard let wp = waypoints.last(where: {
+        // 2. Gap-based "since X minutes ago" entries. Walk consecutive
+        //    pairs of non-external waypoints (sorted by timestamp). Each
+        //    gap (W_old, W_new) yields one menu entry whose diff is
+        //    (W_old → current) and whose label uses W_new's absolute
+        //    minute. Skip if W_old is already a milestone.
+        let gapStart = items.count
+        let nonExternal = waypoints
+            .filter {
                 if case .external = $0.kind { return false }
-                return $0.timestamp <= threshold
-            }) else { continue }
-            guard !usedWaypointIDs.contains(wp.id) else { continue }
+                return true
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        if nonExternal.count >= 2 {
+            for i in 0..<(nonExternal.count - 1) {
+                let oldWP = nonExternal[i]
+                let newWP = nonExternal[i + 1]
+                guard !usedWaypointIDs.contains(oldWP.id) else { continue }
 
-            let label = "since \(minutes) minute\(minutes == 1 ? "" : "s") ago"
-            let diff = diffSummary(from: wp.parsed, to: current, waypointID: wp.id)
-            items.append(ChangeMenuItem(
-                id: wp.id, label: label, timestamp: wp.timestamp,
-                changeCount: diff.groupCount,
-                isActive: isActiveBaseline(wp),
-                hasInsertions: diff.hasInsertions,
-                hasDeletions: diff.hasDeletions))
-            usedWaypointIDs.insert(wp.id)
+                let diff = diffSummary(
+                    from: oldWP.parsed, to: current, waypointID: oldWP.id)
+                // Hide gaps with no changes against current — happens
+                // when the file has been reverted to an earlier state.
+                guard diff.groupCount > 0 else { continue }
+
+                let minutes = Self.minutesAgoLabel(
+                    for: newWP.timestamp, at: now)
+                let label = "since \(minutes) minute\(minutes == 1 ? "" : "s") ago"
+                items.append(ChangeMenuItem(
+                    id: oldWP.id, label: label, timestamp: newWP.timestamp,
+                    changeCount: diff.groupCount,
+                    isActive: isActiveBaseline(oldWP),
+                    hasInsertions: diff.hasInsertions,
+                    hasDeletions: diff.hasDeletions))
+                usedWaypointIDs.insert(oldWP.id)
+            }
         }
-        // Reverse so the menu shows smallest-to-largest.
-        items[timeBucketStart...].reverse()
+        // Reverse so the most recent gap appears at the top.
+        items[gapStart...].reverse()
 
         // 3. "Since document opened" at the bottom (if distinct from primary)
         if acceptWaypoint != nil, let wp = initialWaypoint,
@@ -335,6 +376,23 @@ public class ChangeTracker: ObservableObject {
             hasDeletions: changes.contains { $0.type == .deletion })
         diffCache[waypointID] = summary
         return summary
+    }
+
+    /// Returns an integer key representing the absolute clock-minute a
+    /// timestamp falls in (for coalescing by minute).
+    static func absoluteMinute(_ date: Date) -> Int {
+        Int(date.timeIntervalSinceReferenceDate) / 60
+    }
+
+    /// Computes the "X minutes ago" label value for an anchor timestamp,
+    /// rounding up to the start of the anchor's absolute minute. Floors
+    /// at 1 to handle the (rare) case where `now` lands exactly on a
+    /// minute boundary in the same minute as the anchor.
+    static func minutesAgoLabel(for anchorTime: Date, at now: Date) -> Int {
+        let anchorMin = absoluteMinute(anchorTime)
+        let nowMin = absoluteMinute(now)
+        let secsIntoNowMin = Int(now.timeIntervalSinceReferenceDate) % 60
+        return max(1, (nowMin - anchorMin) + (secsIntoNowMin > 0 ? 1 : 0))
     }
 
     private func isActiveBaseline(_ waypoint: Waypoint) -> Bool {
