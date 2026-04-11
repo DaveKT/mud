@@ -7,6 +7,8 @@
     --change-mix: #e89530;
     --change-ins-ln: #aceebb;
     --change-del-ln: #ffcecb;
+    --change-ins-word: #c3f3ce;
+    --change-del-word: #ffcecb;
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 10%, white);
     --change-del-tint: color-mix(in srgb, var(--change-del) 10%, white);
     --change-mix-tint: color-mix(in srgb, var(--change-mix) 10%, white);
@@ -19,6 +21,8 @@
     --change-mix: #d29922;
     --change-ins-ln: #12572f;
     --change-del-ln: #490400;
+    --change-ins-word: color-mix(in srgb, var(--change-ins) 45%, transparent);
+    --change-del-word: color-mix(in srgb, var(--change-del) 45%, transparent);
     --change-ins-tint: color-mix(in srgb, var(--change-ins) 10%, black);
     --change-del-tint: color-mix(in srgb, var(--change-del) 10%, black);
     --change-mix-tint: color-mix(in srgb, var(--change-mix) 10%, black);
@@ -194,13 +198,13 @@
 
 [data-change-id] ins {
     text-decoration: none;
-    background: color-mix(in srgb, var(--change-ins) 20%, transparent);
+    background: var(--change-ins-word);
 }
 
 [data-change-id] del {
     text-decoration: line-through;
     text-decoration-color: var(--change-del);
-    background: color-mix(in srgb, var(--change-del) 20%, transparent);
+    background: var(--change-del-word);
 }
 
 /* When a mixed group is revealed (red + green side by side), hide
