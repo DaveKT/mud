@@ -87,7 +87,7 @@ struct LeafBlock {
 extension BlockMatcher {
     /// Flattens an AST into an ordered list of leaf blocks.
     static func collectLeafBlocks(from parsed: ParsedMarkdown) -> [LeafBlock] {
-        var collector = LeafBlockCollector(markdown: parsed.markdown)
+        var collector = LeafBlockCollector(markdown: parsed.body)
         collector.visit(parsed.document)
         return collector.blocks
     }
