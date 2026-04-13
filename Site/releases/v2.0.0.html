@@ -497,8 +497,7 @@ img {
 </head>
 <body>
     <article class="up-mode-output">
-<h1 id="releases">RELEASES</h1>
-<h2 id="v200">v2.0.0</h2>
+<h1 id="v200">v2.0.0</h1>
 <p>This version introduces <strong>change tracking</strong>! Compare your document against
 earlier reloads from the same Mud session. More:</p>
 <ul>
@@ -541,95 +540,6 @@ mode, and shown in a <code>---</code> fenced code block in Down mode.
 </ul>
 <p><strong>Screenshot of the Changes feature</strong>:</p>
 <p><img src="assets/v2.0.0-track-changes.png" alt="Changes control bar showing 5 document comparisons" /></p>
-<h2 id="v122">v1.2.2</h2>
-<ul>
-<li>New <code>--standalone</code> CLI flag produces self-contained HTML on stdout with
-images embedded as data URIs and all scripts inlined — the same treatment as
-<code>--browser</code>, without opening a browser window
-</li>
-<li>Copy Code button no longer duplicates when hovering repeatedly over a code
-block
-</li>
-</ul>
-<h2 id="v121">v1.2.1</h2>
-<ul>
-<li>Copy Code button appears on hover over fenced code blocks in Up mode
-</li>
-<li>Down mode layout restructured from HTML table to divs for better rendering
-and accessibility
-</li>
-<li>Mermaid diagram rendering is now optional, with a toggle in Up Mode settings
-</li>
-<li>New Markdown settings pane with DocC alert mode selector
-</li>
-<li>Auto-update support for direct distribution builds via Sparkle
-</li>
-<li>Release Notes link in the Help menu
-</li>
-<li>F3 and F4 as secondary keyboard shortcuts for sidebar and find
-</li>
-<li>Manual reload (Cmd+R) re-establishes the file watcher when the watched file
-has been replaced
-</li>
-<li>File watcher retries with backoff when re-establishing after external changes
-</li>
-<li>Local images served via <code>mud-asset:</code> are no longer cached, so edits to
-referenced images appear immediately on reload
-</li>
-<li>Settings labels use sentence case throughout
-</li>
-<li>Debugging pane in Settings (debug builds only) with preference reset
-</li>
-</ul>
-<h2 id="v110">v1.1.0</h2>
-<ul>
-<li>Settings dialog with sidebar navigation and panes for General, Theme,
-Markdown, Up Mode, Down Mode, Command Line, and Debugging
-</li>
-<li>Theme preview cards in Settings with visual color swatches
-</li>
-<li>Card-based lighting selector in General settings
-</li>
-<li>Up Mode setting to block loading of remote content
-</li>
-<li>Sandbox-aware command line settings: manual <code>ln -s</code> instructions when
-sandboxed, automatic installer otherwise
-</li>
-<li>GFM alerts and DocC-style asides (Note, Tip, Important, Warning, Caution)
-</li>
-<li>Special “Status” aside with deep orange styling and pulse icon
-</li>
-<li>“Error” recognized as a DocC-style aside
-</li>
-<li>Emoji shortcode support in Up mode (<code>:shortcode:</code> → emoji)
-</li>
-<li>Mermaid diagram rendering in Up mode
-</li>
-<li>CLI tool: separate “Mud CLI” target for command-line HTML output
-</li>
-<li>CLI tool: <code>-v</code> reports the main Mud.app version number
-</li>
-<li>CLI tool: when sandboxed, strips executable assets and adapts settings pane
-</li>
-<li>Error page displayed when documents can’t be opened
-</li>
-<li>Help menu item and bundled README opened on first launch
-</li>
-<li>Table of contents sidebar: extra space for disclosure chevrons, decoupled
-empty-state view from sidebar layout
-</li>
-<li>FileWatcher no longer fires onChange after genuine file deletion
-</li>
-<li>Window frame restored after content and toolbar setup
-</li>
-<li>“Enter Full Screen” hidden from View menu
-</li>
-</ul>
-<h2 id="v100">v1.0.0</h2>
-<ul>
-<li>Initial release.
-</li>
-</ul>
 
     </article>
 </body>
