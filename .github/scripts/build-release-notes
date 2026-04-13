@@ -26,6 +26,18 @@ sections = content.scan(/^(## v\S+.*?)(?=^## |\z)/m)
 
 FileUtils.mkdir_p(OUTPUT_DIR)
 
+# Copy Doc/Assets/ → Site/releases/assets/ (lowercase)
+assets_src = File.join(File.dirname(RELEASES_PATH), "Assets")
+assets_dst = File.join(OUTPUT_DIR, "assets")
+if Dir.exist?(assets_src)
+  FileUtils.mkdir_p(assets_dst)
+  Dir.glob(File.join(assets_src, "*")).each { |f| FileUtils.cp(f, assets_dst) }
+end
+
+def rewrite_asset_paths(html)
+  html.gsub('src="Assets/', 'src="assets/')
+end
+
 sections.each do |match|
   section = match[0].strip
   version = section[/^## (v\S+)/, 1]
@@ -37,7 +49,7 @@ sections.each do |match|
   IO.popen([mud_cli, "-u"], "r+") do |io|
     io.write(page)
     io.close_write
-    File.write(outfile, io.read)
+    File.write(outfile, rewrite_asset_paths(io.read))
   end
   puts "  #{outfile}"
 end
@@ -47,6 +59,6 @@ index_file = File.join(OUTPUT_DIR, "index.html")
 IO.popen([mud_cli, "-u"], "r+") do |io|
   io.write(content)
   io.close_write
-  File.write(index_file, io.read)
+  File.write(index_file, rewrite_asset_paths(io.read))
 end
 puts "  #{index_file}"

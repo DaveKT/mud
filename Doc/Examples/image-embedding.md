@@ -18,7 +18,7 @@ These use relative paths to images in the `Images/` subdirectory.
 
 This references an image from the repository root via a relative path.
 
-![Mud app icon](../Mud.png)
+![Mud app icon](../Assets/Mud.png)
 
 
 ## Image with title attribute
@@ -32,7 +32,7 @@ Hover over this image to see the title tooltip.
 
 Images placed inline with surrounding text.
 
-Here is an icon ![Mud](../Mud.png) embedded in a paragraph of text. The
+Here is an icon ![Mud](../Assets/Mud.png) embedded in a paragraph of text. The
 image should appear inline with the words around it.
 
 
@@ -49,7 +49,7 @@ Two images back-to-back with no text between them.
 
 Clicking this image should behave like a regular external link.
 
-[![Mud app icon](../Mud.png)](https://example.com)
+[![Mud app icon](../Assets/Mud.png)](https://example.com)
 
 
 ## Image with empty alt text
