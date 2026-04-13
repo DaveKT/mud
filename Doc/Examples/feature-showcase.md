@@ -1,11 +1,15 @@
+---
+title: Feature showcase
+description: >
+  Demonstrates all of Mud's extended Markdown features in one place.
+  Notice that this YAML frontmatter table is itself a feature.
+---
+
 Feature showcase
 ===============================================================================
 
 Mud renders GitHub-Flavoured Markdown with a set of extended features beyond
 the CommonMark baseline. This document demonstrates all of them in one place.
-
-
--------------------------------------------------------------------------------
 
 
 ## Alerts
@@ -135,6 +139,8 @@ GFM tables support per-column text alignment using `:` in the separator row.
 | Strikethrough    | `~~text~~`           | ✓      |
 | DocC asides      | `> Note: …`          | ✓      |
 | Status asides    | `> Status: …`        | ✓      |
+| Frontmatter      | `---` … `---`        | ✓      |
+| Change tracking  | View → Show Changes  | ✓      |
 
 
 ## Task lists
@@ -149,7 +155,26 @@ GFM tables support per-column text alignment using `:` in the separator row.
 - [x] Mermaid diagrams
 - [x] Syntax highlighting via highlight.js
 - [x] Emoji shortcodes
+- [x] YAML frontmatter
+- [x] Change tracking
 - [ ] Math rendering (not yet planned)
+
+
+## Change tracking
+
+Mud tracks changes to your document as you edit and reload. Toggle the Changes
+bar from **View → Show Changes** (⌃⌘C) or the toolbar button.
+
+- **Up mode** — tinted overlays highlight inserted, deleted, and modified
+  content. Numbered expando buttons let you reveal deletions and expand mixed
+  groups. Word-level diffs show exactly which words changed.
+- **Down mode** — colored line-number gutters and background tints mark changed
+  lines, with word-level markers for fine-grained detail.
+- **Changes sidebar** — a list of all change groups; click to navigate.
+- **Baselines** — diff against the last accept point, a time-based snapshot, or
+  (with git waypoints enabled) a recent commit.
+
+See `Doc/Guides/change-tracking.md` for the full guide.
 
 
 ## Inline formatting

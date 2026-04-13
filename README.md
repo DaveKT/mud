@@ -3,6 +3,7 @@ Mud: A Perfect Markdown Viewer
 
 > Status: Active development
 
+
 ## Why?
 
 Markdown is suddenly everywhere.
@@ -41,10 +42,12 @@ It does one thing — it marks up Markdown! — and it does it really well.
 - [x] GitHub-flavored Markdown with syntax-highlighted code blocks
 - [x] Raw source view with its own syntax highlighting and line numbers
 - [x] Space bar flips between views; scroll position preserved
+- [x] Change tracking!
 - [x] Four color themes — Austere, Blues, Earthy, Riot
 - [x] Bright / Dark / System lighting
 - [x] Table of contents sidebar
 - [x] Auto-reload on file change
+- [x] YAML frontmatter display (collapsible key-value table in Up mode)
 - [x] Find (Cmd+F)
 - [x] Print and Open in Browser
 - [x] Zoom, readable column, word wrap, and line number toggles
@@ -54,6 +57,7 @@ It does one thing — it marks up Markdown! — and it does it really well.
 
 I wrote an overview of my current Claude Code workflow, and how Mud is a great
 fit for it: <https://apps.josephpearson.org/mud/plan-workflows.html>.
+
 
 ## Command line tool
 
