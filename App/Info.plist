@@ -10,6 +10,8 @@
 	<string>SLb8PPG1VxkLUhB+eofc/mUpZlXptWwMdBqXUTKjpjc=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>MDItemKeywords</key>
+	<string>Markdown, GFM</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>CFBundleDocumentTypes</key>
