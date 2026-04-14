@@ -1,6 +1,20 @@
 RELEASES
 ===============================================================================
 
+## v2.0.1
+
+[The v2.0.0 release](https://apps.josephpearson.org/mud/releases/v2.0.0.html)
+introduced a major feature: Change Tracking! This release adds a handful of
+refinements:
+
+- New **Auto-expand changes** setting expands deletion and mixed change groups
+  by default, so you can see the full diff without clicking each one
+- Exported HTML (Save as PDF, Open in Browser) no longer includes change
+  tracking overlays and scripts
+- Improved date formatting for older waypoints in the Changes controls
+- Spotlight searches for "Markdown" and "GFM" now find Mud in results
+
+
 ## v2.0.0
 
 This version introduces **change tracking**! Compare your document against
