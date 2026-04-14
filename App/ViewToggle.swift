@@ -6,6 +6,7 @@ enum ViewToggle: String, CaseIterable {
     case lineNumbers
     case wordWrap
     case codeHeader
+    case autoExpandChanges
 
     var className: String {
         switch self {
@@ -13,12 +14,18 @@ enum ViewToggle: String, CaseIterable {
         case .lineNumbers: return "has-line-numbers"
         case .wordWrap: return "has-word-wrap"
         case .codeHeader: return "is-code-header"
+        case .autoExpandChanges: return "is-auto-expand-changes"
         }
     }
 
     private var defaultsKey: String { "Mud-\(rawValue)" }
 
-    private var defaultValue: Bool { true }
+    private var defaultValue: Bool {
+        switch self {
+        case .autoExpandChanges: return false
+        default: return true
+        }
+    }
 
     var isEnabled: Bool {
         let defaults = UserDefaults.standard

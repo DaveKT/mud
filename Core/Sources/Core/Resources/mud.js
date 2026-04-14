@@ -218,6 +218,9 @@
     } else {
       document.documentElement.classList.remove(name);
     }
+    if (name === "is-auto-expand-changes" && Mud.applyAutoExpandChanges) {
+      Mud.applyAutoExpandChanges(enabled);
+    }
   }
 
   // -- Theme ----------------------------------------------------------------

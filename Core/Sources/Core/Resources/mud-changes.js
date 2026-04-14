@@ -81,13 +81,26 @@
         })(gid));
       }
 
-      // Del-only groups start collapsed.
-      if (type === "del") {
-        div.classList.add("mud-overlay-collapsed");
+      // Del-only and mix groups start collapsed unless auto-expand is on.
+      if (type === "del" || type === "mix") {
+        if (!document.documentElement.classList.contains("is-auto-expand-changes")) {
+          if (type === "del") {
+            div.classList.add("mud-overlay-collapsed");
+          }
+        }
       }
 
       container.appendChild(div);
       _overlays[gid] = div;
+    }
+
+    // Auto-expand collapsible groups when the preference is set.
+    if (document.documentElement.classList.contains("is-auto-expand-changes")) {
+      for (var gid in _overlays) {
+        if (_groupTypes[gid] === "del" || _groupTypes[gid] === "mix") {
+          expandGroup(gid);
+        }
+      }
     }
 
     positionOverlays();
@@ -405,6 +418,20 @@
 
   // -- Extend public namespace ------------------------------------------------
 
+  function applyAutoExpandChanges(enabled) {
+    for (var gid in _overlays) {
+      var type = _groupTypes[gid];
+      if (type === "del" || type === "mix") {
+        if (enabled && !_expandedGroups[gid]) {
+          expandGroup(gid);
+        } else if (!enabled && _expandedGroups[gid]) {
+          collapseGroup(gid);
+        }
+      }
+    }
+  }
+
   window.Mud.scrollToChange = scrollToChange;
   window.Mud.collapseAllChanges = collapseAllChanges;
+  window.Mud.applyAutoExpandChanges = applyAutoExpandChanges;
 })();

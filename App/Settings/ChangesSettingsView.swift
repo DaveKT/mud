@@ -16,6 +16,13 @@ struct ChangesSettingsView: View {
                     Text("Inline deletions")
                     Text("Show replaced words with strikethrough alongside new words in changed blocks.")
                 }
+                Toggle(isOn: Binding(
+                    get: { appState.viewToggles.contains(.autoExpandChanges) },
+                    set: { _ in appState.toggle(.autoExpandChanges) }
+                )) {
+                    Text("Auto-expand changes")
+                    Text("Expand deletion and mixed change groups by default, rather than collapsing them.")
+                }
                 #if GIT_PROVIDER
                 Toggle(isOn: Binding(
                     get: { appState.showGitWaypoints },
