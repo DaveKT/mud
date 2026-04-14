@@ -5,7 +5,8 @@ public enum HTMLTemplate {
     /// Wraps body HTML in an Up-mode document.
     static func wrapUp(body: String, options: RenderOptions) -> String {
         var doc = HTMLDocument(options: options)
-        doc.styles = [themeCSS(for: options.theme), sharedCSS, upCSS, changesCSS]
+        doc.styles = [themeCSS(for: options.theme), sharedCSS, upCSS]
+        if options.waypoint != nil { doc.styles.append(changesCSS) }
         doc.cspImgSrc = options.blockRemoteContent
             ? ["mud-asset:", "data:"]
             : ["mud-asset:", "data:", "https:"]
@@ -26,7 +27,8 @@ public enum HTMLTemplate {
     /// Wraps pre-built body HTML in a Down-mode document.
     static func wrapDown(bodyHTML: String, options: RenderOptions) -> String {
         var doc = HTMLDocument(options: options)
-        doc.styles = [themeCSS(for: options.theme), sharedCSS, downCSS, changesCSS]
+        doc.styles = [themeCSS(for: options.theme), sharedCSS, downCSS]
+        if options.waypoint != nil { doc.styles.append(changesCSS) }
         doc.bodyContent = """
             <div class="down-mode-output">
                 \(bodyHTML)
@@ -66,6 +68,11 @@ public enum HTMLTemplate {
     /// Shared JavaScript injected at runtime by WKWebView.
     public static var mudJS: String {
         loadResource("mud", type: "js") ?? ""
+    }
+
+    /// Change tracking JavaScript injected at runtime by WKWebView.
+    public static var mudChangesJS: String {
+        loadResource("mud-changes", type: "js") ?? ""
     }
 
     /// Up-mode JavaScript injected at runtime by WKWebView.

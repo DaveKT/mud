@@ -70,6 +70,7 @@ struct WebView: NSViewRepresentable {
         // Mermaid is injected on demand via evaluateJavaScript.
         let scripts = [
             HTMLTemplate.mudJS,
+            HTMLTemplate.mudChangesJS,
             HTMLTemplate.mudUpJS,
             HTMLTemplate.mudDownJS,
         ]

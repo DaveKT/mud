@@ -208,6 +208,7 @@ MVP plan.
 - `mud-up.css` — Up mode styles
 - `mud-down.css` — Down mode styles
 - `mud.js` — Shared JS: find, scroll, lighting, zoom
+- `mud-changes.js` — Change tracking JS: overlays, expand/collapse, navigation
 - `mud-up.js` — Up-mode JS
 - `mud-down.js` — Down-mode JS
 - `emoji.json` — GitHub gemoji shortcode database
