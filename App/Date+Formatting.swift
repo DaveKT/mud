@@ -13,8 +13,12 @@ extension Date {
             return "yesterday"
         } else {
             let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            formatter.timeStyle = .short
+            if Calendar.current.component(.year, from: self)
+                == Calendar.current.component(.year, from: Date()) {
+                formatter.setLocalizedDateFormatFromTemplate("MMMd")
+            } else {
+                formatter.setLocalizedDateFormatFromTemplate("MMMdyyyy")
+            }
             return formatter.string(from: self)
         }
     }
