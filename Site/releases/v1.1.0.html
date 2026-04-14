@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src mud-asset: data: https:; style-src 'unsafe-inline'; script-src 'none'">
         
-    <title></title>
+    <title>v1.1.0</title>
     <style>/* Mud - Earthy theme */
 
 :root {
@@ -79,9 +79,10 @@ body {
     background-color: var(--body-bg);
 }
 
-body *:first-child {
-    min-height: 100%;
+article {
+  min-height: 100%;
 }
+
 
 /* Alert color variables (shared between Up and Down mode).
    Themes may override these custom properties. */
@@ -204,9 +205,10 @@ body *:first-child {
 
 .up-mode-output {
     margin: 0 auto;
-    padding: 2em;
-    box-sizing: content-box;
+    padding: 2em 2em 6em; /* space for floating bars beneath */
+    box-sizing: border-box;
     background: var(--bg-color);
+    overflow-x: hidden;
 }
 
 .is-readable-column .up-mode-output {
@@ -466,6 +468,7 @@ th, td {
     padding: 8px 12px;
     border: 1px solid var(--border-color);
     text-align: left;
+    vertical-align: top;
 }
 
 th {
@@ -492,6 +495,79 @@ tr:nth-child(even) {
 img {
     max-width: min(800px, 100%);
     height: auto;
+}
+
+/* Frontmatter */
+.mud-frontmatter {
+    margin-bottom: 1.5em;
+    border-radius: 3px;
+    overflow: hidden;
+    color: var(--blockquote-color);
+    border: 1px solid var(--border-color);
+}
+
+.mud-frontmatter summary {
+    font-size: 70%;
+    padding: 1em;
+    cursor: pointer;
+    font-weight: 500;
+    text-transform: uppercase;
+    user-select: none;
+    -webkit-user-select: none;
+    background-color: var(--code-bg);
+}
+
+.mud-frontmatter[open] summary {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mud-frontmatter pre {
+    margin: 0;
+    border-radius: 0 0 6px 6px;
+}
+
+.mud-frontmatter-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 75%;
+}
+
+.mud-frontmatter table tr {
+    background: none;
+}
+
+.mud-frontmatter-table tr > * {
+    vertical-align: top;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mud-frontmatter-table tr:last-child > * {
+    border-bottom: none;
+}
+
+.mud-frontmatter-table th {
+    width: 20%;
+    padding: 6px 1em;
+    text-align: right;
+    font-weight: 600;
+    white-space: nowrap;
+    border-right: 1px solid var(--border-color);
+}
+
+.mud-frontmatter-table td {
+    padding: 7px 1em;
+    color: var(--text-color);
+}
+
+.mud-frontmatter-table pre {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    background: transparent;
+    color: var(--syntax-string);
 }
 </style>
 </head>
@@ -541,6 +617,8 @@ empty-state view from sidebar layout
 <li>“Enter Full Screen” hidden from View menu
 </li>
 </ul>
+<hr />
+<p><a href="https://apps.josephpearson.org/mud/releases">All release notes</a></p>
 
     </article>
 </body>

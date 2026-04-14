@@ -6,15 +6,15 @@
 # Reads Doc/RELEASES.md, extracts per-version sections, and renders HTML
 # to Site/releases/ using the Mud CLI.
 #
-# The Mud CLI path defaults to the bundled location in Mud.app. Override
-# with the first argument for CI or non-standard installs.
+# The Mud CLI path defaults to /usr/local/bin/mud (the installed symlink).
+# Override with the first argument for CI or non-standard installs.
 
 require "fileutils"
 
 RELEASES_PATH = "Doc/RELEASES.md"
 OUTPUT_DIR = "Site/releases"
 
-mud_cli = ARGV[0] || "/Applications/Mud.app/Contents/Helpers/mud"
+mud_cli = ARGV[0] || "/usr/local/bin/mud"
 
 abort "#{RELEASES_PATH} not found" unless File.exist?(RELEASES_PATH)
 abort "Mud CLI not found at #{mud_cli}" unless File.executable?(mud_cli)
@@ -45,6 +45,7 @@ sections.each do |match|
 
   # Promote the ## heading to # for the standalone page
   page = section.sub(/^## /, "# ")
+  page += "\n\n---\n\n[All release notes](https://apps.josephpearson.org/mud/releases)\n"
   outfile = File.join(OUTPUT_DIR, "#{version}.html")
   IO.popen([mud_cli, "-u"], "r+") do |io|
     io.write(page)
