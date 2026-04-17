@@ -10,36 +10,36 @@ struct MudConfigurationTests {
     @Test func themeRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeTheme(.blues)
-        #expect(tc.config.readTheme() == .blues)
+        tc.config.theme = .blues
+        #expect(tc.config.theme == .blues)
     }
 
     @Test func lightingRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeLighting(.dark)
-        #expect(tc.config.readLighting() == .dark)
+        tc.config.lighting = .dark
+        #expect(tc.config.lighting == .dark)
     }
 
     @Test func doccAlertModeRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeDoccAlertMode(.off)
-        #expect(tc.config.readDoccAlertMode() == .off)
+        tc.config.doccAlertMode = .off
+        #expect(tc.config.doccAlertMode == .off)
     }
 
     @Test func doubleRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeUpModeZoomLevel(1.5)
-        #expect(tc.config.readUpModeZoomLevel() == 1.5)
+        tc.config.upModeZoomLevel = 1.5
+        #expect(tc.config.upModeZoomLevel == 1.5)
     }
 
     @Test func boolRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeTrackChanges(false)
-        #expect(tc.config.readTrackChanges() == false)
+        tc.config.trackChanges = false
+        #expect(tc.config.trackChanges == false)
     }
 
     @Test func stringArrayRoundTrip() {
@@ -54,15 +54,15 @@ struct MudConfigurationTests {
     @Test func sidebarPaneRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeSidebarPane(.changes)
-        #expect(tc.config.readSidebarPane() == .changes)
+        tc.config.sidebarPane = .changes
+        #expect(tc.config.sidebarPane == .changes)
     }
 
     @Test func floatingControlsPositionRoundTrip() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeFloatingControlsPosition(.topRight)
-        #expect(tc.config.readFloatingControlsPosition() == .topRight)
+        tc.config.floatingControlsPosition = .topRight
+        #expect(tc.config.floatingControlsPosition == .topRight)
     }
 
     @Test func viewToggleSingularRoundTrip() {
@@ -80,7 +80,7 @@ struct MudConfigurationTests {
         tc.config.writeViewToggle(.wordWrap, enabled: true)
         tc.config.writeViewToggle(.codeHeader, enabled: false)
         tc.config.writeViewToggle(.autoExpandChanges, enabled: true)
-        let set = tc.config.readViewToggles()
+        let set = tc.config.viewToggles
         #expect(set == [.readableColumn, .wordWrap, .autoExpandChanges])
     }
 
@@ -89,26 +89,26 @@ struct MudConfigurationTests {
     @Test func emptySuiteLightingDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readLighting() == .auto)
+        #expect(tc.config.lighting == .auto)
     }
 
     @Test func emptySuiteThemeDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readTheme() == .earthy)
+        #expect(tc.config.theme == .earthy)
     }
 
     @Test func emptySuiteDoccAlertDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readDoccAlertMode() == .extended)
+        #expect(tc.config.doccAlertMode == .extended)
     }
 
     @Test func emptySuiteZoomDefaults() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readUpModeZoomLevel() == 1.0)
-        #expect(tc.config.readDownModeZoomLevel() == 1.0)
+        #expect(tc.config.upModeZoomLevel == 1.0)
+        #expect(tc.config.downModeZoomLevel == 1.0)
     }
 
     @Test func emptySuiteBoolDefaults() {
@@ -116,31 +116,31 @@ struct MudConfigurationTests {
         defer { tc.tearDown() }
         // Bool prefs must not fall back to `false` on an empty suite —
         // the object(forKey:) as? Bool ?? default pattern matters here.
-        #expect(tc.config.readTrackChanges() == true)
-        #expect(tc.config.readInlineDeletions() == false)
-        #expect(tc.config.readQuitOnClose() == true)
-        #expect(tc.config.readAllowRemoteContent() == true)
-        #expect(tc.config.readUseHeadingAsTitle() == true)
-        #expect(tc.config.readShowGitWaypoints() == false)
-        #expect(tc.config.readSidebarVisible() == false)
+        #expect(tc.config.trackChanges == true)
+        #expect(tc.config.inlineDeletions == false)
+        #expect(tc.config.quitOnClose == true)
+        #expect(tc.config.allowRemoteContent == true)
+        #expect(tc.config.useHeadingAsTitle == true)
+        #expect(tc.config.showGitWaypoints == false)
+        #expect(tc.config.sidebarVisible == false)
     }
 
     @Test func emptySuiteWordDiffThresholdDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readWordDiffThreshold() == 0.25)
+        #expect(tc.config.wordDiffThreshold == 0.25)
     }
 
     @Test func emptySuiteFloatingControlsDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readFloatingControlsPosition() == .bottomCenter)
+        #expect(tc.config.floatingControlsPosition == .bottomCenter)
     }
 
     @Test func emptySuiteSidebarPaneDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        #expect(tc.config.readSidebarPane() == .outline)
+        #expect(tc.config.sidebarPane == .outline)
     }
 
     @Test func emptySuiteEnabledExtensionsReturnsDefault() {
@@ -166,21 +166,21 @@ struct MudConfigurationTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
         tc.config.defaults.set("not-a-theme", forKey: MudConfiguration.Keys.theme.rawValue)
-        #expect(tc.config.readTheme() == .earthy)
+        #expect(tc.config.theme == .earthy)
     }
 
     @Test func unknownLightingRawFallsBackToDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
         tc.config.defaults.set("nope", forKey: MudConfiguration.Keys.lighting.rawValue)
-        #expect(tc.config.readLighting() == .auto)
+        #expect(tc.config.lighting == .auto)
     }
 
     @Test func unknownDoccAlertRawFallsBackToDefault() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
         tc.config.defaults.set("xyz", forKey: MudConfiguration.Keys.doccAlertMode.rawValue)
-        #expect(tc.config.readDoccAlertMode() == .extended)
+        #expect(tc.config.doccAlertMode == .extended)
     }
 
     // MARK: - Reset
@@ -188,24 +188,24 @@ struct MudConfigurationTests {
     @Test func resetClearsEveryKey() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeTheme(.blues)
-        tc.config.writeLighting(.dark)
-        tc.config.writeUpModeZoomLevel(2.0)
-        tc.config.writeTrackChanges(false)
+        tc.config.theme = .blues
+        tc.config.lighting = .dark
+        tc.config.upModeZoomLevel = 2.0
+        tc.config.trackChanges = false
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.reset()
-        #expect(tc.config.readTheme() == .earthy)
-        #expect(tc.config.readLighting() == .auto)
-        #expect(tc.config.readUpModeZoomLevel() == 1.0)
-        #expect(tc.config.readTrackChanges() == true)
+        #expect(tc.config.theme == .earthy)
+        #expect(tc.config.lighting == .auto)
+        #expect(tc.config.upModeZoomLevel == 1.0)
+        #expect(tc.config.trackChanges == true)
         #expect(tc.config.readViewToggle(.readableColumn) == false)
     }
 
     @Test func resetClearsMirror() {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
-        tc.config.writeTheme(.blues)
-        tc.config.writeUpModeZoomLevel(2.0)
+        tc.config.theme = .blues
+        tc.config.upModeZoomLevel = 2.0
         tc.config.writeViewToggle(.readableColumn, enabled: true)
 
         tc.config.reset()
@@ -222,9 +222,9 @@ struct MudConfigurationTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
 
-        tc.config.writeTheme(.blues)
-        tc.config.writeUpModeZoomLevel(1.5)
-        tc.config.writeTrackChanges(false)
+        tc.config.theme = .blues
+        tc.config.upModeZoomLevel = 1.5
+        tc.config.trackChanges = false
         tc.config.writeEnabledExtensions(["alpha", "beta"])
         tc.config.writeViewToggle(.readableColumn, enabled: true)
 
@@ -261,17 +261,17 @@ struct MudConfigurationTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
 
-        tc.config.writeTheme(.riot)
-        tc.config.writeUpModeZoomLevel(1.25)
-        tc.config.writeAllowRemoteContent(false)
+        tc.config.theme = .riot
+        tc.config.upModeZoomLevel = 1.25
+        tc.config.allowRemoteContent = false
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.writeViewToggle(.lineNumbers, enabled: false)
 
         let readerAsExtension = MudConfiguration(defaults: tc.config.mirror!)
 
-        #expect(readerAsExtension.readTheme() == .riot)
-        #expect(readerAsExtension.readUpModeZoomLevel() == 1.25)
-        #expect(readerAsExtension.readAllowRemoteContent() == false)
+        #expect(readerAsExtension.theme == .riot)
+        #expect(readerAsExtension.upModeZoomLevel == 1.25)
+        #expect(readerAsExtension.allowRemoteContent == false)
         #expect(readerAsExtension.readViewToggle(.readableColumn) == true)
         #expect(readerAsExtension.readViewToggle(.lineNumbers) == false)
     }
@@ -284,9 +284,9 @@ struct MudConfigurationTests {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let config = MudConfiguration(defaults: defaults)
-        config.writeTheme(.blues)
+        config.theme = .blues
 
-        #expect(config.readTheme() == .blues)
+        #expect(config.theme == .blues)
         #expect(config.mirror == nil)
     }
 

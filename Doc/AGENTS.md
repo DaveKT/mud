@@ -320,8 +320,8 @@ Three ObservableObject classes, no nesting:
 
 State flows outward via `@ObservedObject`. Combine sinks in
 `DocumentWindowController` bridge state → AppKit (window appearance, toolbar
-icons) and call `AppState.saveX()` methods, which in turn delegate to
-`MudConfiguration.shared.writeX()` for persistence.
+icons). `AppState`'s `@Published` `didSet` observers persist each change by
+assigning to the corresponding `MudConfiguration.shared.<pref>` property.
 
 
 ## Communication patterns

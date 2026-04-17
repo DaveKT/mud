@@ -7,52 +7,52 @@ class AppState: ObservableObject {
     static let shared = AppState()
     @Published var modeInActiveTab: Mode = .up
     @Published var lighting: Lighting {
-        didSet { MudConfiguration.shared.writeLighting(lighting) }
+        didSet { MudConfiguration.shared.lighting = lighting }
     }
     @Published var theme: Theme {
-        didSet { MudConfiguration.shared.writeTheme(theme) }
+        didSet { MudConfiguration.shared.theme = theme }
     }
     @Published var viewToggles: Set<ViewToggle> {
-        didSet { MudConfiguration.shared.writeViewToggles(viewToggles) }
+        didSet { MudConfiguration.shared.viewToggles = viewToggles }
     }
     @Published var upModeZoomLevel: Double {
-        didSet { MudConfiguration.shared.writeUpModeZoomLevel(upModeZoomLevel) }
+        didSet { MudConfiguration.shared.upModeZoomLevel = upModeZoomLevel }
     }
     @Published var downModeZoomLevel: Double {
-        didSet { MudConfiguration.shared.writeDownModeZoomLevel(downModeZoomLevel) }
+        didSet { MudConfiguration.shared.downModeZoomLevel = downModeZoomLevel }
     }
     @Published var sidebarVisible: Bool {
-        didSet { MudConfiguration.shared.writeSidebarVisible(sidebarVisible) }
+        didSet { MudConfiguration.shared.sidebarVisible = sidebarVisible }
     }
     @Published var sidebarPane: SidebarPane {
-        didSet { MudConfiguration.shared.writeSidebarPane(sidebarPane) }
+        didSet { MudConfiguration.shared.sidebarPane = sidebarPane }
     }
     @Published var trackChanges: Bool {
-        didSet { MudConfiguration.shared.writeTrackChanges(trackChanges) }
+        didSet { MudConfiguration.shared.trackChanges = trackChanges }
     }
     @Published var inlineDeletions: Bool {
-        didSet { MudConfiguration.shared.writeInlineDeletions(inlineDeletions) }
+        didSet { MudConfiguration.shared.inlineDeletions = inlineDeletions }
     }
     @Published var quitOnClose: Bool {
-        didSet { MudConfiguration.shared.writeQuitOnClose(quitOnClose) }
+        didSet { MudConfiguration.shared.quitOnClose = quitOnClose }
     }
     @Published var allowRemoteContent: Bool {
-        didSet { MudConfiguration.shared.writeAllowRemoteContent(allowRemoteContent) }
+        didSet { MudConfiguration.shared.allowRemoteContent = allowRemoteContent }
     }
     @Published var doccAlertMode: DocCAlertMode {
-        didSet { MudConfiguration.shared.writeDoccAlertMode(doccAlertMode) }
+        didSet { MudConfiguration.shared.doccAlertMode = doccAlertMode }
     }
     @Published var useHeadingAsTitle: Bool {
-        didSet { MudConfiguration.shared.writeUseHeadingAsTitle(useHeadingAsTitle) }
+        didSet { MudConfiguration.shared.useHeadingAsTitle = useHeadingAsTitle }
     }
     @Published var wordDiffThreshold: Double {
-        didSet { MudConfiguration.shared.writeWordDiffThreshold(wordDiffThreshold) }
+        didSet { MudConfiguration.shared.wordDiffThreshold = wordDiffThreshold }
     }
     @Published var floatingControlsPosition: FloatingControlsPosition {
-        didSet { MudConfiguration.shared.writeFloatingControlsPosition(floatingControlsPosition) }
+        didSet { MudConfiguration.shared.floatingControlsPosition = floatingControlsPosition }
     }
     @Published var showGitWaypoints: Bool {
-        didSet { MudConfiguration.shared.writeShowGitWaypoints(showGitWaypoints) }
+        didSet { MudConfiguration.shared.showGitWaypoints = showGitWaypoints }
     }
     @Published var enabledExtensions: Set<String> {
         didSet { MudConfiguration.shared.writeEnabledExtensions(enabledExtensions) }
@@ -65,22 +65,22 @@ class AppState: ObservableObject {
         MudConfiguration.shared.migrate()
 
         let config = MudConfiguration.shared
-        self.lighting = config.readLighting()
-        self.theme = config.readTheme()
-        self.viewToggles = config.readViewToggles()
-        self.upModeZoomLevel = config.readUpModeZoomLevel()
-        self.downModeZoomLevel = config.readDownModeZoomLevel()
-        self.sidebarVisible = config.readSidebarVisible()
-        self.sidebarPane = config.readSidebarPane()
-        self.trackChanges = config.readTrackChanges()
-        self.inlineDeletions = config.readInlineDeletions()
-        self.quitOnClose = config.readQuitOnClose()
-        self.allowRemoteContent = config.readAllowRemoteContent()
-        self.doccAlertMode = config.readDoccAlertMode()
-        self.useHeadingAsTitle = config.readUseHeadingAsTitle()
-        self.wordDiffThreshold = config.readWordDiffThreshold()
-        self.floatingControlsPosition = config.readFloatingControlsPosition()
-        self.showGitWaypoints = config.readShowGitWaypoints()
+        self.lighting = config.lighting
+        self.theme = config.theme
+        self.viewToggles = config.viewToggles
+        self.upModeZoomLevel = config.upModeZoomLevel
+        self.downModeZoomLevel = config.downModeZoomLevel
+        self.sidebarVisible = config.sidebarVisible
+        self.sidebarPane = config.sidebarPane
+        self.trackChanges = config.trackChanges
+        self.inlineDeletions = config.inlineDeletions
+        self.quitOnClose = config.quitOnClose
+        self.allowRemoteContent = config.allowRemoteContent
+        self.doccAlertMode = config.doccAlertMode
+        self.useHeadingAsTitle = config.useHeadingAsTitle
+        self.wordDiffThreshold = config.wordDiffThreshold
+        self.floatingControlsPosition = config.floatingControlsPosition
+        self.showGitWaypoints = config.showGitWaypoints
         self.enabledExtensions = config.readEnabledExtensions(
             defaultValue: Set(RenderExtension.registry.keys)
         )

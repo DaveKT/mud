@@ -48,12 +48,12 @@ public struct MudConfigurationSnapshot: Sendable {
 extension MudConfiguration {
     public func snapshot(defaultEnabledExtensions: Set<String> = []) -> MudConfigurationSnapshot {
         MudConfigurationSnapshot(
-            theme: readTheme(),
-            upModeZoomLevel: readUpModeZoomLevel(),
-            viewToggles: readViewToggles(),
-            allowRemoteContent: readAllowRemoteContent(),
+            theme: theme,
+            upModeZoomLevel: upModeZoomLevel,
+            viewToggles: viewToggles,
+            allowRemoteContent: allowRemoteContent,
             enabledExtensions: readEnabledExtensions(defaultValue: defaultEnabledExtensions),
-            doccAlertMode: readDoccAlertMode()
+            doccAlertMode: doccAlertMode
         )
     }
 }

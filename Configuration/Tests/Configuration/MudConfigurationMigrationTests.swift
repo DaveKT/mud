@@ -12,8 +12,8 @@ struct MudConfigurationMigrationTests {
 
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readTheme() == .earthy)
-        #expect(tc.config.readLighting() == .auto)
+        #expect(tc.config.theme == .earthy)
+        #expect(tc.config.lighting == .auto)
     }
 
     @Test func legacyRenameMovesThemeAndRemovesOldKey() {
@@ -23,7 +23,7 @@ struct MudConfigurationMigrationTests {
         tc.config.defaults.set("blues", forKey: "Mud-Theme")
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readTheme() == .blues)
+        #expect(tc.config.theme == .blues)
         #expect(tc.config.defaults.object(forKey: "Mud-Theme") == nil)
     }
 
@@ -45,7 +45,7 @@ struct MudConfigurationMigrationTests {
         tc.config.defaults.set(1.75, forKey: "Mud-UpModeZoomLevel")
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readUpModeZoomLevel() == 1.75)
+        #expect(tc.config.upModeZoomLevel == 1.75)
         #expect(tc.config.defaults.object(forKey: "Mud-UpModeZoomLevel") == nil)
     }
 
@@ -67,10 +67,10 @@ struct MudConfigurationMigrationTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
 
-        tc.config.writeTheme(.riot)
+        tc.config.theme = .riot
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readTheme() == .riot)
+        #expect(tc.config.theme == .riot)
     }
 
     @Test func legacyRenameNewKeyWinsWhenBothPresent() {
@@ -78,11 +78,11 @@ struct MudConfigurationMigrationTests {
         defer { tc.tearDown() }
 
         tc.config.defaults.set("blues", forKey: "Mud-Theme")
-        tc.config.writeTheme(.riot)
+        tc.config.theme = .riot
 
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readTheme() == .riot)
+        #expect(tc.config.theme == .riot)
         // The legacy key is still cleared so re-running migration won't keep
         // finding it.
         #expect(tc.config.defaults.object(forKey: "Mud-Theme") == nil)
@@ -96,13 +96,13 @@ struct MudConfigurationMigrationTests {
         tc.config.defaults.set(1.5, forKey: "Mud-UpModeZoomLevel")
 
         tc.config.migrateLegacyKeys()
-        let themeAfterFirst = tc.config.readTheme()
-        let zoomAfterFirst = tc.config.readUpModeZoomLevel()
+        let themeAfterFirst = tc.config.theme
+        let zoomAfterFirst = tc.config.upModeZoomLevel
 
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readTheme() == themeAfterFirst)
-        #expect(tc.config.readUpModeZoomLevel() == zoomAfterFirst)
+        #expect(tc.config.theme == themeAfterFirst)
+        #expect(tc.config.upModeZoomLevel == zoomAfterFirst)
     }
 
     // MARK: - syncMirror — fan-out copy from `defaults` into `mirror`
@@ -160,7 +160,7 @@ struct MudConfigurationMigrationTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
 
-        tc.config.writeTheme(.blues)
+        tc.config.theme = .blues
         tc.config.syncMirror()
         let first = tc.config.mirror!.string(
             forKey: MudConfiguration.Keys.theme.rawValue
@@ -182,7 +182,7 @@ struct MudConfigurationMigrationTests {
 
         tc.config.migrate()
 
-        #expect(tc.config.readTheme() == .blues)
+        #expect(tc.config.theme == .blues)
         #expect(tc.config.defaults.object(forKey: "Mud-Theme") == nil)
         #expect(
             tc.config.mirror!.string(forKey: MudConfiguration.Keys.theme.rawValue)

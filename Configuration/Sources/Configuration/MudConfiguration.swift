@@ -83,7 +83,7 @@ extension MudConfiguration {
     }
 }
 
-// MARK: - Write helper
+// MARK: - Generic read/write helpers
 
 extension MudConfiguration {
     /// Fan a write out to `defaults` (source of truth) and `mirror` (when
@@ -92,90 +92,112 @@ extension MudConfiguration {
         defaults.set(value, forKey: key.rawValue)
         mirror?.set(value, forKey: key.rawValue)
     }
+
+    /// Overload for string-backed enums — persists the rawValue.
+    func write<T: RawRepresentable>(_ value: T, forKey key: Keys) where T.RawValue == String {
+        write(value.rawValue, forKey: key)
+    }
+
+    /// Read a `UserDefaults`-compatible value (Bool, Double, Int, String, …),
+    /// falling back to `d` when the key is absent or of the wrong type.
+    func read<T>(_ key: Keys, default d: T) -> T {
+        defaults.object(forKey: key.rawValue) as? T ?? d
+    }
+
+    /// Read a string-backed enum, falling back to `d`.
+    func read<T: RawRepresentable>(_ key: Keys, default d: T) -> T where T.RawValue == String {
+        defaults.string(forKey: key.rawValue).flatMap(T.init(rawValue:)) ?? d
+    }
 }
 
-// MARK: - Read/write methods
+// MARK: - Preferences
 
 extension MudConfiguration {
-    // Lighting
-    public func readLighting() -> Lighting {
-        let raw = defaults.string(forKey: Keys.lighting.rawValue) ?? ""
-        return Lighting(rawValue: raw) ?? .auto
-    }
-    public func writeLighting(_ value: Lighting) {
-        write(value.rawValue, forKey: .lighting)
+    public var lighting: Lighting {
+        get { read(.lighting, default: .auto) }
+        nonmutating set { write(newValue, forKey: .lighting) }
     }
 
-    // Theme
-    public func readTheme() -> Theme {
-        let raw = defaults.string(forKey: Keys.theme.rawValue) ?? ""
-        return Theme(rawValue: raw) ?? .earthy
-    }
-    public func writeTheme(_ value: Theme) {
-        write(value.rawValue, forKey: .theme)
+    public var theme: Theme {
+        get { read(.theme, default: .earthy) }
+        nonmutating set { write(newValue, forKey: .theme) }
     }
 
-    // Zoom levels
-    public func readUpModeZoomLevel() -> Double {
-        defaults.object(forKey: Keys.upModeZoomLevel.rawValue) as? Double ?? 1.0
-    }
-    public func writeUpModeZoomLevel(_ value: Double) {
-        write(value, forKey: .upModeZoomLevel)
-    }
-    public func readDownModeZoomLevel() -> Double {
-        defaults.object(forKey: Keys.downModeZoomLevel.rawValue) as? Double ?? 1.0
-    }
-    public func writeDownModeZoomLevel(_ value: Double) {
-        write(value, forKey: .downModeZoomLevel)
+    public var upModeZoomLevel: Double {
+        get { read(.upModeZoomLevel, default: 1.0) }
+        nonmutating set { write(newValue, forKey: .upModeZoomLevel) }
     }
 
-    // Sidebar
-    public func readSidebarVisible() -> Bool {
-        defaults.object(forKey: Keys.sidebarVisible.rawValue) as? Bool ?? false
-    }
-    public func writeSidebarVisible(_ value: Bool) {
-        write(value, forKey: .sidebarVisible)
-    }
-    public func readSidebarPane() -> SidebarPane {
-        let raw = defaults.string(forKey: Keys.sidebarPane.rawValue) ?? ""
-        return SidebarPane(rawValue: raw) ?? .outline
-    }
-    public func writeSidebarPane(_ value: SidebarPane) {
-        write(value.rawValue, forKey: .sidebarPane)
+    public var downModeZoomLevel: Double {
+        get { read(.downModeZoomLevel, default: 1.0) }
+        nonmutating set { write(newValue, forKey: .downModeZoomLevel) }
     }
 
-    // Change tracking
-    public func readTrackChanges() -> Bool {
-        defaults.object(forKey: Keys.trackChanges.rawValue) as? Bool ?? true
-    }
-    public func writeTrackChanges(_ value: Bool) {
-        write(value, forKey: .trackChanges)
-    }
-    public func readInlineDeletions() -> Bool {
-        defaults.object(forKey: Keys.inlineDeletions.rawValue) as? Bool ?? false
-    }
-    public func writeInlineDeletions(_ value: Bool) {
-        write(value, forKey: .inlineDeletions)
+    public var sidebarVisible: Bool {
+        get { read(.sidebarVisible, default: false) }
+        nonmutating set { write(newValue, forKey: .sidebarVisible) }
     }
 
-    // Quit on close
-    public func readQuitOnClose() -> Bool {
-        defaults.object(forKey: Keys.quitOnClose.rawValue) as? Bool ?? true
-    }
-    public func writeQuitOnClose(_ value: Bool) {
-        write(value, forKey: .quitOnClose)
+    public var sidebarPane: SidebarPane {
+        get { read(.sidebarPane, default: .outline) }
+        nonmutating set { write(newValue, forKey: .sidebarPane) }
     }
 
-    // Remote content
-    public func readAllowRemoteContent() -> Bool {
-        defaults.object(forKey: Keys.allowRemoteContent.rawValue) as? Bool ?? true
-    }
-    public func writeAllowRemoteContent(_ value: Bool) {
-        write(value, forKey: .allowRemoteContent)
+    public var trackChanges: Bool {
+        get { read(.trackChanges, default: true) }
+        nonmutating set { write(newValue, forKey: .trackChanges) }
     }
 
-    // Extensions. The default is supplied by the caller because
-    // MudConfiguration does not own the registry of available extensions.
+    public var inlineDeletions: Bool {
+        get { read(.inlineDeletions, default: false) }
+        nonmutating set { write(newValue, forKey: .inlineDeletions) }
+    }
+
+    public var quitOnClose: Bool {
+        get { read(.quitOnClose, default: true) }
+        nonmutating set { write(newValue, forKey: .quitOnClose) }
+    }
+
+    public var allowRemoteContent: Bool {
+        get { read(.allowRemoteContent, default: true) }
+        nonmutating set { write(newValue, forKey: .allowRemoteContent) }
+    }
+
+    public var doccAlertMode: DocCAlertMode {
+        get { read(.doccAlertMode, default: .extended) }
+        nonmutating set { write(newValue, forKey: .doccAlertMode) }
+    }
+
+    public var useHeadingAsTitle: Bool {
+        get { read(.useHeadingAsTitle, default: true) }
+        nonmutating set { write(newValue, forKey: .useHeadingAsTitle) }
+    }
+
+    public var wordDiffThreshold: Double {
+        get { read(.wordDiffThreshold, default: 0.25) }
+        nonmutating set { write(newValue, forKey: .wordDiffThreshold) }
+    }
+
+    public var floatingControlsPosition: FloatingControlsPosition {
+        get { read(.floatingControlsPosition, default: .bottomCenter) }
+        nonmutating set { write(newValue, forKey: .floatingControlsPosition) }
+    }
+
+    public var showGitWaypoints: Bool {
+        get { read(.showGitWaypoints, default: false) }
+        nonmutating set { write(newValue, forKey: .showGitWaypoints) }
+    }
+}
+
+// MARK: - Parameterized accessors
+//
+// These stay as methods because their shape doesn't fit a bare property:
+// `enabledExtensions` takes a caller-supplied default, and `ViewToggle`
+// accessors are parameterized by the toggle itself.
+
+extension MudConfiguration {
+    /// Extensions. The default is supplied by the caller because
+    /// MudConfiguration does not own the registry of available extensions.
     public func readEnabledExtensions(defaultValue: Set<String>) -> Set<String> {
         guard let stored = defaults.array(forKey: Keys.enabledExtensions.rawValue)
                 as? [String] else {
@@ -187,61 +209,19 @@ extension MudConfiguration {
         write(Array(value), forKey: .enabledExtensions)
     }
 
-    // DocC alert mode (enum lives in MudCore)
-    public func readDoccAlertMode() -> DocCAlertMode {
-        let raw = defaults.string(forKey: Keys.doccAlertMode.rawValue) ?? ""
-        return DocCAlertMode(rawValue: raw) ?? .extended
-    }
-    public func writeDoccAlertMode(_ value: DocCAlertMode) {
-        write(value.rawValue, forKey: .doccAlertMode)
-    }
-
-    // Heading as title
-    public func readUseHeadingAsTitle() -> Bool {
-        defaults.object(forKey: Keys.useHeadingAsTitle.rawValue) as? Bool ?? true
-    }
-    public func writeUseHeadingAsTitle(_ value: Bool) {
-        write(value, forKey: .useHeadingAsTitle)
-    }
-
-    // Word diff threshold
-    public func readWordDiffThreshold() -> Double {
-        defaults.object(forKey: Keys.wordDiffThreshold.rawValue) as? Double ?? 0.25
-    }
-    public func writeWordDiffThreshold(_ value: Double) {
-        write(value, forKey: .wordDiffThreshold)
-    }
-
-    // Floating controls
-    public func readFloatingControlsPosition() -> FloatingControlsPosition {
-        let raw = defaults.string(forKey: Keys.floatingControlsPosition.rawValue) ?? ""
-        return FloatingControlsPosition(rawValue: raw) ?? .bottomCenter
-    }
-    public func writeFloatingControlsPosition(_ value: FloatingControlsPosition) {
-        write(value.rawValue, forKey: .floatingControlsPosition)
-    }
-
-    // Git waypoints
-    public func readShowGitWaypoints() -> Bool {
-        defaults.object(forKey: Keys.showGitWaypoints.rawValue) as? Bool ?? false
-    }
-    public func writeShowGitWaypoints(_ value: Bool) {
-        write(value, forKey: .showGitWaypoints)
-    }
-
-    // View toggles. Singular pair is primary; the plural wraps it.
     public func readViewToggle(_ toggle: ViewToggle) -> Bool {
-        defaults.object(forKey: toggle.key.rawValue) as? Bool ?? toggle.defaultValue
+        read(toggle.key, default: toggle.defaultValue)
     }
     public func writeViewToggle(_ toggle: ViewToggle, enabled: Bool) {
         write(enabled, forKey: toggle.key)
     }
-    public func readViewToggles() -> Set<ViewToggle> {
-        Set(ViewToggle.allCases.filter { readViewToggle($0) })
-    }
-    public func writeViewToggles(_ toggles: Set<ViewToggle>) {
-        for toggle in ViewToggle.allCases {
-            writeViewToggle(toggle, enabled: toggles.contains(toggle))
+
+    public var viewToggles: Set<ViewToggle> {
+        get { Set(ViewToggle.allCases.filter { readViewToggle($0) }) }
+        nonmutating set {
+            for toggle in ViewToggle.allCases {
+                writeViewToggle(toggle, enabled: newValue.contains(toggle))
+            }
         }
     }
 }

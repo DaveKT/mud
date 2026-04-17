@@ -27,10 +27,10 @@ struct MudConfigurationSnapshotTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
 
-        tc.config.writeTheme(.blues)
-        tc.config.writeUpModeZoomLevel(1.25)
-        tc.config.writeAllowRemoteContent(false)
-        tc.config.writeDoccAlertMode(.common)
+        tc.config.theme = .blues
+        tc.config.upModeZoomLevel = 1.25
+        tc.config.allowRemoteContent = false
+        tc.config.doccAlertMode = .common
         tc.config.writeViewToggle(.readableColumn, enabled: false)
         tc.config.writeViewToggle(.lineNumbers, enabled: true)
         tc.config.writeViewToggle(.wordWrap, enabled: false)
@@ -54,10 +54,10 @@ struct MudConfigurationSnapshotTests {
         let tc = TestConfiguration()
         defer { tc.tearDown() }
 
-        tc.config.writeTheme(.blues)
-        tc.config.writeUpModeZoomLevel(1.25)
-        tc.config.writeAllowRemoteContent(false)
-        tc.config.writeDoccAlertMode(.common)
+        tc.config.theme = .blues
+        tc.config.upModeZoomLevel = 1.25
+        tc.config.allowRemoteContent = false
+        tc.config.doccAlertMode = .common
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.writeViewToggle(.wordWrap, enabled: false)
         tc.config.writeEnabledExtensions(["alpha"])
