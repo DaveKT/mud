@@ -17,9 +17,6 @@ struct SidebarView: View {
             }
             .pickerStyle(.segmented)
             .padding(8)
-            .onChange(of: appState.sidebarPane) { _, _ in
-                appState.saveSidebarPane()
-            }
 
             Group {
                 switch appState.sidebarPane {

@@ -6,24 +6,59 @@ import MudCore
 class AppState: ObservableObject {
     static let shared = AppState()
     @Published var modeInActiveTab: Mode = .up
-    @Published var lighting: Lighting
-    @Published var theme: Theme
-    @Published var viewToggles: Set<ViewToggle>
-    @Published var upModeZoomLevel: Double
-    @Published var downModeZoomLevel: Double
-    @Published var sidebarVisible: Bool
-    @Published var sidebarPane: SidebarPane
-    @Published var trackChanges: Bool
-    @Published var inlineDeletions: Bool
-    @Published var quitOnClose: Bool
-    @Published var allowRemoteContent: Bool
-    @Published var enabledExtensions: Set<String>
-    @Published var doccAlertMode: DocCAlertMode
-    @Published var useHeadingAsTitle: Bool
+    @Published var lighting: Lighting {
+        didSet { MudConfiguration.shared.writeLighting(lighting) }
+    }
+    @Published var theme: Theme {
+        didSet { MudConfiguration.shared.writeTheme(theme) }
+    }
+    @Published var viewToggles: Set<ViewToggle> {
+        didSet { MudConfiguration.shared.writeViewToggles(viewToggles) }
+    }
+    @Published var upModeZoomLevel: Double {
+        didSet { MudConfiguration.shared.writeUpModeZoomLevel(upModeZoomLevel) }
+    }
+    @Published var downModeZoomLevel: Double {
+        didSet { MudConfiguration.shared.writeDownModeZoomLevel(downModeZoomLevel) }
+    }
+    @Published var sidebarVisible: Bool {
+        didSet { MudConfiguration.shared.writeSidebarVisible(sidebarVisible) }
+    }
+    @Published var sidebarPane: SidebarPane {
+        didSet { MudConfiguration.shared.writeSidebarPane(sidebarPane) }
+    }
+    @Published var trackChanges: Bool {
+        didSet { MudConfiguration.shared.writeTrackChanges(trackChanges) }
+    }
+    @Published var inlineDeletions: Bool {
+        didSet { MudConfiguration.shared.writeInlineDeletions(inlineDeletions) }
+    }
+    @Published var quitOnClose: Bool {
+        didSet { MudConfiguration.shared.writeQuitOnClose(quitOnClose) }
+    }
+    @Published var allowRemoteContent: Bool {
+        didSet { MudConfiguration.shared.writeAllowRemoteContent(allowRemoteContent) }
+    }
+    @Published var doccAlertMode: DocCAlertMode {
+        didSet { MudConfiguration.shared.writeDoccAlertMode(doccAlertMode) }
+    }
+    @Published var useHeadingAsTitle: Bool {
+        didSet { MudConfiguration.shared.writeUseHeadingAsTitle(useHeadingAsTitle) }
+    }
+    @Published var wordDiffThreshold: Double {
+        didSet { MudConfiguration.shared.writeWordDiffThreshold(wordDiffThreshold) }
+    }
+    @Published var floatingControlsPosition: FloatingControlsPosition {
+        didSet { MudConfiguration.shared.writeFloatingControlsPosition(floatingControlsPosition) }
+    }
+    @Published var showGitWaypoints: Bool {
+        didSet { MudConfiguration.shared.writeShowGitWaypoints(showGitWaypoints) }
+    }
+    @Published var enabledExtensions: Set<String> {
+        didSet { MudConfiguration.shared.writeEnabledExtensions(enabledExtensions) }
+    }
+
     var openSettingsAction: (() -> Void)?
-    @Published var wordDiffThreshold: Double
-    @Published var floatingControlsPosition: FloatingControlsPosition
-    @Published var showGitWaypoints: Bool
 
     private init() {
         // Copy any legacy Mud-* keys from UserDefaults.standard into the
@@ -43,75 +78,14 @@ class AppState: ObservableObject {
         self.inlineDeletions = config.readInlineDeletions()
         self.quitOnClose = config.readQuitOnClose()
         self.allowRemoteContent = config.readAllowRemoteContent()
-        self.enabledExtensions = config.readEnabledExtensions(
-            defaultValue: Set(RenderExtension.registry.keys)
-        )
         self.doccAlertMode = config.readDoccAlertMode()
         self.useHeadingAsTitle = config.readUseHeadingAsTitle()
         self.wordDiffThreshold = config.readWordDiffThreshold()
         self.floatingControlsPosition = config.readFloatingControlsPosition()
         self.showGitWaypoints = config.readShowGitWaypoints()
-    }
-
-    func saveLighting(_ lighting: Lighting) {
-        MudConfiguration.shared.writeLighting(lighting)
-    }
-
-    func saveTheme(_ theme: Theme) {
-        MudConfiguration.shared.writeTheme(theme)
-    }
-
-    func saveZoomLevels() {
-        MudConfiguration.shared.writeUpModeZoomLevel(upModeZoomLevel)
-        MudConfiguration.shared.writeDownModeZoomLevel(downModeZoomLevel)
-    }
-
-    func saveSidebarVisible() {
-        MudConfiguration.shared.writeSidebarVisible(sidebarVisible)
-    }
-
-    func saveSidebarPane() {
-        MudConfiguration.shared.writeSidebarPane(sidebarPane)
-    }
-
-    func saveTrackChanges(_ value: Bool) {
-        MudConfiguration.shared.writeTrackChanges(value)
-    }
-
-    func saveInlineDeletions() {
-        MudConfiguration.shared.writeInlineDeletions(inlineDeletions)
-    }
-
-    func saveQuitOnClose() {
-        MudConfiguration.shared.writeQuitOnClose(quitOnClose)
-    }
-
-    func saveAllowRemoteContent() {
-        MudConfiguration.shared.writeAllowRemoteContent(allowRemoteContent)
-    }
-
-    func saveEnabledExtensions() {
-        MudConfiguration.shared.writeEnabledExtensions(enabledExtensions)
-    }
-
-    func saveDoccAlertMode() {
-        MudConfiguration.shared.writeDoccAlertMode(doccAlertMode)
-    }
-
-    func saveUseHeadingAsTitle() {
-        MudConfiguration.shared.writeUseHeadingAsTitle(useHeadingAsTitle)
-    }
-
-    func saveWordDiffThreshold() {
-        MudConfiguration.shared.writeWordDiffThreshold(wordDiffThreshold)
-    }
-
-    func saveFloatingControlsPosition() {
-        MudConfiguration.shared.writeFloatingControlsPosition(floatingControlsPosition)
-    }
-
-    func saveShowGitWaypoints() {
-        MudConfiguration.shared.writeShowGitWaypoints(showGitWaypoints)
+        self.enabledExtensions = config.readEnabledExtensions(
+            defaultValue: Set(RenderExtension.registry.keys)
+        )
     }
 
     func toggle(_ option: ViewToggle) {
@@ -120,6 +94,5 @@ class AppState: ObservableObject {
         } else {
             viewToggles.insert(option)
         }
-        option.save(viewToggles.contains(option))
     }
 }

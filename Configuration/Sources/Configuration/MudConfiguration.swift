@@ -222,6 +222,11 @@ extension MudConfiguration {
     public func readViewToggles() -> Set<ViewToggle> {
         Set(ViewToggle.allCases.filter { readViewToggle($0) })
     }
+    public func writeViewToggles(_ toggles: Set<ViewToggle>) {
+        for toggle in ViewToggle.allCases {
+            writeViewToggle(toggle, enabled: toggles.contains(toggle))
+        }
+    }
 }
 
 // MARK: - Reset

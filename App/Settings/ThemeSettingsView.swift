@@ -19,7 +19,6 @@ struct ThemeSettingsView: View {
                         isDark: appState.lighting.isDark()
                     ) {
                         appState.theme = theme
-                        appState.saveTheme(theme)
                     }
                 }
             }

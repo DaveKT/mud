@@ -15,7 +15,6 @@ struct GeneralSettingsView: View {
                                 isSelected: appState.lighting == lighting
                             ) {
                                 appState.lighting = lighting
-                                appState.saveLighting(lighting)
                             }
                             .frame(width: 72)
                         }
@@ -25,13 +24,7 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Picker("Floating controls", selection: Binding(
-                    get: { appState.floatingControlsPosition },
-                    set: { newValue in
-                        appState.floatingControlsPosition = newValue
-                        appState.saveFloatingControlsPosition()
-                    }
-                )) {
+                Picker("Floating controls", selection: $appState.floatingControlsPosition) {
                     ForEach(FloatingControlsPosition.allCases, id: \.self) { position in
                         Text(position.label).tag(position)
                     }
@@ -52,13 +45,7 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle("Quit when last window closes", isOn: Binding(
-                    get: { appState.quitOnClose },
-                    set: { newValue in
-                        appState.quitOnClose = newValue
-                        appState.saveQuitOnClose()
-                    }
-                ))
+                Toggle("Quit when last window closes", isOn: $appState.quitOnClose)
             }
         }
         .formStyle(.grouped)

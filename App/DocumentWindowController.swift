@@ -113,14 +113,6 @@ class DocumentWindowController: NSWindowController {
             .sink { [weak self] lighting in
                 self?.applyLighting(lighting)
                 self?.updateLightingButton(lighting)
-                AppState.shared.saveLighting(lighting)
-            }
-            .store(in: &cancellables)
-
-        AppState.shared.$theme
-            .dropFirst()
-            .sink { theme in
-                AppState.shared.saveTheme(theme)
             }
             .store(in: &cancellables)
 
@@ -155,20 +147,12 @@ class DocumentWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
-        AppState.shared.$trackChanges
-            .dropFirst()
-            .sink { value in
-                AppState.shared.saveTrackChanges(value)
-            }
-            .store(in: &cancellables)
-
         // Track sidebar collapse state for persistence
         if let sidebarItem = splitVC?.splitViewItems.first {
             sidebarItem.publisher(for: \.isCollapsed)
                 .dropFirst()
                 .sink { collapsed in
                     AppState.shared.sidebarVisible = !collapsed
-                    AppState.shared.saveSidebarVisible()
                 }
                 .store(in: &cancellables)
         }
@@ -258,7 +242,6 @@ class DocumentWindowController: NSWindowController {
             app.upModeZoomLevel = (app.upModeZoomLevel + delta)
                 .clamped(to: 0.5...3.0)
         }
-        app.saveZoomLevels()
         updateZoomLabel()
     }
 
@@ -269,7 +252,6 @@ class DocumentWindowController: NSWindowController {
         } else {
             app.upModeZoomLevel = 1.0
         }
-        app.saveZoomLevels()
         updateZoomLabel()
     }
 

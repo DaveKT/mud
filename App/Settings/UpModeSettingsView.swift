@@ -8,13 +8,7 @@ struct UpModeSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: Binding(
-                    get: { appState.allowRemoteContent },
-                    set: { newValue in
-                        appState.allowRemoteContent = newValue
-                        appState.saveAllowRemoteContent()
-                    }
-                )) {
+                Toggle(isOn: $appState.allowRemoteContent) {
                     Text("Allow remote content")
                     Text("Load remote images and other external resources referenced in Markdown documents.")
                 }
@@ -28,7 +22,6 @@ struct UpModeSettingsView: View {
                         } else {
                             appState.enabledExtensions.remove("mermaid")
                         }
-                        appState.saveEnabledExtensions()
                     }
                 )) {
                     Text("Generate diagrams")
@@ -61,7 +54,6 @@ struct UpModeSettingsView: View {
                         } else {
                             appState.enabledExtensions.remove("copyCode")
                         }
-                        appState.saveEnabledExtensions()
                     }
                 )) {
                     Text("Copy button")
