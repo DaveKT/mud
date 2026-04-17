@@ -3,22 +3,28 @@ import MudCore
 
 /// Centralized read/write layer for every persisted user preference.
 ///
-/// Production code uses `MudConfiguration.shared`, which is backed by the
-/// app-group `UserDefaults` suite so the main app and the Quick Look
-/// extension see the same store. Tests create their own instance with a
-/// hermetic per-test suite.
+/// Production code uses `MudConfiguration.shared`. `defaults` is the source of
+/// truth — `UserDefaults.standard` for the app so that `defaults write
+/// org.josephpearson.mud …` from the command line Just Works — and `mirror` is
+/// the app-group suite, which receives a fan-out copy of every write so the
+/// Quick Look extension can read a stable snapshot. Tests construct their own
+/// instance with hermetic per-test suites.
 public struct MudConfiguration: @unchecked Sendable {
-    public static let suiteName = "group.org.josephpearson.mud"
+    public static let appGroupSuiteName = "group.org.josephpearson.mud"
 
     let defaults: UserDefaults
+    let mirror: UserDefaults?
 
-    public init(defaults: UserDefaults) {
+    public init(defaults: UserDefaults, mirror: UserDefaults? = nil) {
         self.defaults = defaults
+        self.mirror = mirror
     }
 
-    /// Production instance — reads and writes the app-group suite.
+    /// Production instance — reads and writes `.standard`, mirrors writes into
+    /// the app-group suite for the Quick Look extension.
     public static let shared = MudConfiguration(
-        defaults: UserDefaults(suiteName: suiteName)!
+        defaults: .standard,
+        mirror: UserDefaults(suiteName: appGroupSuiteName)!
     )
 }
 
@@ -47,8 +53,8 @@ extension MudConfiguration {
         case autoExpandChanges        = "auto-expand-changes"
 
         /// The key this value was persisted under in `UserDefaults.standard`
-        /// before the move to the app-group suite. Used by migration only;
-        /// will be removed in a follow-up release.
+        /// before the lowercase-hyphen rename. Used by migration only; will be
+        /// removed in a follow-up release.
         var legacyStandardKey: String {
             switch self {
             case .lighting:                 return "Mud-Lighting"
@@ -77,6 +83,17 @@ extension MudConfiguration {
     }
 }
 
+// MARK: - Write helper
+
+extension MudConfiguration {
+    /// Fan a write out to `defaults` (source of truth) and `mirror` (when
+    /// present). Passing `nil` removes the key from both stores.
+    func write(_ value: Any?, forKey key: Keys) {
+        defaults.set(value, forKey: key.rawValue)
+        mirror?.set(value, forKey: key.rawValue)
+    }
+}
+
 // MARK: - Read/write methods
 
 extension MudConfiguration {
@@ -86,7 +103,7 @@ extension MudConfiguration {
         return Lighting(rawValue: raw) ?? .auto
     }
     public func writeLighting(_ value: Lighting) {
-        defaults.set(value.rawValue, forKey: Keys.lighting.rawValue)
+        write(value.rawValue, forKey: .lighting)
     }
 
     // Theme
@@ -95,7 +112,7 @@ extension MudConfiguration {
         return Theme(rawValue: raw) ?? .earthy
     }
     public func writeTheme(_ value: Theme) {
-        defaults.set(value.rawValue, forKey: Keys.theme.rawValue)
+        write(value.rawValue, forKey: .theme)
     }
 
     // Zoom levels
@@ -103,13 +120,13 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.upModeZoomLevel.rawValue) as? Double ?? 1.0
     }
     public func writeUpModeZoomLevel(_ value: Double) {
-        defaults.set(value, forKey: Keys.upModeZoomLevel.rawValue)
+        write(value, forKey: .upModeZoomLevel)
     }
     public func readDownModeZoomLevel() -> Double {
         defaults.object(forKey: Keys.downModeZoomLevel.rawValue) as? Double ?? 1.0
     }
     public func writeDownModeZoomLevel(_ value: Double) {
-        defaults.set(value, forKey: Keys.downModeZoomLevel.rawValue)
+        write(value, forKey: .downModeZoomLevel)
     }
 
     // Sidebar
@@ -117,14 +134,14 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.sidebarVisible.rawValue) as? Bool ?? false
     }
     public func writeSidebarVisible(_ value: Bool) {
-        defaults.set(value, forKey: Keys.sidebarVisible.rawValue)
+        write(value, forKey: .sidebarVisible)
     }
     public func readSidebarPane() -> SidebarPane {
         let raw = defaults.string(forKey: Keys.sidebarPane.rawValue) ?? ""
         return SidebarPane(rawValue: raw) ?? .outline
     }
     public func writeSidebarPane(_ value: SidebarPane) {
-        defaults.set(value.rawValue, forKey: Keys.sidebarPane.rawValue)
+        write(value.rawValue, forKey: .sidebarPane)
     }
 
     // Change tracking
@@ -132,13 +149,13 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.trackChanges.rawValue) as? Bool ?? true
     }
     public func writeTrackChanges(_ value: Bool) {
-        defaults.set(value, forKey: Keys.trackChanges.rawValue)
+        write(value, forKey: .trackChanges)
     }
     public func readInlineDeletions() -> Bool {
         defaults.object(forKey: Keys.inlineDeletions.rawValue) as? Bool ?? false
     }
     public func writeInlineDeletions(_ value: Bool) {
-        defaults.set(value, forKey: Keys.inlineDeletions.rawValue)
+        write(value, forKey: .inlineDeletions)
     }
 
     // Quit on close
@@ -146,7 +163,7 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.quitOnClose.rawValue) as? Bool ?? true
     }
     public func writeQuitOnClose(_ value: Bool) {
-        defaults.set(value, forKey: Keys.quitOnClose.rawValue)
+        write(value, forKey: .quitOnClose)
     }
 
     // Remote content
@@ -154,7 +171,7 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.allowRemoteContent.rawValue) as? Bool ?? true
     }
     public func writeAllowRemoteContent(_ value: Bool) {
-        defaults.set(value, forKey: Keys.allowRemoteContent.rawValue)
+        write(value, forKey: .allowRemoteContent)
     }
 
     // Extensions. The default is supplied by the caller because
@@ -167,7 +184,7 @@ extension MudConfiguration {
         return Set(stored).intersection(defaultValue)
     }
     public func writeEnabledExtensions(_ value: Set<String>) {
-        defaults.set(Array(value), forKey: Keys.enabledExtensions.rawValue)
+        write(Array(value), forKey: .enabledExtensions)
     }
 
     // DocC alert mode (enum lives in MudCore)
@@ -176,7 +193,7 @@ extension MudConfiguration {
         return DocCAlertMode(rawValue: raw) ?? .extended
     }
     public func writeDoccAlertMode(_ value: DocCAlertMode) {
-        defaults.set(value.rawValue, forKey: Keys.doccAlertMode.rawValue)
+        write(value.rawValue, forKey: .doccAlertMode)
     }
 
     // Heading as title
@@ -184,7 +201,7 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.useHeadingAsTitle.rawValue) as? Bool ?? true
     }
     public func writeUseHeadingAsTitle(_ value: Bool) {
-        defaults.set(value, forKey: Keys.useHeadingAsTitle.rawValue)
+        write(value, forKey: .useHeadingAsTitle)
     }
 
     // Word diff threshold
@@ -192,7 +209,7 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.wordDiffThreshold.rawValue) as? Double ?? 0.25
     }
     public func writeWordDiffThreshold(_ value: Double) {
-        defaults.set(value, forKey: Keys.wordDiffThreshold.rawValue)
+        write(value, forKey: .wordDiffThreshold)
     }
 
     // Floating controls
@@ -201,7 +218,7 @@ extension MudConfiguration {
         return FloatingControlsPosition(rawValue: raw) ?? .bottomCenter
     }
     public func writeFloatingControlsPosition(_ value: FloatingControlsPosition) {
-        defaults.set(value.rawValue, forKey: Keys.floatingControlsPosition.rawValue)
+        write(value.rawValue, forKey: .floatingControlsPosition)
     }
 
     // Git waypoints
@@ -209,7 +226,7 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.showGitWaypoints.rawValue) as? Bool ?? false
     }
     public func writeShowGitWaypoints(_ value: Bool) {
-        defaults.set(value, forKey: Keys.showGitWaypoints.rawValue)
+        write(value, forKey: .showGitWaypoints)
     }
 
     // View toggles. Singular pair is primary; the plural wraps it.
@@ -217,7 +234,7 @@ extension MudConfiguration {
         defaults.object(forKey: toggle.key.rawValue) as? Bool ?? toggle.defaultValue
     }
     public func writeViewToggle(_ toggle: ViewToggle, enabled: Bool) {
-        defaults.set(enabled, forKey: toggle.key.rawValue)
+        write(enabled, forKey: toggle.key)
     }
     public func readViewToggles() -> Set<ViewToggle> {
         Set(ViewToggle.allCases.filter { readViewToggle($0) })
@@ -232,11 +249,13 @@ extension MudConfiguration {
 // MARK: - Reset
 
 extension MudConfiguration {
-    /// Remove every Mud preference from this instance's suite. Used by the
-    /// Debugging settings pane in debug builds.
+    /// Remove every Mud preference from this instance's `defaults` and, when
+    /// present, from `mirror`. Used by the Debugging settings pane in debug
+    /// builds. Clearing the mirror synchronously matters because the Quick
+    /// Look extension reads it on the next preview request.
     public func reset() {
         for key in Keys.allCases {
-            defaults.removeObject(forKey: key.rawValue)
+            write(nil, forKey: key)
         }
     }
 }

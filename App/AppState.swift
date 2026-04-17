@@ -59,9 +59,9 @@ class AppState: ObservableObject {
     }
 
     private init() {
-        // Copy any legacy Mud-* keys from UserDefaults.standard into the
-        // app-group suite before reading any preference. Runs exactly once
-        // per install because `AppState.shared` is a singleton.
+        // Rename any legacy `Mud-*` keys to the lowercase-hyphen names inside
+        // UserDefaults.standard, then fan the current values out to the
+        // app-group mirror so the Quick Look extension sees a fresh snapshot.
         MudConfiguration.shared.migrate()
 
         let config = MudConfiguration.shared

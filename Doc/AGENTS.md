@@ -159,13 +159,19 @@ MVP plan.
 
 **Configuration/ key files:**
 
-- `MudConfiguration.swift` — Struct with `.shared` (app-group suite
-  `group.org.josephpearson.mud`), `Keys` enum, per-key read/write methods, and
-  `reset()`. `@unchecked Sendable` because `UserDefaults` isn't formally
-  Sendable.
+- `MudConfiguration.swift` — Struct with `.shared`. Reads and writes
+  `UserDefaults.standard` (source of truth, so
+  `defaults write org.josephpearson.mud …` stays easy); every write is also
+  mirrored into the app-group suite `group.org.josephpearson.mud` so the Quick
+  Look extension can read a snapshot. Holds the `Keys` enum, per-key read/write
+  methods, and `reset()`. `@unchecked Sendable` because `UserDefaults` isn't
+  formally Sendable.
 
-- `MudConfigurationMigration.swift` — One-shot copy of legacy `Mud-*` keys from
-  `UserDefaults.standard` into the suite. Idempotent.
+- `MudConfigurationMigration.swift` — `migrateLegacyKeys()` renames legacy
+  `Mud-*` keys in `UserDefaults.standard` to the lowercase-hyphen names;
+  `syncMirror()` fans every current `defaults` value into the mirror (so
+  `defaults write` changes made while the app was not running get picked up).
+  `migrate()` runs both and is called once at launch. Idempotent.
 
 - `MudConfigurationSnapshot.swift` — Value-type snapshot of the prefs that flow
   into `RenderOptions`, plus derived `upModeHTMLClasses`. Consumed by the Quick

@@ -201,6 +201,95 @@ struct MudConfigurationTests {
         #expect(tc.config.readViewToggle(.readableColumn) == false)
     }
 
+    @Test func resetClearsMirror() {
+        let tc = TestConfiguration()
+        defer { tc.tearDown() }
+        tc.config.writeTheme(.blues)
+        tc.config.writeUpModeZoomLevel(2.0)
+        tc.config.writeViewToggle(.readableColumn, enabled: true)
+
+        tc.config.reset()
+
+        let mirror = tc.config.mirror!
+        for key in MudConfiguration.Keys.allCases {
+            #expect(mirror.object(forKey: key.rawValue) == nil)
+        }
+    }
+
+    // MARK: - Mirror fan-out
+
+    @Test func writesLandInBothDefaultsAndMirror() {
+        let tc = TestConfiguration()
+        defer { tc.tearDown() }
+
+        tc.config.writeTheme(.blues)
+        tc.config.writeUpModeZoomLevel(1.5)
+        tc.config.writeTrackChanges(false)
+        tc.config.writeEnabledExtensions(["alpha", "beta"])
+        tc.config.writeViewToggle(.readableColumn, enabled: true)
+
+        #expect(
+            tc.config.defaults.string(forKey: MudConfiguration.Keys.theme.rawValue)
+                == "blues"
+        )
+        #expect(
+            tc.config.mirror!.string(forKey: MudConfiguration.Keys.theme.rawValue)
+                == "blues"
+        )
+        #expect(
+            tc.config.mirror!.object(forKey: MudConfiguration.Keys.upModeZoomLevel.rawValue)
+                as? Double == 1.5
+        )
+        #expect(
+            tc.config.mirror!.object(forKey: MudConfiguration.Keys.trackChanges.rawValue)
+                as? Bool == false
+        )
+        #expect(
+            (tc.config.mirror!.array(forKey: MudConfiguration.Keys.enabledExtensions.rawValue)
+                as? [String]).map(Set.init) == ["alpha", "beta"]
+        )
+        #expect(
+            tc.config.mirror!.object(forKey: MudConfiguration.Keys.readableColumn.rawValue)
+                as? Bool == true
+        )
+    }
+
+    @Test func mirrorBackedReadMatchesDefaults() {
+        // Simulate the Quick Look extension: a second MudConfiguration whose
+        // `defaults` points at the main instance's mirror suite. It should
+        // read back whatever the app just wrote.
+        let tc = TestConfiguration()
+        defer { tc.tearDown() }
+
+        tc.config.writeTheme(.riot)
+        tc.config.writeUpModeZoomLevel(1.25)
+        tc.config.writeAllowRemoteContent(false)
+        tc.config.writeViewToggle(.readableColumn, enabled: true)
+        tc.config.writeViewToggle(.lineNumbers, enabled: false)
+
+        let readerAsExtension = MudConfiguration(defaults: tc.config.mirror!)
+
+        #expect(readerAsExtension.readTheme() == .riot)
+        #expect(readerAsExtension.readUpModeZoomLevel() == 1.25)
+        #expect(readerAsExtension.readAllowRemoteContent() == false)
+        #expect(readerAsExtension.readViewToggle(.readableColumn) == true)
+        #expect(readerAsExtension.readViewToggle(.lineNumbers) == false)
+    }
+
+    @Test func writesWithoutMirrorDoNotFanOut() {
+        // The extension's own MudConfiguration has no mirror. Writes should
+        // still work; they just don't fan out anywhere.
+        let suiteName = "test.mud.nomirror.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let config = MudConfiguration(defaults: defaults)
+        config.writeTheme(.blues)
+
+        #expect(config.readTheme() == .blues)
+        #expect(config.mirror == nil)
+    }
+
     // MARK: - Key-catalog invariants
 
     @Test func keyCatalogCount() {

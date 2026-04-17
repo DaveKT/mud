@@ -48,6 +48,33 @@ struct MudConfigurationSnapshotTests {
         #expect(snap.enabledExtensions == ["alpha"])
     }
 
+    @Test func mirrorBackedSnapshotMatchesDefaults() {
+        // The extension builds its own MudConfiguration pointed at the
+        // app-group suite. Its snapshot should match what the app wrote.
+        let tc = TestConfiguration()
+        defer { tc.tearDown() }
+
+        tc.config.writeTheme(.blues)
+        tc.config.writeUpModeZoomLevel(1.25)
+        tc.config.writeAllowRemoteContent(false)
+        tc.config.writeDoccAlertMode(.common)
+        tc.config.writeViewToggle(.readableColumn, enabled: true)
+        tc.config.writeViewToggle(.wordWrap, enabled: false)
+        tc.config.writeEnabledExtensions(["alpha"])
+
+        let all: Set<String> = ["alpha", "beta"]
+        let defaultsSnap = tc.config.snapshot(defaultEnabledExtensions: all)
+        let extensionConfig = MudConfiguration(defaults: tc.config.mirror!)
+        let mirrorSnap = extensionConfig.snapshot(defaultEnabledExtensions: all)
+
+        #expect(mirrorSnap.theme == defaultsSnap.theme)
+        #expect(mirrorSnap.upModeZoomLevel == defaultsSnap.upModeZoomLevel)
+        #expect(mirrorSnap.allowRemoteContent == defaultsSnap.allowRemoteContent)
+        #expect(mirrorSnap.doccAlertMode == defaultsSnap.doccAlertMode)
+        #expect(mirrorSnap.viewToggles == defaultsSnap.viewToggles)
+        #expect(mirrorSnap.enabledExtensions == defaultsSnap.enabledExtensions)
+    }
+
     // MARK: - upModeHTMLClasses
 
     @Test func upModeHTMLClassesIncludesAllThree() {
