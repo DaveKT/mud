@@ -229,15 +229,10 @@ extension CodeBlockDiff {
         spans, threshold: wordDiffThreshold)
       guard hasWordChanges else { continue }
 
-      // WordDiff skips leading whitespace — offset markers to account
-      // for it.
-      let oldLeading = oldSrc.prefix(while: \.isWhitespace).count
-      let newLeading = newSrc.prefix(while: \.isWhitespace).count
-
       // Build markers for the deletion line.
       var delMarkers: [DownHTMLVisitor.WordMarker] = []
       var insMarkers: [DownHTMLVisitor.WordMarker] = []
-      var oldPos = oldLeading, newPos = newLeading
+      var oldPos = 0, newPos = 0
       for span in spans {
         switch span {
         case .unchanged(let text):
