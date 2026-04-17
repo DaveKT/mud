@@ -11,20 +11,26 @@ the upcoming Quick Look extension (see
 `AppState` keeps its `@Published` topology and remains the reactive owner of
 runtime state. MudConfiguration owns key strings, default values, the typed
 enums backing user-facing preferences, and the read/write helpers that touch
-`UserDefaults`. All preference storage moves into a single app-group container
-so the extension can read a stable snapshot.
+`UserDefaults`. Preferences remain in `UserDefaults.standard` — the domain the
+user's own `defaults write org.josephpearson.mud …` commands target — and
+MudConfiguration mirrors every write into an app-group suite so the Quick Look
+extension can read a stable snapshot.
 
 
 ## Goals
 
 - One central home for everything the app persists to `UserDefaults`. No more
   scattered key strings and inline default literals.
-- Single source of truth for the app group's UserDefaults suite — both the main
-  app and the Quick Look extension read and write the same store.
+- Keep `UserDefaults.standard` as the source of truth. Mud is a developer tool
+  and users should be able to set preferences via
+  `defaults write org.josephpearson.mud …` without wrestling with the long,
+  space-laden path of the app group's Group Containers plist.
+- Every write mirrors into the app-group suite (`group.org.josephpearson.mud`)
+  so the Quick Look extension has a separate, shared, readable copy.
 - Provide a one-shot `Snapshot` value the extension can read without owning any
   reactive state.
-- Per-key migration from `UserDefaults.standard` to the app-group suite, run
-  once on app launch.
+- Per-key legacy rename (`Mud-Theme` → `theme`) inside `UserDefaults.standard`,
+  plus a one-shot sync from standard into the app-group suite on app launch.
 
 
 ## Non-goals
@@ -35,8 +41,11 @@ so the extension can read a stable snapshot.
 - Hiding `UserDefaults` behind a property wrapper (e.g. `@MudPref`). Explicit
   read/write methods keep migration visible and stay grep-friendly. Property
   wrappers add a layer of magic that is harder to use from the snapshot path.
-- Live update propagation from the suite to the extension. Each preview reads
-  the snapshot at request time. Live updates are a non-goal of the QL plan.
+- Live propagation of external `defaults write` changes made while the app is
+  running. The app-group mirror refreshes at launch and on every subsequent
+  in-app write; anyone using `defaults write` to poke at a hidden preference
+  while the app is running should restart the app for the Quick Look extension
+  to see the change. Documented, not fixed.
 - Observability hooks (KVO, Combine publishers) on MudConfiguration itself.
   AppState's existing `@Published` properties already drive the UI.
 
@@ -51,7 +60,7 @@ Configuration/
   Sources/Configuration/
     MudConfiguration.swift              — struct, `.shared`, read/write helpers
     MudConfigurationSnapshot.swift      — value type for extension consumption
-    MudConfigurationMigration.swift     — one-time migration from .standard
+    MudConfigurationMigration.swift     — legacy rename + mirror sync
     Theme.swift                         — moved from App/
     ViewToggle.swift                    — moved from App/
     SidebarPane.swift                   — moved from App/AppState.swift
@@ -59,8 +68,8 @@ Configuration/
     Mode.swift                          — moved from App/
     Lighting.swift                      — bare enum, moved from App/
   Tests/Configuration/
-    MudConfigurationTests.swift           — round-trips, defaults, reset, catalog
-    MudConfigurationMigrationTests.swift  — legacy-to-new key migration
+    MudConfigurationTests.swift           — round-trips, defaults, reset, catalog, mirror fan-out
+    MudConfigurationMigrationTests.swift  — legacy rename + mirror sync
     MudConfigurationSnapshotTests.swift   — snapshot + upModeHTMLClasses
 ```
 
@@ -138,8 +147,8 @@ All keys use **lowercase-with-hyphens**, no prefix, no leading underscore.
 
 Rationale:
 
-- The suite domain (`group.org.josephpearson.mud`) already namespaces every key
-  — an app-level prefix like `Mud-` is structurally redundant. Apple's own
+- The bundle domain (`org.josephpearson.mud`) already namespaces every key — an
+  app-level prefix like `Mud-` is structurally redundant. Apple's own
   first-party apps don't prefix keys within their own domains.
 - macOS first-party precedent for the lowercase-with-hyphens style: the Dock
   (`com.apple.dock`) uses `tilesize`, `autohide`, `static-only`,
@@ -153,10 +162,11 @@ the legacy keys is covered below.
 
 ## Key catalog
 
-Every key currently written by the app. After this work, every key lives in the
-suite (`group.org.josephpearson.mud`). The "Legacy key" column shows the name
-the value was persisted under in `UserDefaults.standard` before this change —
-used only by the one-time migration walker.
+Every key currently written by the app. After this work, every key lives under
+`org.josephpearson.mud` in `UserDefaults.standard` (source of truth) and is
+mirrored into `group.org.josephpearson.mud` for the extension. The "Legacy key"
+column shows the name the value was persisted under in `UserDefaults.standard`
+before this change — used only by the one-time rename.
 
 | Key                          | Type                       | Default         | Legacy key (standard)          |
 | ---------------------------- | -------------------------- | --------------- | ------------------------------ |
@@ -185,32 +195,47 @@ used only by the one-time migration walker.
 
 ## Public API
 
-### Shape: instance type with `.shared`
+### Shape: two UserDefaults instances
 
-`MudConfiguration` is a `struct` that holds the `UserDefaults` instance it
-reads and writes. Production code uses `MudConfiguration.shared`. Tests create
-their own instance with a hermetic per-test suite. This mirrors `URLSession` /
-`JSONDecoder` — a familiar pattern for parallel-safe tests.
+`MudConfiguration` is a `struct` holding two `UserDefaults` — a `defaults` used
+for reads and writes (the source of truth) and an optional `mirror` that
+receives a fan-out copy of every write. Production code in the app uses
+`MudConfiguration.shared`, which points `defaults` at `.standard` and `mirror`
+at the app-group suite. The Quick Look extension constructs its own instance
+with `defaults` pointing at the suite and no mirror — it never writes, and the
+one value-type it consumes is `MudConfigurationSnapshot`.
 
 ```swift
 public struct MudConfiguration {
-    public static let suiteName = "group.org.josephpearson.mud"
+    public static let appGroupSuiteName = "group.org.josephpearson.mud"
 
     let defaults: UserDefaults
+    let mirror: UserDefaults?
 
-    public init(defaults: UserDefaults) {
+    public init(defaults: UserDefaults, mirror: UserDefaults? = nil) {
         self.defaults = defaults
+        self.mirror = mirror
     }
 
-    /// Production instance — reads and writes the app-group suite.
+    /// Production instance — reads and writes `.standard`, mirrors writes
+    /// into the app-group suite for the Quick Look extension.
     public static let shared = MudConfiguration(
-        defaults: UserDefaults(suiteName: suiteName)!
+        defaults: .standard,
+        mirror: UserDefaults(suiteName: appGroupSuiteName)!
     )
 }
 ```
 
+The Quick Look extension builds its instance with:
+
+```swift
+MudConfiguration(
+    defaults: UserDefaults(suiteName: MudConfiguration.appGroupSuiteName)!
+)
+```
+
 All read/write methods below are **instance methods** on `MudConfiguration`.
-Call sites in App/ and the extension go through `MudConfiguration.shared`.
+Call sites in App/ go through `MudConfiguration.shared`.
 
 
 ### Keys
@@ -247,7 +272,7 @@ extension MudConfiguration {
         case autoExpandChanges        = "auto-expand-changes"
 
         /// The key this value was persisted under in UserDefaults.standard
-        /// before the move to the app-group suite. Used by migration only.
+        /// before the lowercase-hyphen rename. Used by migration only.
         var legacyStandardKey: String {
             switch self {
             case .readableColumn:    return "Mud-readableColumn"
@@ -280,9 +305,17 @@ extension MudConfiguration {
 
 ### Per-key read/write methods
 
-Explicit methods, one pair per key. Each method handles the type round-trip
-(raw values for enums, `object(forKey:) as? T` for nullable scalars so the
-hard-coded default applies only when the key is genuinely absent).
+Reads hit `defaults`. Writes fan out — they set both `defaults` and, when
+present, `mirror`. A private helper keeps the per-key methods tight:
+
+```swift
+extension MudConfiguration {
+    private func write(_ value: Any?, forKey key: Keys) {
+        defaults.set(value, forKey: key.rawValue)
+        mirror?.set(value, forKey: key.rawValue)
+    }
+}
+```
 
 The examples below cover the patterns an implementer will meet: a type defined
 in MudConfiguration (`Theme`, `Lighting`), a type imported from MudCore
@@ -297,7 +330,7 @@ extension MudConfiguration {
         return Theme(rawValue: raw) ?? .earthy
     }
     public func writeTheme(_ value: Theme) {
-        defaults.set(value.rawValue, forKey: Keys.theme.rawValue)
+        write(value.rawValue, forKey: .theme)
     }
 
     public func readLighting() -> Lighting {
@@ -305,7 +338,7 @@ extension MudConfiguration {
         return Lighting(rawValue: raw) ?? .auto
     }
     public func writeLighting(_ value: Lighting) {
-        defaults.set(value.rawValue, forKey: Keys.lighting.rawValue)
+        write(value.rawValue, forKey: .lighting)
     }
 
     // Enum imported from MudCore:
@@ -314,7 +347,7 @@ extension MudConfiguration {
         return DocCAlertMode(rawValue: raw) ?? .extended
     }
     public func writeDoccAlertMode(_ value: DocCAlertMode) {
-        defaults.set(value.rawValue, forKey: Keys.doccAlertMode.rawValue)
+        write(value.rawValue, forKey: .doccAlertMode)
     }
 
     // Scalar:
@@ -322,7 +355,7 @@ extension MudConfiguration {
         defaults.object(forKey: Keys.upModeZoomLevel.rawValue) as? Double ?? 1.0
     }
     public func writeUpModeZoomLevel(_ value: Double) {
-        defaults.set(value, forKey: Keys.upModeZoomLevel.rawValue)
+        write(value, forKey: .upModeZoomLevel)
     }
 
     // ViewToggle — singular pair is primary (mirrors today's
@@ -332,7 +365,7 @@ extension MudConfiguration {
             ?? toggle.defaultValue
     }
     public func writeViewToggle(_ toggle: ViewToggle, enabled: Bool) {
-        defaults.set(enabled, forKey: toggle.key.rawValue)
+        write(enabled, forKey: toggle.key)
     }
     public func readViewToggles() -> Set<ViewToggle> {
         Set(ViewToggle.allCases.filter { readViewToggle($0) })
@@ -378,6 +411,10 @@ extension MudConfiguration {
 }
 ```
 
+`snapshot()` always reads from `defaults` — in the app that's `.standard`, in
+the extension that's the app-group suite. Same code, same read path, just aimed
+at different stores.
+
 The snapshot covers only the fields a Quick Look preview consumes (i.e. the
 fields that flow into `RenderOptions`). Other prefs (lighting, sidebar state,
 quit-on-close, etc.) are not in the snapshot — the extension never reads them.
@@ -388,33 +425,50 @@ snapshot's surface area can grow without affecting AppState's call sites.
 
 ### Migration
 
+Migration runs in two phases, both idempotent. The app calls
+`MudConfiguration.shared.migrate()` once on launch. Tests can invoke each phase
+independently.
+
 ```swift
 extension MudConfiguration {
-    /// Per-key copy from a legacy standard-defaults store into this instance's
-    /// suite. Also handles the rename from legacy `Mud-*` keys to the new
-    /// lowercase-hyphen naming. Idempotent — safe to run on every launch.
-    ///
-    /// The `standard` parameter defaults to `UserDefaults.standard` so
-    /// production callers can use `MudConfiguration.shared.migrate()`. Tests
-    /// pass their own stand-in so they can exercise migration without
-    /// touching the real standard defaults.
-    public func migrate(from standard: UserDefaults = .standard) {
+    /// One-time legacy key rename inside `defaults` (e.g. `Mud-Theme` →
+    /// `theme`). Idempotent — an already-present new key short-circuits.
+    public func migrateLegacyKeys() {
         for key in Keys.allCases {
             if defaults.object(forKey: key.rawValue) != nil { continue }
-            guard let value = standard.object(forKey: key.legacyStandardKey)
+            guard let value = defaults.object(forKey: key.legacyStandardKey)
                 else { continue }
             defaults.set(value, forKey: key.rawValue)
-            standard.removeObject(forKey: key.legacyStandardKey)
+            defaults.removeObject(forKey: key.legacyStandardKey)
         }
+    }
+
+    /// Copy every current `defaults` value into `mirror`. Picks up any
+    /// `defaults write` changes the user made while the app was not running,
+    /// and removes any mirror keys whose source value has since been cleared.
+    /// No-op when the instance has no mirror.
+    public func syncMirror() {
+        guard let mirror else { return }
+        for key in Keys.allCases {
+            let value = defaults.object(forKey: key.rawValue)
+            mirror.set(value, forKey: key.rawValue)
+        }
+    }
+
+    /// Convenience called by the app at launch. Rename legacy keys first,
+    /// then sync — so the mirror reflects the post-rename source of truth.
+    public func migrate() {
+        migrateLegacyKeys()
+        syncMirror()
     }
 }
 ```
 
 Called once from the app's `init` sequence (e.g. `AppDelegate` or
 `MudApp.init()`) as `MudConfiguration.shared.migrate()`, before
-`AppState.shared` is first touched. The extension does not run migration — its
-own `UserDefaults.standard` is a different domain, so there is nothing to
-migrate from. If migration has not yet run, the snapshot returns hard-coded
+`AppState.shared` is first touched. The extension does not run migration — it
+has no mirror and no legacy keys to rename. If the app has never launched since
+installation, the suite is empty and the extension falls back to hard-coded
 defaults; this is the documented edge case covered in the QL plan.
 
 
@@ -422,19 +476,25 @@ defaults; this is the documented edge case covered in the QL plan.
 
 ```swift
 extension MudConfiguration {
-    /// Remove every Mud preference from this instance's suite. Used by the
-    /// Debugging settings pane in debug builds (via `.shared.reset()`).
+    /// Remove every Mud preference from this instance's `defaults` and, if
+    /// present, from `mirror`. Used by the Debugging settings pane in debug
+    /// builds (via `.shared.reset()`).
     public func reset() {
         for key in Keys.allCases {
-            defaults.removeObject(forKey: key.rawValue)
+            write(nil, forKey: key)
         }
     }
 }
 ```
 
-Replaces the current per-key reset logic in `DebuggingSettingsView` with a
-single call. Walking `Keys.allCases` means new prefs are reset automatically as
-they're added.
+`write(nil, forKey:)` removes the key from both stores — `UserDefaults.set`
+documents passing `nil` as equivalent to `removeObject(forKey:)`. Clearing the
+mirror synchronously matters because the extension reads it immediately; if we
+left the mirror populated, the Quick Look preview would see stale values until
+the next app launch.
+
+Walking `Keys.allCases` means new prefs are reset automatically as they're
+added.
 
 
 ## AppState changes
@@ -464,7 +524,8 @@ func saveTheme(_ theme: Theme) {
     UserDefaults.standard.set(theme.rawValue, forKey: Self.themeKey)
 }
 
-// After: MudConfiguration owns both. The new "theme" key lives in the suite.
+// After: MudConfiguration owns both. The renamed key sits in .standard
+// under `theme` and is mirrored into the app-group suite on write.
 @Published var theme: Theme
 
 private init() {
@@ -484,8 +545,9 @@ that delegate to `MudConfiguration.shared.readViewToggle(_:)` /
 
 Swift Testing (matching `MudCoreTests`'s `import Testing` / `@Test` / `@Suite`
 conventions). Three test files, split by concern. Every test creates its own
-`MudConfiguration` instance with a hermetic per-test suite so Swift Testing's
-default parallel execution is safe.
+`MudConfiguration` instance with a hermetic per-test `defaults` suite, and most
+also supply a hermetic per-test `mirror` suite, so Swift Testing's default
+parallel execution is safe.
 
 
 ### Helper
@@ -493,24 +555,33 @@ default parallel execution is safe.
 ```swift
 @testable import MudConfiguration
 
-/// Fresh, hermetic MudConfiguration for one test. Call `tearDown()` at the
-/// end of each test to remove the on-disk domain.
+/// Fresh, hermetic MudConfiguration for one test, with its own defaults and
+/// mirror suites. Call `tearDown()` at the end of each test to remove both
+/// on-disk domains.
 struct TestConfiguration {
-    let suiteName: String
+    let defaultsSuiteName: String
+    let mirrorSuiteName: String
     let config: MudConfiguration
 
     init() {
-        self.suiteName = "test.mud.\(UUID().uuidString)"
+        let id = UUID().uuidString
+        self.defaultsSuiteName = "test.mud.defaults.\(id)"
+        self.mirrorSuiteName = "test.mud.mirror.\(id)"
         self.config = MudConfiguration(
-            defaults: UserDefaults(suiteName: suiteName)!
+            defaults: UserDefaults(suiteName: defaultsSuiteName)!,
+            mirror: UserDefaults(suiteName: mirrorSuiteName)!
         )
     }
 
     func tearDown() {
-        config.defaults.removePersistentDomain(forName: suiteName)
+        config.defaults.removePersistentDomain(forName: defaultsSuiteName)
+        config.mirror?.removePersistentDomain(forName: mirrorSuiteName)
     }
 }
 ```
+
+Tests that exercise the extension's read path (no mirror) build a second
+`MudConfiguration` whose `defaults` is the first instance's mirror suite.
 
 
 ### `MudConfigurationTests.swift`
@@ -525,7 +596,18 @@ Round-trips and defaults:
   empty string. Covers the `object(forKey:) as? T ?? default` pattern.
 - Read when the stored raw string doesn't match any enum case returns the
   default (confirms `Type(rawValue:) ?? default`, not force-unwrap).
-- `reset()` after writes → snapshot returns all defaults.
+- `reset()` after writes → snapshot returns all defaults, and both `defaults`
+  and `mirror` are cleared.
+
+Mirror fan-out:
+
+- After every write method, the new value is present in both `defaults` and
+  `mirror` under the same key.
+- A `MudConfiguration` built with `mirror: nil` still reads and writes cleanly;
+  writes simply don't fan out.
+- Reading from a second `MudConfiguration` whose `defaults` points at the first
+  instance's mirror returns the same values — the extension read path matches
+  what the app wrote.
 
 Key-catalog invariants (cheap tripwires for someone adding a case later):
 
@@ -536,20 +618,31 @@ Key-catalog invariants (cheap tripwires for someone adding a case later):
 
 ### `MudConfigurationMigrationTests.swift`
 
-Migration takes both a source (`from standard:`) and an implicit destination
-(the instance's own suite). Tests pass their own stand-in `.standard` so the
-real standard defaults are never touched.
+Legacy rename (`migrateLegacyKeys()`) — source and destination are both
+`defaults`:
 
-- Key absent in both stores → no change; snapshot returns default.
-- Legacy key in the stand-in `.standard` only → migrated to suite under the new
-  name; the legacy key is removed from the stand-in.
-- New key in the suite only → no-op.
-- Both present (partial migration from a prior run) → suite wins; legacy key is
-  removed from `.standard`.
-- Running `migrate()` twice in a row is idempotent (no diff after second call).
+- Neither legacy nor new key present → no change; snapshot returns default.
+- Legacy key present, new key absent → value renamed in place; legacy key
+  removed.
+- New key present, legacy absent → no-op.
+- Both present → new key wins; legacy key is removed.
+- Idempotent: running twice in a row leaves the store in the same state.
 - Type-specific migrations — at least one per shape: `Mud-Theme` (String),
   `Mud-readableColumn` (Bool), `Mud-UpModeZoomLevel` (Double),
   `Mud-EnabledExtensions` (`[String]`).
+
+Mirror sync (`syncMirror()`):
+
+- With a mirror: every key present in `defaults` is copied to `mirror`.
+- Keys absent in `defaults` result in the corresponding mirror key being
+  removed (set-nil behavior), so the mirror never retains stale state.
+- Without a mirror: no-op, no crash.
+- Idempotent.
+
+End-to-end (`migrate()`):
+
+- Populate a legacy key in `defaults`, run `migrate()`, assert the value lands
+  at the renamed key in `defaults` and is also present in `mirror`.
 
 
 ### `MudConfigurationSnapshotTests.swift`
@@ -559,6 +652,9 @@ real standard defaults are never touched.
 - `upModeHTMLClasses` derivation: given a specific `Set<ViewToggle>`, the
   returned class names are correct (`.readableColumn → "is-readable-column"`,
   etc.), and down-mode-only toggles are excluded.
+- Snapshot from a mirror-backed `MudConfiguration` (simulating the extension)
+  equals the snapshot from the defaults-backed `MudConfiguration` after the
+  same sequence of writes.
 
 
 ### Not tested
@@ -569,30 +665,35 @@ real standard defaults are never touched.
 - Cross-process visibility between the app and the QL extension — a runtime
   integration concern, not a unit test. Verified by running the extension
   against a real dev build.
+- Live handling of external `defaults write` changes made while the app is
+  running. Documented as restart-required behavior.
 
 
 ## Order of work
 
-1. Create the `Configuration/` Swift package, declare `MudConfiguration`
-   product, add MudCore dependency.
-2. Move the platform-independent enums into `Sources/Configuration/`. Split
-   `Lighting` — bare enum into the module, AppKit/SwiftUI extension stays in
-   App/ as `Lighting+AppKit.swift`. Update App/ imports.
-3. Land `MudConfiguration` (struct with `.shared`), `Keys`, and read/write
-   methods. Land `MudConfigurationTests.swift`.
-4. Land `migrate(from:)`. Land `MudConfigurationMigrationTests.swift`.
-5. Refactor `AppState` and `ViewToggle` to call `MudConfiguration.shared`.
-   Smoke-test the running app. `DebuggingSettingsView` switches to
-   `MudConfiguration.shared.reset()`.
-6. Add `MudConfigurationSnapshot` and the `snapshot()` instance method. Land
-   `MudConfigurationSnapshotTests.swift`. (Used by the QL extension in the
-   sibling plan.)
-7. Add the app-group entitlement to the main-app target. The suite begins
-   working immediately; existing users' settings migrate on next launch.
+The move-to-suite version of this plan already landed. The diff from the
+current code to the revised (mirror-to-suite) design:
 
-Steps 1–5 are landable independently of the QL plan; the app continues to work
-the same way, just persisting through a centralized layer. Steps 6–7 unblock
-the QL extension.
+1. `MudConfiguration.init` gains a `mirror: UserDefaults? = nil` parameter. Add
+   the `mirror` stored property.
+2. `MudConfiguration.shared` flips: `defaults` becomes `.standard`, `mirror`
+   holds `UserDefaults(suiteName: appGroupSuiteName)!`.
+3. Add the private `write(_:forKey:)` helper. Route every existing write method
+   through it so the mirror receives every write.
+4. Replace the current `migrate(from:)` with `migrateLegacyKeys()` (in-place
+   rename inside `defaults`) and `syncMirror()` (fan-out into the mirror). Keep
+   a `migrate()` convenience that runs both; the existing launch call site is
+   unchanged.
+5. `reset()` routes through `write(nil, forKey:)` so it clears both stores.
+6. Update `MudConfigurationMigrationTests` for the new shape. Add the mirror
+   fan-out assertions to `MudConfigurationTests` and the mirror-backed snapshot
+   assertion to `MudConfigurationSnapshotTests`.
+7. Smoke-test the running app: launch with existing `Mud-*` keys in
+   `.standard`, confirm they rename correctly and that the app-group suite ends
+   up populated.
+
+The app-group entitlement and the Package.swift wiring landed in the earlier
+round and do not need revisiting.
 
 
 ## Follow-up cleanup
@@ -601,7 +702,10 @@ After at least one release has shipped with migration in place and the
 population of existing installs has had a chance to upgrade, remove:
 
 - `Keys.legacyStandardKey` — no longer referenced.
-- `MudConfiguration.migrate(from:)` and its call site.
+- `MudConfiguration.migrateLegacyKeys()` and its call in `migrate()`.
+
+`syncMirror()` stays — it still serves the "user did `defaults write` while the
+app wasn't running" case that motivated the whole mirror design.
 
 Users who upgrade past that cleanup release from a pre-migration version lose
 their settings (falling back to defaults). Acceptable on the assumption that
