@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7C0A00022F3E0001001C3BB7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0A00012F3E0001001C3BB7 /* Theme.swift */; };
 		7C0A00042F5B0001001C3BB7 /* OutlineNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0A00032F5B0001001C3BB7 /* OutlineNode.swift */; };
 		7C0A00062F5B0002001C3BB7 /* OutlineSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0A00052F5B0002001C3BB7 /* OutlineSidebarView.swift */; };
 		7C0A000A2F5B0005001C3BB7 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 7C0A00092F5B0005001C3BB7 /* README.md */; };
@@ -40,8 +39,6 @@
 		7C7A73222F67057900A4A7FB /* ChangesSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7A73202F67057900A4A7FB /* ChangesSidebarView.swift */; };
 		7C7A73232F67057900A4A7FB /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7A73212F67057900A4A7FB /* SidebarView.swift */; };
 		7C8D10302F34CF0400F359C8 /* FindFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8D102F2F34CF0400F359C8 /* FindFeature.swift */; };
-		7CA1197F2F3CC4D00098484A /* ViewToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */; };
-		7CA119812F3CC5110098484A /* Mode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CA119802F3CC50F0098484A /* Mode.swift */; };
 		7CB9BB902F38E28B008AB0BC /* Mud.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7CB9BB8F2F38E28B008AB0BC /* Mud.icon */; };
 		7CC48AFC2F79D3BE00DA8118 /* ReselectMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC48AFB2F79D3BE00DA8118 /* ReselectMonitor.swift */; };
 		7CC6E6B72F657A2200FE7D66 /* DebuggingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */; };
@@ -51,13 +48,13 @@
 		7CC9753A2F340286001C3BB7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7CC975332F340286001C3BB7 /* Assets.xcassets */; };
 		7CC9753D2F340286001C3BB7 /* MudApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975362F340286001C3BB7 /* MudApp.swift */; };
 		7CC975592F34038A001C3BB7 /* MudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7CC975582F34038A001C3BB7 /* MudCore */; };
+		7CCF00000000000000000003 /* MudConfiguration in Frameworks */ = {isa = PBXBuildFile; productRef = 7CCF00000000000000000002 /* MudConfiguration */; };
+		7CCF00000000000000000011 /* Lighting+AppKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF00000000000000000010 /* Lighting+AppKit.swift */; };
 		7CC975672F340904001C3BB7 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975652F340904001C3BB7 /* WebView.swift */; };
 		7CC975862F340FD2001C3BB7 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975842F340FD2001C3BB7 /* FileWatcher.swift */; };
-		7CC975892F341A75001C3BB7 /* Lighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975872F341A75001C3BB7 /* Lighting.swift */; };
 		7CD093082F587185003E4037 /* ErrorPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD093072F587185003E4037 /* ErrorPage.swift */; };
 		7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */; };
 		7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */; };
-		7CE6B5AA2F83D28B006A9BCA /* FloatingControlsPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */; };
 		7CE6B5B02F83E899006A9BCA /* GitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */; };
 /* End PBXBuildFile section */
 
@@ -95,7 +92,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		7C0A00012F3E0001001C3BB7 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		7C0A00032F5B0001001C3BB7 /* OutlineNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineNode.swift; sourceTree = "<group>"; };
 		7C0A00052F5B0002001C3BB7 /* OutlineSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineSidebarView.swift; sourceTree = "<group>"; };
 		7C0A00092F5B0005001C3BB7 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -127,8 +123,6 @@
 		7C7A73202F67057900A4A7FB /* ChangesSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesSidebarView.swift; sourceTree = "<group>"; };
 		7C7A73212F67057900A4A7FB /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		7C8D102F2F34CF0400F359C8 /* FindFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindFeature.swift; sourceTree = "<group>"; };
-		7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewToggle.swift; sourceTree = "<group>"; };
-		7CA119802F3CC50F0098484A /* Mode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mode.swift; sourceTree = "<group>"; };
 		7CB9BB8F2F38E28B008AB0BC /* Mud.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Mud.icon; sourceTree = "<group>"; };
 		7CC48AFB2F79D3BE00DA8118 /* ReselectMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReselectMonitor.swift; sourceTree = "<group>"; };
 		7CC6E6B62F657A2200FE7D66 /* DebuggingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebuggingSettingsView.swift; sourceTree = "<group>"; };
@@ -142,11 +136,10 @@
 		7CC975652F340904001C3BB7 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		7CC975682F340B64001C3BB7 /* Mud.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Mud.entitlements; sourceTree = "<group>"; };
 		7CC975842F340FD2001C3BB7 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
-		7CC975872F341A75001C3BB7 /* Lighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lighting.swift; sourceTree = "<group>"; };
+		7CCF00000000000000000010 /* Lighting+AppKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Lighting+AppKit.swift"; sourceTree = "<group>"; };
 		7CD093072F587185003E4037 /* ErrorPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorPage.swift; sourceTree = "<group>"; };
 		7CD0930B2F58F9B7003E4037 /* LightingPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightingPreviewCard.swift; sourceTree = "<group>"; };
 		7CE6B5A72F833DB3006A9BCA /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
-		7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingControlsPosition.swift; sourceTree = "<group>"; };
 		7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -185,6 +178,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7CC975592F34038A001C3BB7 /* MudCore in Frameworks */,
+				7CCF00000000000000000003 /* MudConfiguration in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,11 +257,7 @@
 				7C1FD9802F44FAC200BB4076 /* LocalFileSchemeHandler.swift */,
 				7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */,
 				7CC975652F340904001C3BB7 /* WebView.swift */,
-				7CA119802F3CC50F0098484A /* Mode.swift */,
-				7CC975872F341A75001C3BB7 /* Lighting.swift */,
-				7C0A00012F3E0001001C3BB7 /* Theme.swift */,
-				7CA1197E2F3CC4CC0098484A /* ViewToggle.swift */,
-				7CE6B5A92F83D28B006A9BCA /* FloatingControlsPosition.swift */,
+				7CCF00000000000000000010 /* Lighting+AppKit.swift */,
 				7C8D102F2F34CF0400F359C8 /* FindFeature.swift */,
 				7C134FC12F813A010020BF91 /* ChangesFeature.swift */,
 				7C7A73212F67057900A4A7FB /* SidebarView.swift */,
@@ -331,6 +321,7 @@
 			name = Mud;
 			packageProductDependencies = (
 				7CC975582F34038A001C3BB7 /* MudCore */,
+				7CCF00000000000000000002 /* MudConfiguration */,
 			);
 			productName = Mud;
 			productReference = 7CC975212F3401F4001C3BB7 /* Mud.app */;
@@ -365,6 +356,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7CC975572F34038A001C3BB7 /* XCLocalSwiftPackageReference "Core" */,
+				7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7CC975222F3401F4001C3BB7 /* Products */;
@@ -502,11 +494,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7CC975892F341A75001C3BB7 /* Lighting.swift in Sources */,
-				7C0A00022F3E0001001C3BB7 /* Theme.swift in Sources */,
+				7CCF00000000000000000011 /* Lighting+AppKit.swift in Sources */,
 				7C8D10302F34CF0400F359C8 /* FindFeature.swift in Sources */,
 				7C134FC22F813A010020BF91 /* ChangesFeature.swift in Sources */,
-				7CA119812F3CC5110098484A /* Mode.swift in Sources */,
 				7CC975672F340904001C3BB7 /* WebView.swift in Sources */,
 				7CD093082F587185003E4037 /* ErrorPage.swift in Sources */,
 				7CC975862F340FD2001C3BB7 /* FileWatcher.swift in Sources */,
@@ -521,10 +511,8 @@
 				7CCH00000000000000000002 /* ChangesSettingsView.swift in Sources */,
 				7CC6E6B72F657A2200FE7D66 /* DebuggingSettingsView.swift in Sources */,
 				7C442A622F3450190046E0CD /* AppDelegate.swift in Sources */,
-				7CA1197F2F3CC4D00098484A /* ViewToggle.swift in Sources */,
 				7C2665942F3D6216004C8D74 /* DocumentState.swift in Sources */,
 				7CC9753D2F340286001C3BB7 /* MudApp.swift in Sources */,
-				7CE6B5AA2F83D28B006A9BCA /* FloatingControlsPosition.swift in Sources */,
 				7C282ADF2F50063900611919 /* CommandLineSettingsView.swift in Sources */,
 				7C442A652F3457C20046E0CD /* DocumentController.swift in Sources */,
 				7CC48AFC2F79D3BE00DA8118 /* ReselectMonitor.swift in Sources */,
@@ -1077,6 +1065,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Core;
 		};
+		7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Configuration;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1088,6 +1080,11 @@
 		7CC975582F34038A001C3BB7 /* MudCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MudCore;
+		};
+		7CCF00000000000000000002 /* MudConfiguration */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */;
+			productName = MudConfiguration;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

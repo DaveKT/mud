@@ -46,6 +46,9 @@ MVP plan.
   Mud.app
 - **MudCore** (Core/) -- Swift Package, platform-independent rendering and
   syntax highlighting
+- **MudConfiguration** (Configuration/) -- Swift Package, Foundation-only
+  preference persistence shared between the app and the Quick Look extension.
+  Depends on MudCore.
 
 
 ## File quick reference
@@ -54,7 +57,8 @@ MVP plan.
 
 - `MudApp.swift` — @main, menu commands
 
-- `AppState.swift` — Singleton observable state, UserDefaults persistence
+- `AppState.swift` — Singleton observable state; persistence delegated to
+  `MudConfiguration.shared`
 
 - `AppDelegate.swift` — Lifecycle and document handling
 
@@ -76,9 +80,6 @@ MVP plan.
 
 - `ChangesFeature.swift` — Floating Changes bar and overlay
 
-- `FloatingControlsPosition.swift` — Top right / bottom right / bottom center
-  enum for floating bar placement
-
 - `GitProvider.swift` — Git history queries for external waypoints
   (`#if GIT_PROVIDER`)
 
@@ -90,13 +91,9 @@ MVP plan.
 
 - `DeferMutation.swift` — Run-loop deferred state mutation helper
 
-- `Lighting.swift` — auto/bright/dark enum
-
-- `Mode.swift` — up/down enum
-
-- `Theme.swift` — austere/blues/earthy/riot enum
-
-- `ViewToggle.swift` — readableColumn/lineNumbers/wordWrap toggles
+- `Lighting+AppKit.swift` — AppKit/SwiftUI behavior (`appearance`,
+  `colorScheme`, `toggled()`, `systemIsDark`) on the bare `Lighting` enum that
+  lives in MudConfiguration
 
 - `ErrorPage.swift` — Error-page HTML generator (renders Markdown via MudCore)
 
@@ -159,6 +156,36 @@ MVP plan.
 
 - `DebuggingSettingsView.swift` — Debugging pane (debug builds only; reset
   preferences)
+
+**Configuration/ key files:**
+
+- `MudConfiguration.swift` — Struct with `.shared` (app-group suite
+  `group.org.josephpearson.mud`), `Keys` enum, per-key read/write methods, and
+  `reset()`. `@unchecked Sendable` because `UserDefaults` isn't formally
+  Sendable.
+
+- `MudConfigurationMigration.swift` — One-shot copy of legacy `Mud-*` keys from
+  `UserDefaults.standard` into the suite. Idempotent.
+
+- `MudConfigurationSnapshot.swift` — Value-type snapshot of the prefs that flow
+  into `RenderOptions`, plus derived `upModeHTMLClasses`. Consumed by the Quick
+  Look extension.
+
+- `Theme.swift` — austere/blues/earthy/riot enum
+
+- `Lighting.swift` — auto/bright/dark enum (bare; AppKit behavior in
+  `App/Lighting+AppKit.swift`)
+
+- `Mode.swift` — up/down enum
+
+- `ViewToggle.swift` — readableColumn/lineNumbers/wordWrap/codeHeader/
+  autoExpandChanges toggles; `isEnabled`/ `save(_:)` delegate to
+  `MudConfiguration.shared`
+
+- `SidebarPane.swift` — outline/changes enum
+
+- `FloatingControlsPosition.swift` — Top right / bottom right / bottom center
+  enum for floating bar placement
 
 **Core/ key files:**
 
@@ -287,7 +314,8 @@ Three ObservableObject classes, no nesting:
 
 State flows outward via `@ObservedObject`. Combine sinks in
 `DocumentWindowController` bridge state → AppKit (window appearance, toolbar
-icons, UserDefaults persistence).
+icons) and call `AppState.saveX()` methods, which in turn delegate to
+`MudConfiguration.shared.writeX()` for persistence.
 
 
 ## Communication patterns

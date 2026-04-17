@@ -1,0 +1,50 @@
+import Foundation
+
+/// A persisted boolean toggle that maps to a CSS class on the webview root.
+public enum ViewToggle: String, CaseIterable, Sendable {
+    case readableColumn
+    case lineNumbers
+    case wordWrap
+    case codeHeader
+    case autoExpandChanges
+
+    public var className: String {
+        switch self {
+        case .readableColumn: return "is-readable-column"
+        case .lineNumbers: return "has-line-numbers"
+        case .wordWrap: return "has-word-wrap"
+        case .codeHeader: return "is-code-header"
+        case .autoExpandChanges: return "is-auto-expand-changes"
+        }
+    }
+
+    /// The persistence key that backs this toggle.
+    var key: MudConfiguration.Keys {
+        switch self {
+        case .readableColumn:    return .readableColumn
+        case .lineNumbers:       return .lineNumbers
+        case .wordWrap:          return .wordWrap
+        case .codeHeader:        return .codeHeader
+        case .autoExpandChanges: return .autoExpandChanges
+        }
+    }
+
+    /// The hard-coded default if the key has never been written.
+    var defaultValue: Bool {
+        switch self {
+        case .readableColumn:    return false
+        case .lineNumbers:       return true
+        case .wordWrap:          return true
+        case .codeHeader:        return true
+        case .autoExpandChanges: return false
+        }
+    }
+
+    public var isEnabled: Bool {
+        MudConfiguration.shared.readViewToggle(self)
+    }
+
+    public func save(_ enabled: Bool) {
+        MudConfiguration.shared.writeViewToggle(self, enabled: enabled)
+    }
+}

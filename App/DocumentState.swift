@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import MudConfiguration
 import MudCore
 
 // MARK: - Scroll Target

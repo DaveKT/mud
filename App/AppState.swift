@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import MudConfiguration
 import MudCore
 
 class AppState: ObservableObject {
@@ -24,113 +25,93 @@ class AppState: ObservableObject {
     @Published var floatingControlsPosition: FloatingControlsPosition
     @Published var showGitWaypoints: Bool
 
-    private static let lightingKey = "Mud-Lighting"
-    private static let themeKey = "Mud-Theme"
-    private static let upModeZoomKey = "Mud-UpModeZoomLevel"
-    private static let downModeZoomKey = "Mud-DownModeZoomLevel"
-    private static let sidebarVisibleKey = "Mud-SidebarVisible"
-    private static let sidebarPaneKey = "Mud-SidebarPane"
-    private static let trackChangesKey = "Mud-TrackChanges"
-    private static let inlineDeletionsKey = "Mud-InlineDeletions"
-    private static let quitOnCloseKey = "Mud-QuitOnClose"
-    private static let allowRemoteContentKey = "Mud-AllowRemoteContent"
-    private static let enabledExtensionsKey = "Mud-EnabledExtensions"
-    private static let doccAlertModeKey = "Mud-DoccAlertMode"
-    private static let useHeadingAsTitleKey = "Mud-UseHeadingAsTitle"
-    private static let wordDiffThresholdKey = "Mud-WordDiffThreshold"
-    private static let floatingControlsPositionKey = "Mud-FloatingControlsPosition"
-    private static let showGitWaypointsKey = "Mud-ShowGitWaypoints"
-
     private init() {
-        let raw = UserDefaults.standard.string(forKey: Self.lightingKey) ?? ""
-        self.lighting = Lighting(rawValue: raw) ?? .auto
-        let themeRaw = UserDefaults.standard.string(forKey: Self.themeKey) ?? ""
-        self.theme = Theme(rawValue: themeRaw) ?? .earthy
-        self.viewToggles = Set(ViewToggle.allCases.filter { $0.isEnabled })
-        let defaults = UserDefaults.standard
-        self.upModeZoomLevel = defaults.object(forKey: Self.upModeZoomKey) as? Double ?? 1.0
-        self.downModeZoomLevel = defaults.object(forKey: Self.downModeZoomKey) as? Double ?? 1.0
-        self.sidebarVisible = defaults.bool(forKey: Self.sidebarVisibleKey)
-        let paneRaw = defaults.string(forKey: Self.sidebarPaneKey) ?? ""
-        self.sidebarPane = SidebarPane(rawValue: paneRaw) ?? .outline
-        self.trackChanges = defaults.object(forKey: Self.trackChangesKey) as? Bool ?? true
-        self.inlineDeletions = defaults.object(forKey: Self.inlineDeletionsKey) as? Bool ?? false
-        self.quitOnClose = defaults.object(forKey: Self.quitOnCloseKey) as? Bool ?? true
-        self.allowRemoteContent = defaults.object(forKey: Self.allowRemoteContentKey) as? Bool ?? true
-        let allExtensions = Set(RenderExtension.registry.keys)
-        if let saved = defaults.array(forKey: Self.enabledExtensionsKey) as? [String] {
-            self.enabledExtensions = Set(saved).intersection(allExtensions)
-        } else {
-            self.enabledExtensions = allExtensions
-        }
-        let doccRaw = defaults.string(forKey: Self.doccAlertModeKey) ?? ""
-        self.doccAlertMode = DocCAlertMode(rawValue: doccRaw) ?? .extended
-        self.useHeadingAsTitle = defaults.object(forKey: Self.useHeadingAsTitleKey) as? Bool ?? true
-        self.wordDiffThreshold = defaults.object(forKey: Self.wordDiffThresholdKey) as? Double ?? 0.25
-        let posRaw = defaults.string(forKey: Self.floatingControlsPositionKey) ?? ""
-        self.floatingControlsPosition = FloatingControlsPosition(rawValue: posRaw) ?? .bottomCenter
-        self.showGitWaypoints = defaults.object(forKey: Self.showGitWaypointsKey) as? Bool ?? false
+        // Copy any legacy Mud-* keys from UserDefaults.standard into the
+        // app-group suite before reading any preference. Runs exactly once
+        // per install because `AppState.shared` is a singleton.
+        MudConfiguration.shared.migrate()
+
+        let config = MudConfiguration.shared
+        self.lighting = config.readLighting()
+        self.theme = config.readTheme()
+        self.viewToggles = config.readViewToggles()
+        self.upModeZoomLevel = config.readUpModeZoomLevel()
+        self.downModeZoomLevel = config.readDownModeZoomLevel()
+        self.sidebarVisible = config.readSidebarVisible()
+        self.sidebarPane = config.readSidebarPane()
+        self.trackChanges = config.readTrackChanges()
+        self.inlineDeletions = config.readInlineDeletions()
+        self.quitOnClose = config.readQuitOnClose()
+        self.allowRemoteContent = config.readAllowRemoteContent()
+        self.enabledExtensions = config.readEnabledExtensions(
+            defaultValue: Set(RenderExtension.registry.keys)
+        )
+        self.doccAlertMode = config.readDoccAlertMode()
+        self.useHeadingAsTitle = config.readUseHeadingAsTitle()
+        self.wordDiffThreshold = config.readWordDiffThreshold()
+        self.floatingControlsPosition = config.readFloatingControlsPosition()
+        self.showGitWaypoints = config.readShowGitWaypoints()
     }
 
     func saveLighting(_ lighting: Lighting) {
-        UserDefaults.standard.set(lighting.rawValue, forKey: Self.lightingKey)
+        MudConfiguration.shared.writeLighting(lighting)
     }
 
     func saveTheme(_ theme: Theme) {
-        UserDefaults.standard.set(theme.rawValue, forKey: Self.themeKey)
+        MudConfiguration.shared.writeTheme(theme)
     }
 
     func saveZoomLevels() {
-        UserDefaults.standard.set(upModeZoomLevel, forKey: Self.upModeZoomKey)
-        UserDefaults.standard.set(downModeZoomLevel, forKey: Self.downModeZoomKey)
+        MudConfiguration.shared.writeUpModeZoomLevel(upModeZoomLevel)
+        MudConfiguration.shared.writeDownModeZoomLevel(downModeZoomLevel)
     }
 
     func saveSidebarVisible() {
-        UserDefaults.standard.set(sidebarVisible, forKey: Self.sidebarVisibleKey)
+        MudConfiguration.shared.writeSidebarVisible(sidebarVisible)
     }
 
     func saveSidebarPane() {
-        UserDefaults.standard.set(sidebarPane.rawValue, forKey: Self.sidebarPaneKey)
+        MudConfiguration.shared.writeSidebarPane(sidebarPane)
     }
 
     func saveTrackChanges(_ value: Bool) {
-        UserDefaults.standard.set(value, forKey: Self.trackChangesKey)
+        MudConfiguration.shared.writeTrackChanges(value)
     }
 
     func saveInlineDeletions() {
-        UserDefaults.standard.set(inlineDeletions, forKey: Self.inlineDeletionsKey)
+        MudConfiguration.shared.writeInlineDeletions(inlineDeletions)
     }
 
     func saveQuitOnClose() {
-        UserDefaults.standard.set(quitOnClose, forKey: Self.quitOnCloseKey)
+        MudConfiguration.shared.writeQuitOnClose(quitOnClose)
     }
 
     func saveAllowRemoteContent() {
-        UserDefaults.standard.set(allowRemoteContent, forKey: Self.allowRemoteContentKey)
+        MudConfiguration.shared.writeAllowRemoteContent(allowRemoteContent)
     }
 
     func saveEnabledExtensions() {
-        UserDefaults.standard.set(Array(enabledExtensions), forKey: Self.enabledExtensionsKey)
+        MudConfiguration.shared.writeEnabledExtensions(enabledExtensions)
     }
 
     func saveDoccAlertMode() {
-        UserDefaults.standard.set(doccAlertMode.rawValue, forKey: Self.doccAlertModeKey)
+        MudConfiguration.shared.writeDoccAlertMode(doccAlertMode)
     }
 
     func saveUseHeadingAsTitle() {
-        UserDefaults.standard.set(useHeadingAsTitle, forKey: Self.useHeadingAsTitleKey)
+        MudConfiguration.shared.writeUseHeadingAsTitle(useHeadingAsTitle)
     }
 
     func saveWordDiffThreshold() {
-        UserDefaults.standard.set(wordDiffThreshold, forKey: Self.wordDiffThresholdKey)
+        MudConfiguration.shared.writeWordDiffThreshold(wordDiffThreshold)
     }
 
     func saveFloatingControlsPosition() {
-        UserDefaults.standard.set(floatingControlsPosition.rawValue, forKey: Self.floatingControlsPositionKey)
+        MudConfiguration.shared.writeFloatingControlsPosition(floatingControlsPosition)
     }
 
     func saveShowGitWaypoints() {
-        UserDefaults.standard.set(showGitWaypoints, forKey: Self.showGitWaypointsKey)
+        MudConfiguration.shared.writeShowGitWaypoints(showGitWaypoints)
     }
 
     func toggle(_ option: ViewToggle) {
@@ -141,11 +122,4 @@ class AppState: ObservableObject {
         }
         option.save(viewToggles.contains(option))
     }
-}
-
-// MARK: - Sidebar Pane
-
-enum SidebarPane: String {
-    case outline
-    case changes
 }

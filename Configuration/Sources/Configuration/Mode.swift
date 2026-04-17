@@ -1,8 +1,8 @@
-enum Mode {
+public enum Mode: Sendable {
     case up
     case down
 
-    func toggled() -> Mode {
+    public func toggled() -> Mode {
         switch self {
         case .up: return .down
         case .down: return .up

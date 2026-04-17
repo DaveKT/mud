@@ -1,9 +1,9 @@
-enum FloatingControlsPosition: String, CaseIterable {
+public enum FloatingControlsPosition: String, CaseIterable, Sendable {
     case topRight = "topRight"
     case bottomRight = "bottomRight"
     case bottomCenter = "bottomCenter"
 
-    var label: String {
+    public var label: String {
         switch self {
         case .topRight: return "Top right"
         case .bottomRight: return "Bottom right"

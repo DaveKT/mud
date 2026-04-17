@@ -1,4 +1,5 @@
 import SwiftUI
+import MudConfiguration
 import MudCore
 
 // MARK: - Document Content View

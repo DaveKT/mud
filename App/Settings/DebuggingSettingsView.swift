@@ -1,4 +1,5 @@
 import SwiftUI
+import MudConfiguration
 
 struct DebuggingSettingsView: View {
     @ObservedObject private var appState = AppState.shared
@@ -66,10 +67,10 @@ struct DebuggingSettingsView: View {
     }
 
     private func resetAllPreferences() {
-        guard let bundleID = Bundle.main.bundleIdentifier else { return }
-        UserDefaults.standard.removePersistentDomain(forName: bundleID)
-        UserDefaults.standard.synchronize()
-        removeSavedApplicationState(bundleID: bundleID)
+        MudConfiguration.shared.reset()
+        if let bundleID = Bundle.main.bundleIdentifier {
+            removeSavedApplicationState(bundleID: bundleID)
+        }
         exit(0)
     }
 

@@ -1,10 +1,7 @@
 import SwiftUI
+import MudConfiguration
 
-enum Lighting: String, CaseIterable {
-    case bright
-    case dark
-    case auto
-
+extension Lighting {
     /// Toggle: auto ↔ opposite of system
     func toggled() -> Lighting {
         switch self {

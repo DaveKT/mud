@@ -1,4 +1,5 @@
 import Combine
+import MudConfiguration
 import MudCore
 import SwiftUI
 import UniformTypeIdentifiers

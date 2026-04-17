@@ -1,4 +1,4 @@
-enum Theme: String, CaseIterable {
+public enum Theme: String, CaseIterable, Sendable {
     case austere
     case blues
     case earthy
@@ -6,5 +6,5 @@ enum Theme: String, CaseIterable {
     /// Internal theme for system messages (error pages, etc.). Not user-selectable.
     case system
 
-    static let allCases: [Theme] = [.austere, .blues, .earthy, .riot]
+    public static let allCases: [Theme] = [.austere, .blues, .earthy, .riot]
 }

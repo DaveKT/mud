@@ -1,6 +1,7 @@
 import Combine
 import SwiftUI
 import MudCore
+import MudConfiguration
 
 // MARK: - Search Types
 

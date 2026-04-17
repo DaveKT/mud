@@ -1,4 +1,5 @@
 import SwiftUI
+import MudConfiguration
 
 struct DownModeSettingsView: View {
     @ObservedObject private var appState = AppState.shared
