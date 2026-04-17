@@ -19,7 +19,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Markdown", package: "swift-markdown"),
             ],
-            path: "Sources/Core",
+            path: "Sources",
             resources: [
                 .process("Resources")
             ]
@@ -27,7 +27,7 @@ let package = Package(
         .testTarget(
             name: "MudCoreTests",
             dependencies: ["MudCore"],
-            path: "Tests/Core"
+            path: "Tests"
         ),
     ]
 )

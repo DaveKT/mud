@@ -16,12 +16,12 @@ let package = Package(
             dependencies: [
                 .product(name: "MudCore", package: "Core"),
             ],
-            path: "Sources/Configuration"
+            path: "Sources"
         ),
         .testTarget(
             name: "MudConfigurationTests",
             dependencies: ["MudConfiguration"],
-            path: "Tests/Configuration"
+            path: "Tests"
         ),
     ]
 )
