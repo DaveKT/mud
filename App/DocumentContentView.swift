@@ -20,7 +20,6 @@ struct DocumentContentView: View {
     @State private var fileWatcher: FileWatcher?
     @FocusState private var contentFocused: Bool
     @Environment(\.colorScheme) private var environmentColorScheme
-    @Environment(\.openSettings) private var openSettings
 
     private var displayHTML: String {
         switch content {
@@ -154,7 +153,6 @@ struct DocumentContentView: View {
             contentFocused = true
             loadFromDisk()
             setupFileWatcher()
-            appState.openSettingsAction = { openSettings() }
         }
         .onDisappear {
             fileWatcher = nil

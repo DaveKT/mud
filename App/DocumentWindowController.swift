@@ -230,7 +230,7 @@ class DocumentWindowController: NSWindowController {
     }
 
     @objc func openSettings(_ sender: Any?) {
-        AppState.shared.openSettingsAction?()
+        SettingsWindowController.shared.openSettings()
     }
 
     private func adjustZoom(by delta: Double) {

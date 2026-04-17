@@ -58,8 +58,6 @@ class AppState: ObservableObject {
         didSet { MudConfiguration.shared.writeEnabledExtensions(enabledExtensions) }
     }
 
-    var openSettingsAction: (() -> Void)?
-
     private init() {
         // Copy any legacy Mud-* keys from UserDefaults.standard into the
         // app-group suite before reading any preference. Runs exactly once
