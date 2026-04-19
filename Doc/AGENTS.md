@@ -241,18 +241,29 @@ MVP plan.
 
 **QuickLook/ key files:**
 
-- `PreviewProvider.swift` — `QLPreviewProvider` subclass. Reads the shared
-  configuration snapshot from the app-group `UserDefaults` suite and renders
-  the preview as self-contained HTML via `MudCore.renderUpModeDocument`.
-  Inlines local images as data URIs via `ImageDataURI.encode`.
+- `PreviewProvider.swift` — `MudPreviewProvider`, an `NSViewController`
+  subclass conforming to `QLPreviewingController` (view-based, not data-based —
+  required for Finder's column-view preview pane to live-render our output).
+  Hosts a `WKWebView`. Reads the shared configuration snapshot from the
+  app-group `UserDefaults` suite and renders the preview as self-contained HTML
+  via `MudCore.renderUpModeDocument`. Inlines local images as data URIs via
+  `ImageDataURI.encode`. The `@objc(MudPreviewProvider)` annotation registers a
+  stable Obj-C class name so `NSExtensionPrincipalClass` resolves without
+  relying on Swift module-name mangling.
 - `Info.plist` — `NSExtensionPointIdentifier = com.apple.quicklook.preview`,
-  `NSExtensionPrincipalClass = $(PRODUCT_MODULE_NAME).PreviewProvider`,
-  `NSExtensionAttributes.QLIsDataBasedPreview = true`,
+  `NSExtensionPrincipalClass = MudPreviewProvider` (bare Obj-C name, paired
+  with the `@objc(...)` annotation on the Swift class),
   `QLSupportedContentTypes = [net.daringfireball.markdown]`.
-- `QuickLook.entitlements` — sandboxed extension with the
-  `$(TeamIdentifierPrefix)org.josephpearson.mud` app-group membership and a
-  read-only absolute-path temporary exception so the extension can inline
-  sibling images into previews.
+- `QuickLook.entitlements` / `QuickLookDirect.entitlements` — sandboxed
+  extension. MAS variant (`QuickLook.entitlements`) carries the app-sandbox,
+  network.client, and Team-ID-prefixed app-group entitlements. Direct variant
+  (`QuickLookDirect.entitlements`) additionally carries a read-only
+  absolute-path temporary exception so the extension can inline sibling images
+  into previews — omitted from the MAS variant because App Review is
+  historically cool on `temporary-exception` entries. Selection per build
+  config via `CODE_SIGN_ENTITLEMENTS` in `Mud.xcodeproj/project.pbxproj`,
+  following the same pattern as `App/Mud.entitlements` /
+  `App/MudDirect.entitlements`.
 
 **Resources:**
 
