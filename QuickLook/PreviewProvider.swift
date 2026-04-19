@@ -20,18 +20,23 @@ private let log = Logger(
 /// `NSExtensionPrincipalClass` in Info.plist resolves without depending on
 /// Swift module-name mangling.
 @objc(MudPreviewProvider)
-final class MudPreviewProvider: NSViewController, QLPreviewingController {
+final class MudPreviewProvider: NSViewController, QLPreviewingController,
+    WKNavigationDelegate
+{
     private let webView = WKWebView(
         frame: NSRect(x: 0, y: 0, width: 800, height: 600)
     )
+    private var previewURL: URL?
 
     override func loadView() {
         webView.autoresizingMask = [.width, .height]
+        webView.navigationDelegate = self
         self.view = webView
     }
 
     func preparePreviewOfFile(at url: URL) async throws {
         log.info("preparePreviewOfFile: \(url.path, privacy: .public)")
+        previewURL = url
         let source = try String(contentsOf: url, encoding: .utf8)
 
         let config: MudConfiguration
@@ -66,5 +71,33 @@ final class MudPreviewProvider: NSViewController, QLPreviewingController {
         )
 
         webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+    }
+
+    // MARK: WKNavigationDelegate
+
+    /// Block outbound navigation from the preview. The QL extension sandbox
+    /// doesn't reliably permit opening URLs via `NSWorkspace.open` or
+    /// `extensionContext.open`, so rather than half-working links we cancel
+    /// them entirely. The initial HTML load and same-document fragment
+    /// scrolls are allowed through.
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    ) {
+        if navigationAction.navigationType == .other {
+            decisionHandler(.allow)
+            return
+        }
+
+        if let url = navigationAction.request.url,
+           url.fragment != nil,
+           url.path == previewURL?.path
+        {
+            decisionHandler(.allow)
+            return
+        }
+
+        decisionHandler(.cancel)
     }
 }
