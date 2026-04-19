@@ -37,6 +37,7 @@
 		7C6532B12F585CEE00B71730 /* MudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7C6532B02F585CEE00B71730 /* MudCore */; };
 		7C6532B32F585D6300B71730 /* mud in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7C6532A82F585CA100B71730 /* mud */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C6B316D2F3A228000F6A4E8 /* DeferMutation.swift */; };
+		7CAA0000000000000000BADE /* TabReloadBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAA0000000000000000BADF /* TabReloadBadgeView.swift */; };
 		7C7A73222F67057900A4A7FB /* ChangesSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7A73202F67057900A4A7FB /* ChangesSidebarView.swift */; };
 		7C7A73232F67057900A4A7FB /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7A73212F67057900A4A7FB /* SidebarView.swift */; };
 		7C8D10302F34CF0400F359C8 /* FindFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8D102F2F34CF0400F359C8 /* FindFeature.swift */; };
@@ -141,6 +142,7 @@
 		7C5A00032F4800020046E0CD /* CommandLineInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLineInstaller.swift; sourceTree = "<group>"; };
 		7C6532A82F585CA100B71730 /* mud */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = mud; sourceTree = BUILT_PRODUCTS_DIR; };
 		7C6B316D2F3A228000F6A4E8 /* DeferMutation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeferMutation.swift; sourceTree = "<group>"; };
+		7CAA0000000000000000BADF /* TabReloadBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabReloadBadgeView.swift; sourceTree = "<group>"; };
 		7C7A73202F67057900A4A7FB /* ChangesSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesSidebarView.swift; sourceTree = "<group>"; };
 		7C7A73212F67057900A4A7FB /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		7C8D102F2F34CF0400F359C8 /* FindFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindFeature.swift; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 				7C442A642F3457C20046E0CD /* DocumentController.swift */,
 				7C442A672F34BB7E0046E0CD /* DocumentWindowController.swift */,
 				7C442A662F34BB7E0046E0CD /* DocumentContentView.swift */,
+				7CAA0000000000000000BADF /* TabReloadBadgeView.swift */,
 				7C1FD9802F44FAC200BB4076 /* LocalFileSchemeHandler.swift */,
 				7CE6B5AF2F83E899006A9BCA /* GitProvider.swift */,
 				7CC975652F340904001C3BB7 /* WebView.swift */,
@@ -620,6 +623,7 @@
 				7CE6B5A82F833DB3006A9BCA /* Date+Formatting.swift in Sources */,
 				7CD0930C2F58F9B7003E4037 /* LightingPreviewCard.swift in Sources */,
 				7C6B316E2F3A228000F6A4E8 /* DeferMutation.swift in Sources */,
+				7CAA0000000000000000BADE /* TabReloadBadgeView.swift in Sources */,
 				7C134FC42F813A020020BF91 /* View+Modify.swift in Sources */,
 				7CC6E6E52F6595F900FE7D66 /* CheckForUpdatesView.swift in Sources */,
 				7C442A692F34BB7E0046E0CD /* DocumentContentView.swift in Sources */,

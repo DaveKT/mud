@@ -36,6 +36,7 @@ class DocumentWindowController: NSWindowController {
 
         super.init(window: window)
         shouldCascadeWindows = false
+        state.windowController = self
 
         // Apply lighting BEFORE content setup to prevent flash
         applyLighting(AppState.shared.lighting)
@@ -147,6 +148,12 @@ class DocumentWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
+        state.$hasBackgroundReload
+            .sink { [weak self] hasReload in
+                self?.updateTabReloadBadge(hasReload)
+            }
+            .store(in: &cancellables)
+
         // Track sidebar collapse state for persistence
         if let sidebarItem = splitVC?.splitViewItems.first {
             sidebarItem.publisher(for: \.isCollapsed)
@@ -160,6 +167,17 @@ class DocumentWindowController: NSWindowController {
 
     private func applyLighting(_ lighting: Lighting) {
         window?.appearance = lighting.appearance
+    }
+
+    private func updateTabReloadBadge(_ showBadge: Bool) {
+        guard let window else { return }
+        if showBadge {
+            if !(window.tab.accessoryView is TabReloadBadgeView) {
+                window.tab.accessoryView = TabReloadBadgeView()
+            }
+        } else {
+            window.tab.accessoryView = nil
+        }
     }
 
     private func updateLightingButton(_ lighting: Lighting) {
@@ -312,6 +330,7 @@ class DocumentWindowController: NSWindowController {
 extension DocumentWindowController: NSWindowDelegate {
     func windowDidBecomeKey(_ notification: Notification) {
         AppState.shared.modeInActiveTab = state.mode
+        state.hasBackgroundReload = false
     }
 
     func windowWillClose(_ notification: Notification) {

@@ -26,6 +26,8 @@ class DocumentState: ObservableObject {
     @Published var scrollTarget: ScrollTarget?
     @Published var changeScrollTarget: ChangeScrollTarget?
     @Published var contentTitle: String?
+    @Published var hasBackgroundReload: Bool = false
+    weak var windowController: DocumentWindowController?
     let find = FindState()
     let changeTracker = ChangeTracker()
 

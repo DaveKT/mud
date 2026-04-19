@@ -181,7 +181,12 @@ struct DocumentContentView: View {
 
     private func setupFileWatcher() {
         guard !fileURL.isBundleResource else { return }
-        fileWatcher = FileWatcher(url: fileURL) { loadFromDisk() }
+        fileWatcher = FileWatcher(url: fileURL) {
+            loadFromDisk()
+            if state.windowController?.window?.isKeyWindow != true {
+                state.hasBackgroundReload = true
+            }
+        }
     }
 
     private func loadFromDisk() {

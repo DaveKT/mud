@@ -107,6 +107,10 @@ MVP plan.
 - `ReselectMonitor.swift` — NSViewRepresentable that detects clicks on
   already-selected List rows
 
+- `TabReloadBadgeView.swift` — Small brown-dot NSView attached to
+  `NSWindowTab.accessoryView` when a tab's document reloaded while the window
+  was not key; cleared when the tab becomes key
+
 - `View+Modify.swift` — SwiftUI `modify(_:)` view modifier helper
 
 - `Date+Formatting.swift` — `shortTimestamp` formatting extension
