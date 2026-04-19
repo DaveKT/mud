@@ -49,6 +49,9 @@ MVP plan.
 - **MudConfiguration** (Configuration/) -- Swift Package, Foundation-only
   preference persistence shared between the app and the Quick Look extension.
   Depends on MudCore.
+- **QuickLook** (QuickLook/) -- `.appex` Quick Look preview extension, bundled
+  in `Mud.app/Contents/PlugIns/`. Renders `.md` previews via MudCore and reads
+  preferences from the app-group mirror via MudConfiguration.
 
 
 ## File quick reference
@@ -162,10 +165,11 @@ MVP plan.
 - `MudConfiguration.swift` — Struct with `.shared`. Reads and writes
   `UserDefaults.standard` (source of truth, so
   `defaults write org.josephpearson.mud …` stays easy); every write is also
-  mirrored into the app-group suite `group.org.josephpearson.mud` so the Quick
-  Look extension can read a snapshot. Holds the `Keys` enum, per-key read/write
-  methods, and `reset()`. `@unchecked Sendable` because `UserDefaults` isn't
-  formally Sendable.
+  mirrored into the app-group suite `XVL2AFNXH5.org.josephpearson.mud` so the
+  Quick Look extension can read a snapshot. The suite name is Team-ID-prefixed
+  so macOS Sequoia+ grants silent access without a TCC prompt. Holds the `Keys`
+  enum, per-key read/write methods, and `reset()`. `@unchecked Sendable`
+  because `UserDefaults` isn't formally Sendable.
 
 - `MudConfigurationMigration.swift` — `migrateLegacyKeys()` renames legacy
   `Mud-*` keys in `UserDefaults.standard` to the lowercase-hyphen names;
@@ -234,6 +238,21 @@ MVP plan.
   navigation and counts
 - `ChangeTracker.swift` — Waypoint history, active baseline selection, menu
   item computation with caching
+
+**QuickLook/ key files:**
+
+- `PreviewProvider.swift` — `QLPreviewProvider` subclass. Reads the shared
+  configuration snapshot from the app-group `UserDefaults` suite and renders
+  the preview as self-contained HTML via `MudCore.renderUpModeDocument`.
+  Inlines local images as data URIs via `ImageDataURI.encode`.
+- `Info.plist` — `NSExtensionPointIdentifier = com.apple.quicklook.preview`,
+  `NSExtensionPrincipalClass = $(PRODUCT_MODULE_NAME).PreviewProvider`,
+  `NSExtensionAttributes.QLIsDataBasedPreview = true`,
+  `QLSupportedContentTypes = [net.daringfireball.markdown]`.
+- `QuickLook.entitlements` — sandboxed extension with the
+  `$(TeamIdentifierPrefix)org.josephpearson.mud` app-group membership and a
+  read-only absolute-path temporary exception so the extension can inline
+  sibling images into previews.
 
 **Resources:**
 

@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import MudCore
 
 /// Centralized read/write layer for every persisted user preference.
@@ -10,7 +11,28 @@ import MudCore
 /// Quick Look extension can read a stable snapshot. Tests construct their own
 /// instance with hermetic per-test suites.
 public struct MudConfiguration: @unchecked Sendable {
-    public static let appGroupSuiteName = "group.org.josephpearson.mud"
+    /// App-group suite name, resolved from the calling process's
+    /// `com.apple.security.application-groups` entitlement. Xcode expands
+    /// `$(TeamIdentifierPrefix)` in the entitlements file at signing time,
+    /// so the runtime value is already Team-ID-prefixed — which macOS
+    /// Sequoia+ requires for silent container access without a TCC prompt.
+    /// The hardcoded fallback guards against `SecTask` failure (e.g. running
+    /// unsigned in a test harness) and must match the entitlements file.
+    public static let appGroupSuiteName: String = {
+        guard
+            let task = SecTaskCreateFromSelf(nil),
+            let value = SecTaskCopyValueForEntitlement(
+                task,
+                "com.apple.security.application-groups" as CFString,
+                nil
+            ),
+            let groups = value as? [String],
+            let first = groups.first
+        else {
+            return "XVL2AFNXH5.org.josephpearson.mud"
+        }
+        return first
+    }()
 
     let defaults: UserDefaults
     let mirror: UserDefaults?
