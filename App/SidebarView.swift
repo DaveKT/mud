@@ -1,5 +1,5 @@
 import SwiftUI
-import MudConfiguration
+import MudPreferences
 import MudCore
 
 struct SidebarView: View {

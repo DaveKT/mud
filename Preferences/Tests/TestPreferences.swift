@@ -1,19 +1,19 @@
 import Foundation
-@testable import MudConfiguration
+@testable import MudPreferences
 
-/// Fresh, hermetic MudConfiguration for one test, with its own `defaults`
+/// Fresh, hermetic MudPreferences for one test, with its own `defaults`
 /// and `mirror` suites. Call `tearDown()` at the end of each test to remove
 /// both on-disk domains.
-struct TestConfiguration {
+struct TestPreferences {
     let defaultsSuiteName: String
     let mirrorSuiteName: String
-    let config: MudConfiguration
+    let config: MudPreferences
 
     init() {
         let id = UUID().uuidString
         self.defaultsSuiteName = "test.mud.defaults.\(id)"
         self.mirrorSuiteName = "test.mud.mirror.\(id)"
-        self.config = MudConfiguration(
+        self.config = MudPreferences(
             defaults: UserDefaults(suiteName: defaultsSuiteName)!,
             mirror: UserDefaults(suiteName: mirrorSuiteName)!
         )

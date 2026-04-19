@@ -1,5 +1,5 @@
 import SwiftUI
-import MudConfiguration
+import MudPreferences
 
 extension Lighting {
     /// Toggle: auto ↔ opposite of system

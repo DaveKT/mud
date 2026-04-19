@@ -1,4 +1,4 @@
-import MudConfiguration
+import MudPreferences
 import MudCore
 import SwiftUI
 import WebKit

@@ -2,25 +2,25 @@
 import PackageDescription
 
 let package = Package(
-    name: "Configuration",
+    name: "Preferences",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "MudConfiguration", targets: ["MudConfiguration"]),
+        .library(name: "MudPreferences", targets: ["MudPreferences"]),
     ],
     dependencies: [
         .package(path: "../Core"),
     ],
     targets: [
         .target(
-            name: "MudConfiguration",
+            name: "MudPreferences",
             dependencies: [
                 .product(name: "MudCore", package: "Core"),
             ],
             path: "Sources"
         ),
         .testTarget(
-            name: "MudConfigurationTests",
-            dependencies: ["MudConfiguration"],
+            name: "MudPreferencesTests",
+            dependencies: ["MudPreferences"],
             path: "Tests"
         ),
     ]

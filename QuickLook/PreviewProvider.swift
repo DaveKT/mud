@@ -4,7 +4,7 @@ import OSLog
 import QuickLookUI
 import WebKit
 import MudCore
-import MudConfiguration
+import MudPreferences
 
 private let log = Logger(
     subsystem: "org.josephpearson.Mud.QuickLook",
@@ -39,14 +39,14 @@ final class MudPreviewProvider: NSViewController, QLPreviewingController,
         previewURL = url
         let source = try String(contentsOf: url, encoding: .utf8)
 
-        let config: MudConfiguration
+        let config: MudPreferences
         if let suite = UserDefaults(
-            suiteName: MudConfiguration.appGroupSuiteName
+            suiteName: MudPreferences.appGroupSuiteName
         ) {
-            config = MudConfiguration(defaults: suite)
+            config = MudPreferences(defaults: suite)
         } else {
             log.error("app-group suite unavailable; falling back to defaults")
-            config = MudConfiguration(defaults: .standard)
+            config = MudPreferences(defaults: .standard)
         }
         let snapshot = config.snapshot(
             defaultEnabledExtensions: Set(RenderExtension.registry.keys)

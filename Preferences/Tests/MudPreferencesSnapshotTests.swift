@@ -1,12 +1,12 @@
 import Foundation
 import Testing
 import MudCore
-@testable import MudConfiguration
+@testable import MudPreferences
 
-@Suite("MudConfiguration snapshot")
-struct MudConfigurationSnapshotTests {
+@Suite("MudPreferences snapshot")
+struct MudPreferencesSnapshotTests {
     @Test func emptySuiteReturnsDefaults() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         let snap = tc.config.snapshot()
@@ -24,7 +24,7 @@ struct MudConfigurationSnapshotTests {
     }
 
     @Test func snapshotReflectsEachField() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.theme = .blues
@@ -49,9 +49,9 @@ struct MudConfigurationSnapshotTests {
     }
 
     @Test func mirrorBackedSnapshotMatchesDefaults() {
-        // The extension builds its own MudConfiguration pointed at the
+        // The extension builds its own MudPreferences pointed at the
         // app-group suite. Its snapshot should match what the app wrote.
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.theme = .blues
@@ -64,7 +64,7 @@ struct MudConfigurationSnapshotTests {
 
         let all: Set<String> = ["alpha", "beta"]
         let defaultsSnap = tc.config.snapshot(defaultEnabledExtensions: all)
-        let extensionConfig = MudConfiguration(defaults: tc.config.mirror!)
+        let extensionConfig = MudPreferences(defaults: tc.config.mirror!)
         let mirrorSnap = extensionConfig.snapshot(defaultEnabledExtensions: all)
 
         #expect(mirrorSnap.theme == defaultsSnap.theme)
@@ -78,7 +78,7 @@ struct MudConfigurationSnapshotTests {
     // MARK: - upModeHTMLClasses
 
     @Test func upModeHTMLClassesIncludesAllThree() {
-        let snap = MudConfigurationSnapshot(
+        let snap = MudPreferencesSnapshot(
             theme: .earthy, upModeZoomLevel: 1.0,
             viewToggles: [.readableColumn, .wordWrap, .lineNumbers],
             allowRemoteContent: true, enabledExtensions: [],
@@ -90,7 +90,7 @@ struct MudConfigurationSnapshotTests {
     }
 
     @Test func upModeHTMLClassesExcludesDownModeOnly() {
-        let snap = MudConfigurationSnapshot(
+        let snap = MudPreferencesSnapshot(
             theme: .earthy, upModeZoomLevel: 1.0,
             viewToggles: [.readableColumn, .codeHeader, .autoExpandChanges],
             allowRemoteContent: true, enabledExtensions: [],
@@ -100,7 +100,7 @@ struct MudConfigurationSnapshotTests {
     }
 
     @Test func upModeHTMLClassesEmptyWhenNoUpToggles() {
-        let snap = MudConfigurationSnapshot(
+        let snap = MudPreferencesSnapshot(
             theme: .earthy, upModeZoomLevel: 1.0,
             viewToggles: [.codeHeader, .autoExpandChanges],
             allowRemoteContent: true, enabledExtensions: [],

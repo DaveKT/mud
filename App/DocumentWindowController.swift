@@ -1,6 +1,6 @@
 import SwiftUI
 import Combine
-import MudConfiguration
+import MudPreferences
 
 // MARK: - Document Window Controller
 

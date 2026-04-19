@@ -2,8 +2,8 @@
 
 Core/.build/
 Core/Package.resolved
-Configuration/.build/
-Configuration/Package.resolved
+Preferences/.build/
+Preferences/Package.resolved
 
 Vendor/
 

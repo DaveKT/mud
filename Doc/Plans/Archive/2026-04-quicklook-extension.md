@@ -66,7 +66,7 @@ flowchart LR
     Ext[MudPreviewProvider<br/>NSViewController]
     WebView[WKWebView<br/>in extension sandbox]
     Core[MudCore]
-    Config[MudConfiguration]
+    Config[MudPreferences]
     Suite[(App-group<br/>UserDefaults)]
 
     Finder -->|preparePreviewOfFile| Ext
@@ -160,7 +160,7 @@ install.
 
 Fix: rename the app group to `$(TeamIdentifierPrefix)org.josephpearson.mud`
 (Xcode expands at sign time) in all three entitlements files. In Swift,
-`MudConfiguration.appGroupSuiteName` reads the resolved group at runtime via
+`MudPreferences.appGroupSuiteName` reads the resolved group at runtime via
 `SecTaskCopyValueForEntitlement`, with the literal string
 `"XVL2AFNXH5.org.josephpearson.mud"` as a hard fallback for unsigned test
 processes. Single source of truth is the entitlements file; the hardcoded
@@ -258,7 +258,7 @@ reviewability matters more than perfect image coverage there.
 Extensions can't read the main app's `UserDefaults` directly. The shared
 preference layer is described in
 [2026-04-mud-configuration.md](./2026-04-mud-configuration.md). The QL
-extension consumes one piece of it: `MudConfiguration.snapshot()`, a value type
+extension consumes one piece of it: `MudPreferences.snapshot()`, a value type
 containing every field that flows into `RenderOptions` for an Up-mode preview.
 
 Edge case: if a user installs the upgrade and triggers a Quick Look preview

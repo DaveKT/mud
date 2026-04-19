@@ -4,13 +4,13 @@ import MudCore
 
 /// Centralized read/write layer for every persisted user preference.
 ///
-/// Production code uses `MudConfiguration.shared`. `defaults` is the source of
+/// Production code uses `MudPreferences.shared`. `defaults` is the source of
 /// truth — `UserDefaults.standard` for the app so that `defaults write
 /// org.josephpearson.mud …` from the command line Just Works — and `mirror` is
 /// the app-group suite, which receives a fan-out copy of every write so the
 /// Quick Look extension can read a stable snapshot. Tests construct their own
 /// instance with hermetic per-test suites.
-public struct MudConfiguration: @unchecked Sendable {
+public struct MudPreferences: @unchecked Sendable {
     /// App-group suite name, resolved from the calling process's
     /// `com.apple.security.application-groups` entitlement. Xcode expands
     /// `$(TeamIdentifierPrefix)` in the entitlements file at signing time,
@@ -44,13 +44,13 @@ public struct MudConfiguration: @unchecked Sendable {
 
     /// Production instance — reads and writes `.standard`, mirrors writes into
     /// the app-group suite for the Quick Look extension.
-    public static let shared = MudConfiguration(
+    public static let shared = MudPreferences(
         defaults: .standard,
         mirror: UserDefaults(suiteName: appGroupSuiteName)!
     )
 }
 
-extension MudConfiguration {
+extension MudPreferences {
     public enum Keys: String, CaseIterable {
         case lighting                 = "lighting"
         case theme                    = "theme"
@@ -107,7 +107,7 @@ extension MudConfiguration {
 
 // MARK: - Generic read/write helpers
 
-extension MudConfiguration {
+extension MudPreferences {
     /// Fan a write out to `defaults` (source of truth) and `mirror` (when
     /// present). Passing `nil` removes the key from both stores.
     func write(_ value: Any?, forKey key: Keys) {
@@ -134,7 +134,7 @@ extension MudConfiguration {
 
 // MARK: - Preferences
 
-extension MudConfiguration {
+extension MudPreferences {
     public var lighting: Lighting {
         get { read(.lighting, default: .auto) }
         nonmutating set { write(newValue, forKey: .lighting) }
@@ -217,9 +217,9 @@ extension MudConfiguration {
 // `enabledExtensions` takes a caller-supplied default, and `ViewToggle`
 // accessors are parameterized by the toggle itself.
 
-extension MudConfiguration {
+extension MudPreferences {
     /// Extensions. The default is supplied by the caller because
-    /// MudConfiguration does not own the registry of available extensions.
+    /// MudPreferences does not own the registry of available extensions.
     public func readEnabledExtensions(defaultValue: Set<String>) -> Set<String> {
         guard let stored = defaults.array(forKey: Keys.enabledExtensions.rawValue)
                 as? [String] else {
@@ -250,7 +250,7 @@ extension MudConfiguration {
 
 // MARK: - Reset
 
-extension MudConfiguration {
+extension MudPreferences {
     /// Remove every Mud preference from this instance's `defaults` and, when
     /// present, from `mirror`. Used by the Debugging settings pane in debug
     /// builds. Clearing the mirror synchronously matters because the Quick

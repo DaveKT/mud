@@ -1,49 +1,49 @@
 import Foundation
 import Testing
 import MudCore
-@testable import MudConfiguration
+@testable import MudPreferences
 
-@Suite("MudConfiguration")
-struct MudConfigurationTests {
+@Suite("MudPreferences")
+struct MudPreferencesTests {
     // MARK: - Round-trips
 
     @Test func themeRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.theme = .blues
         #expect(tc.config.theme == .blues)
     }
 
     @Test func lightingRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.lighting = .dark
         #expect(tc.config.lighting == .dark)
     }
 
     @Test func doccAlertModeRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.doccAlertMode = .off
         #expect(tc.config.doccAlertMode == .off)
     }
 
     @Test func doubleRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.upModeZoomLevel = 1.5
         #expect(tc.config.upModeZoomLevel == 1.5)
     }
 
     @Test func boolRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.trackChanges = false
         #expect(tc.config.trackChanges == false)
     }
 
     @Test func stringArrayRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         let all: Set<String> = ["alpha", "beta", "gamma"]
         tc.config.writeEnabledExtensions(["alpha", "gamma"])
@@ -52,28 +52,28 @@ struct MudConfigurationTests {
     }
 
     @Test func sidebarPaneRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.sidebarPane = .changes
         #expect(tc.config.sidebarPane == .changes)
     }
 
     @Test func floatingControlsPositionRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.floatingControlsPosition = .topRight
         #expect(tc.config.floatingControlsPosition == .topRight)
     }
 
     @Test func viewToggleSingularRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.writeViewToggle(.readableColumn, enabled: false)
         #expect(tc.config.readViewToggle(.readableColumn) == false)
     }
 
     @Test func viewTogglePluralRoundTrip() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.writeViewToggle(.lineNumbers, enabled: false)
@@ -87,32 +87,32 @@ struct MudConfigurationTests {
     // MARK: - Defaults on empty suite
 
     @Test func emptySuiteLightingDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.lighting == .auto)
     }
 
     @Test func emptySuiteThemeDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.theme == .earthy)
     }
 
     @Test func emptySuiteDoccAlertDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.doccAlertMode == .extended)
     }
 
     @Test func emptySuiteZoomDefaults() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.upModeZoomLevel == 1.0)
         #expect(tc.config.downModeZoomLevel == 1.0)
     }
 
     @Test func emptySuiteBoolDefaults() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         // Bool prefs must not fall back to `false` on an empty suite —
         // the object(forKey:) as? Bool ?? default pattern matters here.
@@ -126,32 +126,32 @@ struct MudConfigurationTests {
     }
 
     @Test func emptySuiteWordDiffThresholdDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.wordDiffThreshold == 0.25)
     }
 
     @Test func emptySuiteFloatingControlsDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.floatingControlsPosition == .bottomCenter)
     }
 
     @Test func emptySuiteSidebarPaneDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.sidebarPane == .outline)
     }
 
     @Test func emptySuiteEnabledExtensionsReturnsDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         let all: Set<String> = ["alpha", "beta"]
         #expect(tc.config.readEnabledExtensions(defaultValue: all) == all)
     }
 
     @Test func emptySuiteViewToggleDefaults() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         #expect(tc.config.readViewToggle(.readableColumn) == false)
         #expect(tc.config.readViewToggle(.lineNumbers) == true)
@@ -163,30 +163,30 @@ struct MudConfigurationTests {
     // MARK: - Unknown enum raw values fall back to the default
 
     @Test func unknownThemeRawFallsBackToDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.defaults.set("not-a-theme", forKey: MudConfiguration.Keys.theme.rawValue)
+        tc.config.defaults.set("not-a-theme", forKey: MudPreferences.Keys.theme.rawValue)
         #expect(tc.config.theme == .earthy)
     }
 
     @Test func unknownLightingRawFallsBackToDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.defaults.set("nope", forKey: MudConfiguration.Keys.lighting.rawValue)
+        tc.config.defaults.set("nope", forKey: MudPreferences.Keys.lighting.rawValue)
         #expect(tc.config.lighting == .auto)
     }
 
     @Test func unknownDoccAlertRawFallsBackToDefault() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.defaults.set("xyz", forKey: MudConfiguration.Keys.doccAlertMode.rawValue)
+        tc.config.defaults.set("xyz", forKey: MudPreferences.Keys.doccAlertMode.rawValue)
         #expect(tc.config.doccAlertMode == .extended)
     }
 
     // MARK: - Reset
 
     @Test func resetClearsEveryKey() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.theme = .blues
         tc.config.lighting = .dark
@@ -202,7 +202,7 @@ struct MudConfigurationTests {
     }
 
     @Test func resetClearsMirror() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
         tc.config.theme = .blues
         tc.config.upModeZoomLevel = 2.0
@@ -211,7 +211,7 @@ struct MudConfigurationTests {
         tc.config.reset()
 
         let mirror = tc.config.mirror!
-        for key in MudConfiguration.Keys.allCases {
+        for key in MudPreferences.Keys.allCases {
             #expect(mirror.object(forKey: key.rawValue) == nil)
         }
     }
@@ -219,7 +219,7 @@ struct MudConfigurationTests {
     // MARK: - Mirror fan-out
 
     @Test func writesLandInBothDefaultsAndMirror() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.theme = .blues
@@ -229,36 +229,36 @@ struct MudConfigurationTests {
         tc.config.writeViewToggle(.readableColumn, enabled: true)
 
         #expect(
-            tc.config.defaults.string(forKey: MudConfiguration.Keys.theme.rawValue)
+            tc.config.defaults.string(forKey: MudPreferences.Keys.theme.rawValue)
                 == "blues"
         )
         #expect(
-            tc.config.mirror!.string(forKey: MudConfiguration.Keys.theme.rawValue)
+            tc.config.mirror!.string(forKey: MudPreferences.Keys.theme.rawValue)
                 == "blues"
         )
         #expect(
-            tc.config.mirror!.object(forKey: MudConfiguration.Keys.upModeZoomLevel.rawValue)
+            tc.config.mirror!.object(forKey: MudPreferences.Keys.upModeZoomLevel.rawValue)
                 as? Double == 1.5
         )
         #expect(
-            tc.config.mirror!.object(forKey: MudConfiguration.Keys.trackChanges.rawValue)
+            tc.config.mirror!.object(forKey: MudPreferences.Keys.trackChanges.rawValue)
                 as? Bool == false
         )
         #expect(
-            (tc.config.mirror!.array(forKey: MudConfiguration.Keys.enabledExtensions.rawValue)
+            (tc.config.mirror!.array(forKey: MudPreferences.Keys.enabledExtensions.rawValue)
                 as? [String]).map(Set.init) == ["alpha", "beta"]
         )
         #expect(
-            tc.config.mirror!.object(forKey: MudConfiguration.Keys.readableColumn.rawValue)
+            tc.config.mirror!.object(forKey: MudPreferences.Keys.readableColumn.rawValue)
                 as? Bool == true
         )
     }
 
     @Test func mirrorBackedReadMatchesDefaults() {
-        // Simulate the Quick Look extension: a second MudConfiguration whose
+        // Simulate the Quick Look extension: a second MudPreferences whose
         // `defaults` points at the main instance's mirror suite. It should
         // read back whatever the app just wrote.
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.theme = .riot
@@ -267,7 +267,7 @@ struct MudConfigurationTests {
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.writeViewToggle(.lineNumbers, enabled: false)
 
-        let readerAsExtension = MudConfiguration(defaults: tc.config.mirror!)
+        let readerAsExtension = MudPreferences(defaults: tc.config.mirror!)
 
         #expect(readerAsExtension.theme == .riot)
         #expect(readerAsExtension.upModeZoomLevel == 1.25)
@@ -277,13 +277,13 @@ struct MudConfigurationTests {
     }
 
     @Test func writesWithoutMirrorDoNotFanOut() {
-        // The extension's own MudConfiguration has no mirror. Writes should
+        // The extension's own MudPreferences has no mirror. Writes should
         // still work; they just don't fan out anywhere.
         let suiteName = "test.mud.nomirror.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let config = MudConfiguration(defaults: defaults)
+        let config = MudPreferences(defaults: defaults)
         config.theme = .blues
 
         #expect(config.theme == .blues)
@@ -293,16 +293,16 @@ struct MudConfigurationTests {
     // MARK: - Key-catalog invariants
 
     @Test func keyCatalogCount() {
-        #expect(MudConfiguration.Keys.allCases.count == 21)
+        #expect(MudPreferences.Keys.allCases.count == 21)
     }
 
     @Test func keyRawValuesAreDistinct() {
-        let raws = MudConfiguration.Keys.allCases.map(\.rawValue)
+        let raws = MudPreferences.Keys.allCases.map(\.rawValue)
         #expect(Set(raws).count == raws.count)
     }
 
     @Test func legacyKeysAreDistinct() {
-        let legacy = MudConfiguration.Keys.allCases.map(\.legacyStandardKey)
+        let legacy = MudPreferences.Keys.allCases.map(\.legacyStandardKey)
         #expect(Set(legacy).count == legacy.count)
     }
 }

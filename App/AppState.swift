@@ -1,70 +1,70 @@
 import Foundation
 import Combine
-import MudConfiguration
+import MudPreferences
 import MudCore
 
 class AppState: ObservableObject {
     static let shared = AppState()
     @Published var modeInActiveTab: Mode = .up
     @Published var lighting: Lighting {
-        didSet { MudConfiguration.shared.lighting = lighting }
+        didSet { MudPreferences.shared.lighting = lighting }
     }
     @Published var theme: Theme {
-        didSet { MudConfiguration.shared.theme = theme }
+        didSet { MudPreferences.shared.theme = theme }
     }
     @Published var viewToggles: Set<ViewToggle> {
-        didSet { MudConfiguration.shared.viewToggles = viewToggles }
+        didSet { MudPreferences.shared.viewToggles = viewToggles }
     }
     @Published var upModeZoomLevel: Double {
-        didSet { MudConfiguration.shared.upModeZoomLevel = upModeZoomLevel }
+        didSet { MudPreferences.shared.upModeZoomLevel = upModeZoomLevel }
     }
     @Published var downModeZoomLevel: Double {
-        didSet { MudConfiguration.shared.downModeZoomLevel = downModeZoomLevel }
+        didSet { MudPreferences.shared.downModeZoomLevel = downModeZoomLevel }
     }
     @Published var sidebarVisible: Bool {
-        didSet { MudConfiguration.shared.sidebarVisible = sidebarVisible }
+        didSet { MudPreferences.shared.sidebarVisible = sidebarVisible }
     }
     @Published var sidebarPane: SidebarPane {
-        didSet { MudConfiguration.shared.sidebarPane = sidebarPane }
+        didSet { MudPreferences.shared.sidebarPane = sidebarPane }
     }
     @Published var trackChanges: Bool {
-        didSet { MudConfiguration.shared.trackChanges = trackChanges }
+        didSet { MudPreferences.shared.trackChanges = trackChanges }
     }
     @Published var inlineDeletions: Bool {
-        didSet { MudConfiguration.shared.inlineDeletions = inlineDeletions }
+        didSet { MudPreferences.shared.inlineDeletions = inlineDeletions }
     }
     @Published var quitOnClose: Bool {
-        didSet { MudConfiguration.shared.quitOnClose = quitOnClose }
+        didSet { MudPreferences.shared.quitOnClose = quitOnClose }
     }
     @Published var allowRemoteContent: Bool {
-        didSet { MudConfiguration.shared.allowRemoteContent = allowRemoteContent }
+        didSet { MudPreferences.shared.allowRemoteContent = allowRemoteContent }
     }
     @Published var doccAlertMode: DocCAlertMode {
-        didSet { MudConfiguration.shared.doccAlertMode = doccAlertMode }
+        didSet { MudPreferences.shared.doccAlertMode = doccAlertMode }
     }
     @Published var useHeadingAsTitle: Bool {
-        didSet { MudConfiguration.shared.useHeadingAsTitle = useHeadingAsTitle }
+        didSet { MudPreferences.shared.useHeadingAsTitle = useHeadingAsTitle }
     }
     @Published var wordDiffThreshold: Double {
-        didSet { MudConfiguration.shared.wordDiffThreshold = wordDiffThreshold }
+        didSet { MudPreferences.shared.wordDiffThreshold = wordDiffThreshold }
     }
     @Published var floatingControlsPosition: FloatingControlsPosition {
-        didSet { MudConfiguration.shared.floatingControlsPosition = floatingControlsPosition }
+        didSet { MudPreferences.shared.floatingControlsPosition = floatingControlsPosition }
     }
     @Published var showGitWaypoints: Bool {
-        didSet { MudConfiguration.shared.showGitWaypoints = showGitWaypoints }
+        didSet { MudPreferences.shared.showGitWaypoints = showGitWaypoints }
     }
     @Published var enabledExtensions: Set<String> {
-        didSet { MudConfiguration.shared.writeEnabledExtensions(enabledExtensions) }
+        didSet { MudPreferences.shared.writeEnabledExtensions(enabledExtensions) }
     }
 
     private init() {
         // Rename any legacy `Mud-*` keys to the lowercase-hyphen names inside
         // UserDefaults.standard, then fan the current values out to the
         // app-group mirror so the Quick Look extension sees a fresh snapshot.
-        MudConfiguration.shared.migrate()
+        MudPreferences.shared.migrate()
 
-        let config = MudConfiguration.shared
+        let config = MudPreferences.shared
         self.lighting = config.lighting
         self.theme = config.theme
         self.viewToggles = config.viewToggles

@@ -1,6 +1,6 @@
 import Foundation
 
-extension MudConfiguration {
+extension MudPreferences {
     /// One-time rename of legacy `Mud-*` keys to the lowercase-hyphen names,
     /// performed in place inside `defaults`. The new key wins when both are
     /// present; either way, the legacy key is removed. Idempotent. Will be

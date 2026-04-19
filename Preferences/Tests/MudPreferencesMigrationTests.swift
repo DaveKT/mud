@@ -1,13 +1,13 @@
 import Foundation
 import Testing
-@testable import MudConfiguration
+@testable import MudPreferences
 
-@Suite("MudConfiguration migration")
-struct MudConfigurationMigrationTests {
+@Suite("MudPreferences migration")
+struct MudPreferencesMigrationTests {
     // MARK: - migrateLegacyKeys — in-place rename inside `defaults`
 
     @Test func legacyRenameNoopWhenStoreEmpty() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.migrateLegacyKeys()
@@ -17,7 +17,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameMovesThemeAndRemovesOldKey() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set("blues", forKey: "Mud-Theme")
@@ -28,7 +28,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameMovesBool() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set(false, forKey: "Mud-readableColumn")
@@ -39,7 +39,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameMovesDouble() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set(1.75, forKey: "Mud-UpModeZoomLevel")
@@ -50,7 +50,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameMovesStringArray() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set(["alpha", "beta"], forKey: "Mud-EnabledExtensions")
@@ -64,7 +64,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameLeavesNewKeyAlone() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.theme = .riot
@@ -74,7 +74,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameNewKeyWinsWhenBothPresent() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set("blues", forKey: "Mud-Theme")
@@ -89,7 +89,7 @@ struct MudConfigurationMigrationTests {
     }
 
     @Test func legacyRenameIsIdempotent() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set("blues", forKey: "Mud-Theme")
@@ -108,42 +108,42 @@ struct MudConfigurationMigrationTests {
     // MARK: - syncMirror — fan-out copy from `defaults` into `mirror`
 
     @Test func syncMirrorCopiesEveryPresentKey() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         // Set values directly on `defaults` to simulate external
         // `defaults write` changes made while the app was not running.
-        tc.config.defaults.set("blues", forKey: MudConfiguration.Keys.theme.rawValue)
-        tc.config.defaults.set(1.5, forKey: MudConfiguration.Keys.upModeZoomLevel.rawValue)
-        tc.config.defaults.set(false, forKey: MudConfiguration.Keys.trackChanges.rawValue)
+        tc.config.defaults.set("blues", forKey: MudPreferences.Keys.theme.rawValue)
+        tc.config.defaults.set(1.5, forKey: MudPreferences.Keys.upModeZoomLevel.rawValue)
+        tc.config.defaults.set(false, forKey: MudPreferences.Keys.trackChanges.rawValue)
 
         tc.config.syncMirror()
 
         let mirror = tc.config.mirror!
         #expect(
-            mirror.string(forKey: MudConfiguration.Keys.theme.rawValue) == "blues"
+            mirror.string(forKey: MudPreferences.Keys.theme.rawValue) == "blues"
         )
         #expect(
-            mirror.object(forKey: MudConfiguration.Keys.upModeZoomLevel.rawValue)
+            mirror.object(forKey: MudPreferences.Keys.upModeZoomLevel.rawValue)
                 as? Double == 1.5
         )
         #expect(
-            mirror.object(forKey: MudConfiguration.Keys.trackChanges.rawValue)
+            mirror.object(forKey: MudPreferences.Keys.trackChanges.rawValue)
                 as? Bool == false
         )
     }
 
     @Test func syncMirrorClearsStaleValueWhenSourceIsAbsent() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
-        tc.config.mirror!.set("riot", forKey: MudConfiguration.Keys.theme.rawValue)
+        tc.config.mirror!.set("riot", forKey: MudPreferences.Keys.theme.rawValue)
         // `defaults` does not have a `theme` key.
 
         tc.config.syncMirror()
 
         #expect(
-            tc.config.mirror!.object(forKey: MudConfiguration.Keys.theme.rawValue) == nil
+            tc.config.mirror!.object(forKey: MudPreferences.Keys.theme.rawValue) == nil
         )
     }
 
@@ -152,22 +152,22 @@ struct MudConfigurationMigrationTests {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let config = MudConfiguration(defaults: defaults)
+        let config = MudPreferences(defaults: defaults)
         config.syncMirror() // must not crash
     }
 
     @Test func syncMirrorIsIdempotent() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.theme = .blues
         tc.config.syncMirror()
         let first = tc.config.mirror!.string(
-            forKey: MudConfiguration.Keys.theme.rawValue
+            forKey: MudPreferences.Keys.theme.rawValue
         )
         tc.config.syncMirror()
         let second = tc.config.mirror!.string(
-            forKey: MudConfiguration.Keys.theme.rawValue
+            forKey: MudPreferences.Keys.theme.rawValue
         )
         #expect(first == second)
     }
@@ -175,7 +175,7 @@ struct MudConfigurationMigrationTests {
     // MARK: - migrate — end-to-end (legacy rename + mirror sync)
 
     @Test func migrateRenamesLegacyKeyAndPopulatesMirror() {
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
         tc.config.defaults.set("blues", forKey: "Mud-Theme")
@@ -185,7 +185,7 @@ struct MudConfigurationMigrationTests {
         #expect(tc.config.theme == .blues)
         #expect(tc.config.defaults.object(forKey: "Mud-Theme") == nil)
         #expect(
-            tc.config.mirror!.string(forKey: MudConfiguration.Keys.theme.rawValue)
+            tc.config.mirror!.string(forKey: MudPreferences.Keys.theme.rawValue)
                 == "blues"
         )
     }
@@ -195,15 +195,15 @@ struct MudConfigurationMigrationTests {
         // riot` while the app was not running. The value sits on the new
         // key in `defaults` already (no rename needed); `migrate()` just
         // needs to fan it out to the mirror so the QL extension sees it.
-        let tc = TestConfiguration()
+        let tc = TestPreferences()
         defer { tc.tearDown() }
 
-        tc.config.defaults.set("riot", forKey: MudConfiguration.Keys.theme.rawValue)
+        tc.config.defaults.set("riot", forKey: MudPreferences.Keys.theme.rawValue)
 
         tc.config.migrate()
 
         #expect(
-            tc.config.mirror!.string(forKey: MudConfiguration.Keys.theme.rawValue)
+            tc.config.mirror!.string(forKey: MudPreferences.Keys.theme.rawValue)
                 == "riot"
         )
     }

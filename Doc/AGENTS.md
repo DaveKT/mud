@@ -46,12 +46,12 @@ MVP plan.
   Mud.app
 - **MudCore** (Core/) -- Swift Package, platform-independent rendering and
   syntax highlighting
-- **MudConfiguration** (Configuration/) -- Swift Package, Foundation-only
+- **MudPreferences** (Preferences/) -- Swift Package, Foundation-only
   preference persistence shared between the app and the Quick Look extension.
   Depends on MudCore.
 - **QuickLook** (QuickLook/) -- `.appex` Quick Look preview extension, bundled
   in `Mud.app/Contents/PlugIns/`. Renders `.md` previews via MudCore and reads
-  preferences from the app-group mirror via MudConfiguration.
+  preferences from the app-group mirror via MudPreferences.
 
 
 ## File quick reference
@@ -61,7 +61,7 @@ MVP plan.
 - `MudApp.swift` — @main, menu commands
 
 - `AppState.swift` — Singleton observable state; persistence delegated to
-  `MudConfiguration.shared`
+  `MudPreferences.shared`
 
 - `AppDelegate.swift` — Lifecycle and document handling
 
@@ -96,7 +96,7 @@ MVP plan.
 
 - `Lighting+AppKit.swift` — AppKit/SwiftUI behavior (`appearance`,
   `colorScheme`, `toggled()`, `systemIsDark`) on the bare `Lighting` enum that
-  lives in MudConfiguration
+  lives in MudPreferences
 
 - `ErrorPage.swift` — Error-page HTML generator (renders Markdown via MudCore)
 
@@ -164,9 +164,9 @@ MVP plan.
 - `DebuggingSettingsView.swift` — Debugging pane (debug builds only; reset
   preferences)
 
-**Configuration/ key files:**
+**Preferences/ key files:**
 
-- `MudConfiguration.swift` — Struct with `.shared`. Reads and writes
+- `MudPreferences.swift` — Struct with `.shared`. Reads and writes
   `UserDefaults.standard` (source of truth, so
   `defaults write org.josephpearson.mud …` stays easy); every write is also
   mirrored into the app-group suite `XVL2AFNXH5.org.josephpearson.mud` so the
@@ -175,13 +175,13 @@ MVP plan.
   enum, per-key read/write methods, and `reset()`. `@unchecked Sendable`
   because `UserDefaults` isn't formally Sendable.
 
-- `MudConfigurationMigration.swift` — `migrateLegacyKeys()` renames legacy
+- `MudPreferencesMigration.swift` — `migrateLegacyKeys()` renames legacy
   `Mud-*` keys in `UserDefaults.standard` to the lowercase-hyphen names;
   `syncMirror()` fans every current `defaults` value into the mirror (so
   `defaults write` changes made while the app was not running get picked up).
   `migrate()` runs both and is called once at launch. Idempotent.
 
-- `MudConfigurationSnapshot.swift` — Value-type snapshot of the prefs that flow
+- `MudPreferencesSnapshot.swift` — Value-type snapshot of the prefs that flow
   into `RenderOptions`, plus derived `upModeHTMLClasses`. Consumed by the Quick
   Look extension.
 
@@ -194,7 +194,7 @@ MVP plan.
 
 - `ViewToggle.swift` — readableColumn/lineNumbers/wordWrap/codeHeader/
   autoExpandChanges toggles; `isEnabled`/ `save(_:)` delegate to
-  `MudConfiguration.shared`
+  `MudPreferences.shared`
 
 - `SidebarPane.swift` — outline/changes enum
 
@@ -355,7 +355,7 @@ Three ObservableObject classes, no nesting:
 State flows outward via `@ObservedObject`. Combine sinks in
 `DocumentWindowController` bridge state → AppKit (window appearance, toolbar
 icons). `AppState`'s `@Published` `didSet` observers persist each change by
-assigning to the corresponding `MudConfiguration.shared.<pref>` property.
+assigning to the corresponding `MudPreferences.shared.<pref>` property.
 
 
 ## Communication patterns

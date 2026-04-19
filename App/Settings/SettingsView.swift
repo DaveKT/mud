@@ -1,5 +1,5 @@
 import SwiftUI
-import MudConfiguration
+import MudPreferences
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general

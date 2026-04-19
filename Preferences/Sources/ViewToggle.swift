@@ -19,7 +19,7 @@ public enum ViewToggle: String, CaseIterable, Sendable {
     }
 
     /// The persistence key that backs this toggle.
-    var key: MudConfiguration.Keys {
+    var key: MudPreferences.Keys {
         switch self {
         case .readableColumn:    return .readableColumn
         case .lineNumbers:       return .lineNumbers
@@ -41,10 +41,10 @@ public enum ViewToggle: String, CaseIterable, Sendable {
     }
 
     public var isEnabled: Bool {
-        MudConfiguration.shared.readViewToggle(self)
+        MudPreferences.shared.readViewToggle(self)
     }
 
     public func save(_ enabled: Bool) {
-        MudConfiguration.shared.writeViewToggle(self, enabled: enabled)
+        MudPreferences.shared.writeViewToggle(self, enabled: enabled)
     }
 }

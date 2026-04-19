@@ -26,7 +26,7 @@
 		7C3640B52F60DC2C00364BEC /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3640B42F60DC2C00364BEC /* AppState.swift */; };
 		7C3640C52F60FCF400364BEC /* MarkdownSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3640C42F60FCF400364BEC /* MarkdownSettingsView.swift */; };
 		7C3C65D82F93304A00AE0BB7 /* MudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7C3C65D72F93304A00AE0BB7 /* MudCore */; };
-		7C3C65DA2F93304A00AE0BB7 /* MudConfiguration in Frameworks */ = {isa = PBXBuildFile; productRef = 7C3C65D92F93304A00AE0BB7 /* MudConfiguration */; };
+		7C3C65DA2F93304A00AE0BB7 /* MudPreferences in Frameworks */ = {isa = PBXBuildFile; productRef = 7C3C65D92F93304A00AE0BB7 /* MudPreferences */; };
 		7C442A622F3450190046E0CD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C442A612F3450190046E0CD /* AppDelegate.swift */; };
 		7C442A652F3457C20046E0CD /* DocumentController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C442A642F3457C20046E0CD /* DocumentController.swift */; };
 		7C442A682F34BB7E0046E0CD /* DocumentWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C442A672F34BB7E0046E0CD /* DocumentWindowController.swift */; };
@@ -54,7 +54,7 @@
 		7CC975592F34038A001C3BB7 /* MudCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7CC975582F34038A001C3BB7 /* MudCore */; };
 		7CC975672F340904001C3BB7 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975652F340904001C3BB7 /* WebView.swift */; };
 		7CC975862F340FD2001C3BB7 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC975842F340FD2001C3BB7 /* FileWatcher.swift */; };
-		7CCF00000000000000000003 /* MudConfiguration in Frameworks */ = {isa = PBXBuildFile; productRef = 7CCF00000000000000000002 /* MudConfiguration */; };
+		7CCF00000000000000000003 /* MudPreferences in Frameworks */ = {isa = PBXBuildFile; productRef = 7CCF00000000000000000002 /* MudPreferences */; };
 		7CCF00000000000000000011 /* Lighting+AppKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF00000000000000000010 /* Lighting+AppKit.swift */; };
 		7CCH00000000000000000002 /* ChangesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCH00000000000000000001 /* ChangesSettingsView.swift */; };
 		7CD093082F587185003E4037 /* ErrorPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD093072F587185003E4037 /* ErrorPage.swift */; };
@@ -219,7 +219,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7C3C65D82F93304A00AE0BB7 /* MudCore in Frameworks */,
-				7C3C65DA2F93304A00AE0BB7 /* MudConfiguration in Frameworks */,
+				7C3C65DA2F93304A00AE0BB7 /* MudPreferences in Frameworks */,
 				7C8FC0422F932DFD003B14D4 /* Quartz.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -229,7 +229,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7CC975592F34038A001C3BB7 /* MudCore in Frameworks */,
-				7CCF00000000000000000003 /* MudConfiguration in Frameworks */,
+				7CCF00000000000000000003 /* MudPreferences in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -371,7 +371,7 @@
 			name = MudQuickLook;
 			packageProductDependencies = (
 				7C3C65D72F93304A00AE0BB7 /* MudCore */,
-				7C3C65D92F93304A00AE0BB7 /* MudConfiguration */,
+				7C3C65D92F93304A00AE0BB7 /* MudPreferences */,
 			);
 			productName = QuickLook;
 			productReference = 7C8FC0402F932DFC003B14D4 /* MudQuickLook.appex */;
@@ -402,7 +402,7 @@
 			name = Mud;
 			packageProductDependencies = (
 				7CC975582F34038A001C3BB7 /* MudCore */,
-				7CCF00000000000000000002 /* MudConfiguration */,
+				7CCF00000000000000000002 /* MudPreferences */,
 			);
 			productName = Mud;
 			productReference = 7CC975212F3401F4001C3BB7 /* Mud.app */;
@@ -440,7 +440,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7CC975572F34038A001C3BB7 /* XCLocalSwiftPackageReference "Core" */,
-				7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */,
+				7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Preferences" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7CC975222F3401F4001C3BB7 /* Products */;
@@ -1519,9 +1519,9 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Core;
 		};
-		7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */ = {
+		7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Preferences" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Configuration;
+			relativePath = Preferences;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -1531,10 +1531,10 @@
 			package = 7CC975572F34038A001C3BB7 /* XCLocalSwiftPackageReference "Core" */;
 			productName = MudCore;
 		};
-		7C3C65D92F93304A00AE0BB7 /* MudConfiguration */ = {
+		7C3C65D92F93304A00AE0BB7 /* MudPreferences */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */;
-			productName = MudConfiguration;
+			package = 7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Preferences" */;
+			productName = MudPreferences;
 		};
 		7C6532B02F585CEE00B71730 /* MudCore */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1545,10 +1545,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = MudCore;
 		};
-		7CCF00000000000000000002 /* MudConfiguration */ = {
+		7CCF00000000000000000002 /* MudPreferences */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Configuration" */;
-			productName = MudConfiguration;
+			package = 7CCF00000000000000000001 /* XCLocalSwiftPackageReference "Preferences" */;
+			productName = MudPreferences;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

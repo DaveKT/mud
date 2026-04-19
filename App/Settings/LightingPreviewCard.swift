@@ -1,5 +1,5 @@
 import SwiftUI
-import MudConfiguration
+import MudPreferences
 
 struct LightingPreviewCard: View {
     let lighting: Lighting

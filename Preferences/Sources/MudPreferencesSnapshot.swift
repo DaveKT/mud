@@ -2,12 +2,12 @@ import Foundation
 import MudCore
 
 /// A one-shot read of the preferences a Quick Look preview (or any other
-/// non-reactive consumer) needs. Built from `MudConfiguration.snapshot()`.
+/// non-reactive consumer) needs. Built from `MudPreferences.snapshot()`.
 ///
 /// The surface area covers only the fields that flow into `RenderOptions`.
 /// Preferences that don't affect a preview (lighting, sidebar state,
 /// quit-on-close, etc.) are deliberately omitted.
-public struct MudConfigurationSnapshot: Sendable {
+public struct MudPreferencesSnapshot: Sendable {
     public let theme: Theme
     public let upModeZoomLevel: Double
     public let viewToggles: Set<ViewToggle>
@@ -45,9 +45,9 @@ public struct MudConfigurationSnapshot: Sendable {
     }
 }
 
-extension MudConfiguration {
-    public func snapshot(defaultEnabledExtensions: Set<String> = []) -> MudConfigurationSnapshot {
-        MudConfigurationSnapshot(
+extension MudPreferences {
+    public func snapshot(defaultEnabledExtensions: Set<String> = []) -> MudPreferencesSnapshot {
+        MudPreferencesSnapshot(
             theme: theme,
             upModeZoomLevel: upModeZoomLevel,
             viewToggles: viewToggles,

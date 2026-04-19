@@ -1,5 +1,5 @@
 import SwiftUI
-import MudConfiguration
+import MudPreferences
 
 struct ChangesSettingsView: View {
     @ObservedObject private var appState = AppState.shared
