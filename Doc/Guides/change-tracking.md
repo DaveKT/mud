@@ -83,14 +83,14 @@ the same row again to deselect it.
 ![The Changes sidebar pane](change-tracking-assets/sidebar.png)
 
 
-## Choosing a baseline
+## Choosing a waypoint
 
 By default, Mud diffs against the state when you last accepted changes — or
 when the document was opened, if you haven't accepted yet. You can choose a
-different baseline by clicking the status label area on the Changes bar to open
+different waypoint by clicking the status label area on the Changes bar to open
 the **Changes since…** popover.
 
-The popover shows all available baselines:
+The popover shows all available waypoint:
 
 - **Since last accepted** — the most recent accept point
 - **Time-based snapshots** — automatic snapshots taken as you reload (e.g.,
@@ -98,16 +98,16 @@ The popover shows all available baselines:
 - **Since document opened** — the content at the moment the file was first
   loaded
 
-Select any baseline to see what has changed since that point. The active
-baseline has a checkmark next to it.
+Select any waypoint to see what has changed since that point. The active
+waypoint has a checkmark next to it.
 
-![The Changes since popover with baseline options](change-tracking-assets/popover.png)
+![The Changes since popover with waypoint options](change-tracking-assets/popover.png)
 
 
 ## Accepting changes
 
 Click the **checkmark** button on the Changes bar to accept all current
-changes. This creates a new baseline from the current content — the change
+changes. This creates a new waypoint from the current content — the change
 count resets to zero, and future edits will be compared against this new
 accepted state.
 
@@ -115,19 +115,12 @@ Accepting is lightweight and local. It doesn't modify the file on disk — it
 just moves the comparison point forward.
 
 
-## Git waypoints
+## Git commits
 
-> Note: Git waypoints are available in the direct distribution build only.
-> Enable them with:
->
-> ```
-> defaults write org.josephpearson.Mud Mud-ShowGitWaypoints -bool true
-> ```
->
-> Then relaunch Mud.
+> Note: Git commits are available in the direct distribution build only.
 
-When enabled, the **Changes since…** popover gains a git section at the bottom.
-This lets you diff against:
+When this option is enabled in Settings, the **Changes since…** popover gains
+a **Git** section at the bottom. This lets you diff against:
 
 - **Since last staged** — the version in the git index (shown only when there
   are unstaged changes)
@@ -137,7 +130,7 @@ This lets you diff against:
 This is a powerful way to review what you've changed since your last commit, or
 to compare against any recent point in the file's history.
 
-![The Changes since popover with git waypoints](change-tracking-assets/git-waypoints.png)
+![The Changes since popover with Git waypoints](change-tracking-assets/git-waypoints.png)
 
 
 ## Positioning the floating bars
