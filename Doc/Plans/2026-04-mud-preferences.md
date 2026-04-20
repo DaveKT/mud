@@ -26,8 +26,14 @@ Swift-identifier alignment landed under
 [Archive/2026-04-pref-key-conventions.md](./Archive/2026-04-pref-key-conventions.md);
 the catalog and identifier tables below reflect the post-conventions names.
 
-The only remaining item is the legacy-key cleanup described under
-[Follow-up cleanup](#follow-up-cleanup) — deferred until a release with
+The stretch goal under
+[External change propagation](#external-change-propagation-stretch) also
+shipped — `defaults write` is picked up live while the app is running, via
+per-key KVO on `UserDefaults.standard` (the originally-planned Darwin
+notification path turned out not to fire for app-specific domains).
+
+Only the legacy-key cleanup described under
+[Follow-up cleanup](#follow-up-cleanup) remains, deferred until a release with
 migration in place has been in the field long enough for installs to upgrade.
 
 
@@ -56,11 +62,9 @@ migration in place has been in the field long enough for installs to upgrade.
 - Hiding `UserDefaults` behind a property wrapper (e.g. `@MudPref`). Explicit
   read/write accessors keep migration visible and stay grep-friendly. Property
   wrappers add a layer of magic that is harder to use from the snapshot path.
-- Live propagation of external `defaults write` changes made while the app is
-  running. The app-group mirror refreshes at launch and on every subsequent
-  in-app write; anyone using `defaults write` to poke at a hidden preference
-  while the app is running should restart the app for the Quick Look extension
-  to see the change. Documented, not fixed.
+- ~~Live propagation of external `defaults write` changes made while the app is
+  running.~~ Originally deferred — now a stretch goal; see
+  [External change propagation](#external-change-propagation-stretch).
 - Observability hooks (KVO, Combine publishers) on MudPreferences itself.
   AppState's existing `@Published` properties already drive the UI.
 - Supporting multiple writer targets. The mirror direction (standard as source
@@ -383,8 +387,139 @@ per-test `mirror` suite, so Swift Testing's default parallel execution is safe.
 - Cross-process visibility between the app and the QL extension — a runtime
   integration concern, not a unit test. Verified by running the extension
   against a real dev build.
-- Live handling of external `defaults write` changes made while the app is
-  running. Documented as restart-required behavior.
+- Darwin-notification plumbing itself — a runtime-integration concern; see
+  [External change propagation → Tests](#tests-1).
+
+
+## External change propagation (stretch)
+
+> Status: Complete — shipped with KVO on `UserDefaults.standard` rather than
+> the originally-planned Darwin notification (see mechanism section).
+
+Pick up external `defaults write` / `defaults delete` on
+`org.josephpearson.Mud` while the app is running, so that:
+
+- AppState reloads its `@Published` properties — the running UI reflects the
+  change without a restart.
+- The app-group mirror re-syncs so the Quick Look extension's next render picks
+  up the change.
+
+The one-writer, "user's CLI overrides UI on next launch" contract from the
+Non-goals discussion is unchanged. This stretch adds observation only, not a
+second writer: the app still reads and writes `.standard`; the extension still
+reads the mirror.
+
+
+### Mechanism: KVO on `UserDefaults.standard`
+
+The original plan proposed subscribing to a Darwin notification
+`com.apple.cfprefsd.domain.<bundle-id>`. In practice cfprefsd does **not** post
+a public Darwin notification for app-specific domain changes (empirically
+verified with `notifyutil -w` and `log stream --process cfprefsd`). Instead it
+signals subscribers over private XPC — each process's `NSUserDefaults` instance
+is an XPC peer, and cfprefsd invalidates their caches directly.
+
+Foundation surfaces that XPC-driven invalidation as per-key KVO on the same
+`NSUserDefaults` instance. Registering
+`addObserver(_:forKeyPath:options: context:)` for each `Keys.rawValue` on
+`UserDefaults.standard` therefore fires on external writes — this is how we get
+notified.
+
+A single `KVOBridge: NSObject` is created per `MudPreferences.State` and added
+as observer for every key. Its `observeValue` calls `state.scheduleRefresh()`,
+which uses an `NSLock`-guarded `refreshPending` flag to enqueue at most one
+main-queue diff pass per run-loop turn. cfprefsd invalidates the whole domain
+at once, so 25 KVO callbacks per external write are expected — they coalesce
+into a single diff pass that fires `onChange` exactly once per actually-
+changed key.
+
+The observer lifetime matches the process: no `removeObserver` is exposed.
+Hermetic test suites (where `defaults !== UserDefaults.standard`) skip the KVO
+registration and drive the diff pass directly — see the Tests section.
+
+
+### Feedback-loop mitigation: last-known snapshot
+
+KVO fires regardless of which process caused the change, so an in-app write
+would otherwise trigger a reload-from-prefs, which would trigger another write
+via AppState's `didSet`, idempotently pinging back and forth.
+
+`MudPreferences.shared` keeps a private `lastKnown: [Keys: NSObject?]` map
+(UserDefaults values are always `NSObject` subclasses — `NSNumber`, `NSString`,
+`NSArray`, `NSDictionary`, `NSData`, `NSDate` — so `isEqual:` comparison is
+straightforward).
+
+- Seeded after `migrate()` at startup by reading every key once.
+- Every in-app `write(_:forKey:)` updates `lastKnown` before touching
+  `defaults` and `mirror`.
+- On each KVO callback: iterate `Keys.allCases`, read
+  `defaults.object(forKey:)`, compare against `lastKnown`. For each diff,
+  update `lastKnown`, write the new value to `mirror`, and dispatch a
+  `(Keys) -> Void` callback on the main queue.
+
+Self-triggered callbacks see no diffs because in-app writes keep `lastKnown` in
+lockstep with `defaults`. External writes bypass `lastKnown`, so the diff
+surfaces and the handler acts.
+
+
+### Public API
+
+A single new entry point on `MudPreferences`:
+
+```swift
+extension MudPreferences {
+    /// Start observing external changes to `defaults`. Idempotent. The
+    /// callback is dispatched on the main queue, once per changed key.
+    /// Not called by the Quick Look extension — it re-reads the snapshot
+    /// on every preview request.
+    public func startObservingExternalChanges(
+        onChange: @escaping (Keys) -> Void
+    )
+}
+```
+
+The subscription lives for the process lifetime; no removal is exposed.
+`lastKnown` becomes a `nonmutating` private stored state (boxed in a reference
+type since `MudPreferences` is a struct).
+
+
+### AppState integration
+
+`AppState.init()` calls `startObservingExternalChanges` with a handler that
+switches on `Keys` and assigns the freshly-read value to the matching
+`@Published` property. Each assignment fires `didSet`, which writes back to
+`MudPreferences.shared`, which updates `lastKnown`. Subsequent notifications
+for that key see no diff — the loop terminates at one round.
+
+Keys with no `@Published` representative in AppState (e.g.
+`internal.window-frame`, `internal.cli-installed`) are ignored by the handler.
+The mirror still receives them so the extension stays in sync.
+
+
+### Tests
+
+The `lastKnown`-based diff machinery is unit-testable with the existing
+hermetic-suite helper — no cfprefsd or KVO involved:
+
+- In-app writes update `lastKnown` before `defaults`, so a manually-triggered
+  diff pass emits nothing.
+- Direct mutation of the underlying suite (simulating an external write)
+  surfaces through the diff pass as a callback with the right key.
+- Removing a key via `defaults.removeObject(forKey:)` surfaces as a callback
+  with the `nil` path.
+- Writing every key in sequence, externally, produces one callback per changed
+  key and leaves `lastKnown` equal to `defaults`.
+
+The KVO bridge itself (NSObject subclass, observer registration, main-queue
+dispatch) is a runtime-integration concern — unit tests can't drive
+cross-process cfprefsd invalidations. Verify manually with the app running:
+
+```
+defaults write org.josephpearson.Mud theme blues
+```
+
+The app window should switch themes without a restart, and a Quick Look preview
+opened afterward in Finder should render with the new theme.
 
 
 ## Follow-up cleanup

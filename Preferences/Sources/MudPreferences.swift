@@ -34,12 +34,45 @@ public struct MudPreferences: @unchecked Sendable {
         return first
     }()
 
-    let defaults: UserDefaults
-    let mirror: UserDefaults?
+    let state: State
+
+    var defaults: UserDefaults { state.defaults }
+    var mirror: UserDefaults? { state.mirror }
 
     public init(defaults: UserDefaults, mirror: UserDefaults? = nil) {
-        self.defaults = defaults
-        self.mirror = mirror
+        self.state = State(defaults: defaults, mirror: mirror)
+    }
+
+    /// Reference-typed storage so that the struct's `nonmutating` setters
+    /// can update the last-known snapshot used for external-change detection.
+    /// Single-threaded invariant: every mutation happens on the main queue
+    /// (AppState setters, Darwin notification dispatched to `.main`). Tests
+    /// use their own instance on the testing thread, no sharing.
+    final class State: @unchecked Sendable {
+        let defaults: UserDefaults
+        let mirror: UserDefaults?
+
+        /// Snapshot of every Mud-owned key as seen by `defaults` at the
+        /// most recent checkpoint (observation start, in-app write, or
+        /// external-change diff pass). Populated only while `isObserving`.
+        var lastKnown: [Keys: NSObject?] = [:]
+        var isObserving = false
+        var onChange: ((Keys) -> Void)?
+
+        /// Holds the NSObject subclass that receives KVO callbacks. Retained
+        /// here for the process lifetime; see `registerKVOObservers`.
+        var kvoBridge: KVOBridge?
+
+        /// Coalesces KVO bursts: a single external write fires KVO for every
+        /// registered key. `scheduleRefresh` guards the enqueue with this
+        /// flag so only one main-queue block is in flight at a time.
+        let pendingLock = NSLock()
+        var refreshPending = false
+
+        init(defaults: UserDefaults, mirror: UserDefaults?) {
+            self.defaults = defaults
+            self.mirror = mirror
+        }
     }
 
     /// Production instance — reads and writes `.standard`, mirrors writes into
@@ -133,7 +166,14 @@ extension MudPreferences {
 extension MudPreferences {
     /// Fan a write out to `defaults` (source of truth) and `mirror` (when
     /// present). Passing `nil` removes the key from both stores.
+    ///
+    /// Updating `lastKnown` before the fan-out means any self-triggered
+    /// Darwin notification sees no diff for this key; see
+    /// `startObservingExternalChanges`.
     func write(_ value: Any?, forKey key: Keys) {
+        if state.isObserving {
+            state.lastKnown[key] = value as? NSObject
+        }
         defaults.set(value, forKey: key.rawValue)
         mirror?.set(value, forKey: key.rawValue)
     }

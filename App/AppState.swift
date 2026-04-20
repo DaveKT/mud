@@ -84,6 +84,54 @@ class AppState: ObservableObject {
         self.enabledExtensions = config.readEnabledExtensions(
             defaultValue: Set(RenderExtension.registry.keys)
         )
+
+        // Pick up `defaults write org.josephpearson.Mud …` made while the app
+        // is running. The callback's `didSet` writes idempotently update the
+        // last-known snapshot, so there's no feedback loop with the app's own
+        // writes.
+        MudPreferences.shared.startObservingExternalChanges { [weak self] key in
+            self?.reloadPreference(key)
+        }
+    }
+
+    /// Re-read a single preference from `MudPreferences.shared` into the
+    /// matching `@Published` property. Called from the external-change
+    /// observer; ignores internal.* keys that have no AppState representative.
+    private func reloadPreference(_ key: MudPreferences.Keys) {
+        let c = MudPreferences.shared
+        switch key {
+        case .lighting:                   self.lighting = c.lighting
+        case .theme:                      self.theme = c.theme
+        case .quitOnClose:                self.quitOnClose = c.quitOnClose
+        case .enabledExtensions:
+            self.enabledExtensions = c.readEnabledExtensions(
+                defaultValue: Set(RenderExtension.registry.keys)
+            )
+        case .changesEnabled:             self.changesEnabled = c.changesEnabled
+        case .changesShowInlineDeletions: self.changesShowInlineDeletions = c.changesShowInlineDeletions
+        case .changesShowGitWaypoints:    self.changesShowGitWaypoints = c.changesShowGitWaypoints
+        case .changesWordDiffThreshold:   self.changesWordDiffThreshold = c.changesWordDiffThreshold
+        case .upModeZoomLevel:            self.upModeZoomLevel = c.upModeZoomLevel
+        case .upModeAllowRemoteContent:   self.upModeAllowRemoteContent = c.upModeAllowRemoteContent
+        case .downModeZoomLevel:          self.downModeZoomLevel = c.downModeZoomLevel
+        case .sidebarEnabled:             self.sidebarEnabled = c.sidebarEnabled
+        case .sidebarPane:                self.sidebarPane = c.sidebarPane
+        case .markdownDocCAlertMode:      self.markdownDocCAlertMode = c.markdownDocCAlertMode
+        case .uiUseHeadingAsTitle:        self.uiUseHeadingAsTitle = c.uiUseHeadingAsTitle
+        case .uiFloatingControlsPosition: self.uiFloatingControlsPosition = c.uiFloatingControlsPosition
+        // Every ViewToggle-backed key reloads the whole set — cheaper than
+        // duplicating the Key → ViewToggle lookup, and `viewToggles` is a
+        // small Set<ViewToggle>.
+        case .changesAutoExpandGroups,
+             .upModeShowCodeHeader,
+             .downModeShowLineNumbers,
+             .downModeWrapLines,
+             .uiShowReadableColumn:
+            self.viewToggles = c.viewToggles
+        // internal.* — not exposed on AppState; mirror already updated.
+        case .hasLaunched, .windowFrame, .cliInstalled, .cliSymlinkPath:
+            break
+        }
     }
 
     func toggle(_ option: ViewToggle) {

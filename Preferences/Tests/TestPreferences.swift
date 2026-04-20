@@ -52,4 +52,18 @@ struct TestPreferences {
             .appendingPathComponent("\(suiteName).plist")
         try? FileManager.default.removeItem(at: url)
     }
+
+    /// Start observing external changes with a simple append-on-callback
+    /// change log. Returns the log; inspect `log.keys` after acting.
+    func startObserving() -> ChangeLog {
+        let log = ChangeLog()
+        config.startObservingExternalChanges { [weak log] key in
+            log?.keys.append(key)
+        }
+        return log
+    }
+
+    final class ChangeLog {
+        var keys: [MudPreferences.Keys] = []
+    }
 }
