@@ -21,11 +21,11 @@ struct MudPreferencesTests {
         #expect(tc.config.lighting == .dark)
     }
 
-    @Test func doccAlertModeRoundTrip() {
+    @Test func markdownDocCAlertModeRoundTrip() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.doccAlertMode = .off
-        #expect(tc.config.doccAlertMode == .off)
+        tc.config.markdownDocCAlertMode = .off
+        #expect(tc.config.markdownDocCAlertMode == .off)
     }
 
     @Test func doubleRoundTrip() {
@@ -38,8 +38,8 @@ struct MudPreferencesTests {
     @Test func boolRoundTrip() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.trackChanges = false
-        #expect(tc.config.trackChanges == false)
+        tc.config.changesEnabled = false
+        #expect(tc.config.changesEnabled == false)
     }
 
     @Test func stringArrayRoundTrip() {
@@ -58,11 +58,11 @@ struct MudPreferencesTests {
         #expect(tc.config.sidebarPane == .changes)
     }
 
-    @Test func floatingControlsPositionRoundTrip() {
+    @Test func uiFloatingControlsPositionRoundTrip() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.floatingControlsPosition = .topRight
-        #expect(tc.config.floatingControlsPosition == .topRight)
+        tc.config.uiFloatingControlsPosition = .topRight
+        #expect(tc.config.uiFloatingControlsPosition == .topRight)
     }
 
     @Test func viewToggleSingularRoundTrip() {
@@ -70,6 +70,63 @@ struct MudPreferencesTests {
         defer { tc.tearDown() }
         tc.config.writeViewToggle(.readableColumn, enabled: false)
         #expect(tc.config.readViewToggle(.readableColumn) == false)
+    }
+
+    @Test func hasLaunchedRoundTrip() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+        #expect(tc.config.hasLaunched == false)
+        tc.config.hasLaunched = true
+        #expect(tc.config.hasLaunched == true)
+    }
+
+    @Test func windowFrameRoundTrip() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+        #expect(tc.config.windowFrame == nil)
+        tc.config.windowFrame = "{{0, 0}, {800, 600}}"
+        #expect(tc.config.windowFrame == "{{0, 0}, {800, 600}}")
+        tc.config.windowFrame = nil
+        #expect(tc.config.windowFrame == nil)
+    }
+
+    @Test func cliInstalledRoundTrip() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+        #expect(tc.config.cliInstalled == false)
+        tc.config.cliInstalled = true
+        #expect(tc.config.cliInstalled == true)
+    }
+
+    @Test func cliSymlinkPathRoundTrip() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+        #expect(tc.config.cliSymlinkPath == nil)
+        tc.config.cliSymlinkPath = "/usr/local/bin/mud"
+        #expect(tc.config.cliSymlinkPath == "/usr/local/bin/mud")
+        tc.config.cliSymlinkPath = nil
+        #expect(tc.config.cliSymlinkPath == nil)
+    }
+
+    @Test func internalKeysFanOutToMirror() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+        tc.config.hasLaunched = true
+        tc.config.windowFrame = "{{0, 0}, {800, 600}}"
+        tc.config.cliInstalled = true
+        tc.config.cliSymlinkPath = "/usr/local/bin/mud"
+
+        let mirror = tc.config.mirror!
+        #expect(mirror.bool(forKey: MudPreferences.Keys.hasLaunched.rawValue) == true)
+        #expect(
+            mirror.string(forKey: MudPreferences.Keys.windowFrame.rawValue)
+                == "{{0, 0}, {800, 600}}"
+        )
+        #expect(mirror.bool(forKey: MudPreferences.Keys.cliInstalled.rawValue) == true)
+        #expect(
+            mirror.string(forKey: MudPreferences.Keys.cliSymlinkPath.rawValue)
+                == "/usr/local/bin/mud"
+        )
     }
 
     @Test func viewTogglePluralRoundTrip() {
@@ -98,10 +155,10 @@ struct MudPreferencesTests {
         #expect(tc.config.theme == .earthy)
     }
 
-    @Test func emptySuiteDoccAlertDefault() {
+    @Test func emptySuiteMarkdownDocCAlertDefault() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        #expect(tc.config.doccAlertMode == .extended)
+        #expect(tc.config.markdownDocCAlertMode == .extended)
     }
 
     @Test func emptySuiteZoomDefaults() {
@@ -116,25 +173,25 @@ struct MudPreferencesTests {
         defer { tc.tearDown() }
         // Bool prefs must not fall back to `false` on an empty suite —
         // the object(forKey:) as? Bool ?? default pattern matters here.
-        #expect(tc.config.trackChanges == true)
-        #expect(tc.config.inlineDeletions == false)
+        #expect(tc.config.changesEnabled == true)
+        #expect(tc.config.changesShowInlineDeletions == false)
         #expect(tc.config.quitOnClose == true)
-        #expect(tc.config.allowRemoteContent == true)
-        #expect(tc.config.useHeadingAsTitle == true)
-        #expect(tc.config.showGitWaypoints == false)
-        #expect(tc.config.sidebarVisible == false)
+        #expect(tc.config.upModeAllowRemoteContent == true)
+        #expect(tc.config.uiUseHeadingAsTitle == true)
+        #expect(tc.config.changesShowGitWaypoints == false)
+        #expect(tc.config.sidebarEnabled == false)
     }
 
-    @Test func emptySuiteWordDiffThresholdDefault() {
+    @Test func emptySuiteChangesWordDiffThresholdDefault() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        #expect(tc.config.wordDiffThreshold == 0.25)
+        #expect(tc.config.changesWordDiffThreshold == 0.25)
     }
 
-    @Test func emptySuiteFloatingControlsDefault() {
+    @Test func emptySuiteUIFloatingControlsDefault() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        #expect(tc.config.floatingControlsPosition == .bottomCenter)
+        #expect(tc.config.uiFloatingControlsPosition == .bottomCenter)
     }
 
     @Test func emptySuiteSidebarPaneDefault() {
@@ -176,11 +233,11 @@ struct MudPreferencesTests {
         #expect(tc.config.lighting == .auto)
     }
 
-    @Test func unknownDoccAlertRawFallsBackToDefault() {
+    @Test func unknownMarkdownDocCAlertRawFallsBackToDefault() {
         let tc = TestPreferences()
         defer { tc.tearDown() }
-        tc.config.defaults.set("xyz", forKey: MudPreferences.Keys.doccAlertMode.rawValue)
-        #expect(tc.config.doccAlertMode == .extended)
+        tc.config.defaults.set("xyz", forKey: MudPreferences.Keys.markdownDocCAlertMode.rawValue)
+        #expect(tc.config.markdownDocCAlertMode == .extended)
     }
 
     // MARK: - Reset
@@ -191,13 +248,13 @@ struct MudPreferencesTests {
         tc.config.theme = .blues
         tc.config.lighting = .dark
         tc.config.upModeZoomLevel = 2.0
-        tc.config.trackChanges = false
+        tc.config.changesEnabled = false
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.reset()
         #expect(tc.config.theme == .earthy)
         #expect(tc.config.lighting == .auto)
         #expect(tc.config.upModeZoomLevel == 1.0)
-        #expect(tc.config.trackChanges == true)
+        #expect(tc.config.changesEnabled == true)
         #expect(tc.config.readViewToggle(.readableColumn) == false)
     }
 
@@ -224,7 +281,7 @@ struct MudPreferencesTests {
 
         tc.config.theme = .blues
         tc.config.upModeZoomLevel = 1.5
-        tc.config.trackChanges = false
+        tc.config.changesEnabled = false
         tc.config.writeEnabledExtensions(["alpha", "beta"])
         tc.config.writeViewToggle(.readableColumn, enabled: true)
 
@@ -241,7 +298,7 @@ struct MudPreferencesTests {
                 as? Double == 1.5
         )
         #expect(
-            tc.config.mirror!.object(forKey: MudPreferences.Keys.trackChanges.rawValue)
+            tc.config.mirror!.object(forKey: MudPreferences.Keys.changesEnabled.rawValue)
                 as? Bool == false
         )
         #expect(
@@ -249,7 +306,7 @@ struct MudPreferencesTests {
                 as? [String]).map(Set.init) == ["alpha", "beta"]
         )
         #expect(
-            tc.config.mirror!.object(forKey: MudPreferences.Keys.readableColumn.rawValue)
+            tc.config.mirror!.object(forKey: MudPreferences.Keys.uiShowReadableColumn.rawValue)
                 as? Bool == true
         )
     }
@@ -263,7 +320,7 @@ struct MudPreferencesTests {
 
         tc.config.theme = .riot
         tc.config.upModeZoomLevel = 1.25
-        tc.config.allowRemoteContent = false
+        tc.config.upModeAllowRemoteContent = false
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.writeViewToggle(.lineNumbers, enabled: false)
 
@@ -271,7 +328,7 @@ struct MudPreferencesTests {
 
         #expect(readerAsExtension.theme == .riot)
         #expect(readerAsExtension.upModeZoomLevel == 1.25)
-        #expect(readerAsExtension.allowRemoteContent == false)
+        #expect(readerAsExtension.upModeAllowRemoteContent == false)
         #expect(readerAsExtension.readViewToggle(.readableColumn) == true)
         #expect(readerAsExtension.readViewToggle(.lineNumbers) == false)
     }
@@ -293,7 +350,7 @@ struct MudPreferencesTests {
     // MARK: - Key-catalog invariants
 
     @Test func keyCatalogCount() {
-        #expect(MudPreferences.Keys.allCases.count == 21)
+        #expect(MudPreferences.Keys.allCases.count == 25)
     }
 
     @Test func keyRawValuesAreDistinct() {

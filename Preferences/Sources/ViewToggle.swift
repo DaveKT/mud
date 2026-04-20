@@ -21,11 +21,11 @@ public enum ViewToggle: String, CaseIterable, Sendable {
     /// The persistence key that backs this toggle.
     var key: MudPreferences.Keys {
         switch self {
-        case .readableColumn:    return .readableColumn
-        case .lineNumbers:       return .lineNumbers
-        case .wordWrap:          return .wordWrap
-        case .codeHeader:        return .codeHeader
-        case .autoExpandChanges: return .autoExpandChanges
+        case .readableColumn:    return .uiShowReadableColumn
+        case .lineNumbers:       return .downModeShowLineNumbers
+        case .wordWrap:          return .downModeWrapLines
+        case .codeHeader:        return .upModeShowCodeHeader
+        case .autoExpandChanges: return .changesAutoExpandGroups
         }
     }
 

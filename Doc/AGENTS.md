@@ -331,7 +331,7 @@ Both modes render into the same WKWebView; toggling mode swaps the HTML
 document.
 
 All public rendering functions accept a `RenderOptions` value that bundles
-configuration (theme, baseURL, doccAlertMode, etc.). Call sites build a
+configuration (theme, baseURL, docCAlertMode, etc.). Call sites build a
 `RenderOptions` and pass it through; adding new options requires only a new
 field on the struct.
 

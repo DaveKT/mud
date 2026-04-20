@@ -19,8 +19,6 @@ class DocumentWindowController: NSWindowController {
     private var splitVC: NSSplitViewController?
     private var cancellables = Set<AnyCancellable>()
 
-    private static let frameKey = "Mud-WindowFrame"
-
     init(url: URL) {
         self.fileURL = url
 
@@ -46,7 +44,7 @@ class DocumentWindowController: NSWindowController {
 
         // Restore saved window frame AFTER content and toolbar setup,
         // so that layout changes don't override the saved frame.
-        if let frameString = UserDefaults.standard.string(forKey: Self.frameKey) {
+        if let frameString = MudPreferences.shared.windowFrame {
             window.setFrame(NSRectFromString(frameString), display: false)
         } else {
             window.setContentSize(NSSize(width: 860, height: 740))
@@ -92,7 +90,7 @@ class DocumentWindowController: NSWindowController {
         window?.contentViewController = split
 
         // Collapse sidebar if persisted state says hidden
-        if !AppState.shared.sidebarVisible {
+        if !AppState.shared.sidebarEnabled {
             sidebarItem.isCollapsed = true
         }
     }
@@ -137,7 +135,7 @@ class DocumentWindowController: NSWindowController {
             .store(in: &cancellables)
 
         state.$contentTitle
-            .combineLatest(AppState.shared.$useHeadingAsTitle)
+            .combineLatest(AppState.shared.$uiUseHeadingAsTitle)
             .sink { [weak self] title, useHeading in
                 guard let self, let window = self.window else { return }
                 if useHeading, let title {
@@ -159,7 +157,7 @@ class DocumentWindowController: NSWindowController {
             sidebarItem.publisher(for: \.isCollapsed)
                 .dropFirst()
                 .sink { collapsed in
-                    AppState.shared.sidebarVisible = !collapsed
+                    AppState.shared.sidebarEnabled = !collapsed
                 }
                 .store(in: &cancellables)
         }
@@ -286,7 +284,7 @@ class DocumentWindowController: NSWindowController {
     }
 
     @objc func toggleChangesBar(_ sender: Any?) {
-        AppState.shared.trackChanges.toggle()
+        AppState.shared.changesEnabled.toggle()
     }
 
     @objc func findNext(_ sender: Any?) {
@@ -336,7 +334,7 @@ extension DocumentWindowController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         // Save window frame for next launch
         if let frame = window?.frame {
-            UserDefaults.standard.set(NSStringFromRect(frame), forKey: Self.frameKey)
+            MudPreferences.shared.windowFrame = NSStringFromRect(frame)
         }
         onClose?(self)
     }

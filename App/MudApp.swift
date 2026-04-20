@@ -72,13 +72,13 @@ struct MudApp: App {
             CommandGroup(replacing: .undoRedo) { }
 
             CommandGroup(before: .toolbar) {
-                Button(appState.sidebarVisible ? "Hide Sidebar" : "Show Sidebar") {
+                Button(appState.sidebarEnabled ? "Hide Sidebar" : "Show Sidebar") {
                     NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .control])
 
-                Button(appState.trackChanges ? "Hide Changes" : "Show Changes") {
-                    appState.trackChanges.toggle()
+                Button(appState.changesEnabled ? "Hide Changes" : "Show Changes") {
+                    appState.changesEnabled.toggle()
                 }
                 .keyboardShortcut("c", modifiers: [.command, .control])
 

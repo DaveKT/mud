@@ -52,54 +52,77 @@ public struct MudPreferences: @unchecked Sendable {
 
 extension MudPreferences {
     public enum Keys: String, CaseIterable {
-        case lighting                 = "lighting"
-        case theme                    = "theme"
-        case upModeZoomLevel          = "up-mode-zoom-level"
-        case downModeZoomLevel        = "down-mode-zoom-level"
-        case sidebarVisible           = "sidebar-visible"
-        case sidebarPane              = "sidebar-pane"
-        case trackChanges             = "track-changes"
-        case inlineDeletions          = "inline-deletions"
-        case quitOnClose              = "quit-on-close"
-        case allowRemoteContent       = "allow-remote-content"
-        case enabledExtensions        = "enabled-extensions"
-        case doccAlertMode            = "docc-alert-mode"
-        case useHeadingAsTitle        = "use-heading-as-title"
-        case wordDiffThreshold        = "word-diff-threshold"
-        case floatingControlsPosition = "floating-controls-position"
-        case showGitWaypoints         = "show-git-waypoints"
-        case readableColumn           = "readable-column"
-        case lineNumbers              = "line-numbers"
-        case wordWrap                 = "word-wrap"
-        case codeHeader               = "code-header"
-        case autoExpandChanges        = "auto-expand-changes"
+        // Top-level — app-global selections
+        case lighting                   = "lighting"
+        case theme                      = "theme"
+        case quitOnClose                = "quit-on-close"
+        case enabledExtensions          = "enabled-extensions"
+
+        // changes.* — diff display and change-tracking
+        case changesEnabled             = "changes.enabled"
+        case changesShowInlineDeletions = "changes.show-inline-deletions"
+        case changesShowGitWaypoints    = "changes.show-git-waypoints"
+        case changesAutoExpandGroups    = "changes.auto-expand-groups"
+        case changesWordDiffThreshold   = "changes.word-diff-threshold"
+
+        // up-mode.* — rendered-HTML view options
+        case upModeZoomLevel            = "up-mode.zoom-level"
+        case upModeAllowRemoteContent   = "up-mode.allow-remote-content"
+        case upModeShowCodeHeader       = "up-mode.show-code-header"
+
+        // down-mode.* — source view options
+        case downModeZoomLevel          = "down-mode.zoom-level"
+        case downModeShowLineNumbers    = "down-mode.show-line-numbers"
+        case downModeWrapLines          = "down-mode.wrap-lines"
+
+        // sidebar.* — sidebar state
+        case sidebarEnabled             = "sidebar.enabled"
+        case sidebarPane                = "sidebar.pane"
+
+        // markdown.* — parser options
+        case markdownDocCAlertMode      = "markdown.docc-alert-mode"
+
+        // ui.* — UI chrome and cross-mode layout
+        case uiUseHeadingAsTitle        = "ui.use-heading-as-title"
+        case uiFloatingControlsPosition = "ui.floating-controls-position"
+        case uiShowReadableColumn       = "ui.show-readable-column"
+
+        // internal.* — app-owned bookkeeping
+        case hasLaunched                = "internal.has-launched"
+        case windowFrame                = "internal.window-frame"
+        case cliInstalled               = "internal.cli-installed"
+        case cliSymlinkPath             = "internal.cli-symlink-path"
 
         /// The key this value was persisted under in `UserDefaults.standard`
         /// before the lowercase-hyphen rename. Used by migration only; will be
         /// removed in a follow-up release.
         var legacyStandardKey: String {
             switch self {
-            case .lighting:                 return "Mud-Lighting"
-            case .theme:                    return "Mud-Theme"
-            case .upModeZoomLevel:          return "Mud-UpModeZoomLevel"
-            case .downModeZoomLevel:        return "Mud-DownModeZoomLevel"
-            case .sidebarVisible:           return "Mud-SidebarVisible"
-            case .sidebarPane:              return "Mud-SidebarPane"
-            case .trackChanges:             return "Mud-TrackChanges"
-            case .inlineDeletions:          return "Mud-InlineDeletions"
-            case .quitOnClose:              return "Mud-QuitOnClose"
-            case .allowRemoteContent:       return "Mud-AllowRemoteContent"
-            case .enabledExtensions:        return "Mud-EnabledExtensions"
-            case .doccAlertMode:            return "Mud-DoccAlertMode"
-            case .useHeadingAsTitle:        return "Mud-UseHeadingAsTitle"
-            case .wordDiffThreshold:        return "Mud-WordDiffThreshold"
-            case .floatingControlsPosition: return "Mud-FloatingControlsPosition"
-            case .showGitWaypoints:         return "Mud-ShowGitWaypoints"
-            case .readableColumn:           return "Mud-readableColumn"
-            case .lineNumbers:              return "Mud-lineNumbers"
-            case .wordWrap:                 return "Mud-wordWrap"
-            case .codeHeader:               return "Mud-codeHeader"
-            case .autoExpandChanges:        return "Mud-autoExpandChanges"
+            case .lighting:                   return "Mud-Lighting"
+            case .theme:                      return "Mud-Theme"
+            case .quitOnClose:                return "Mud-QuitOnClose"
+            case .enabledExtensions:          return "Mud-EnabledExtensions"
+            case .changesEnabled:             return "Mud-TrackChanges"
+            case .changesShowInlineDeletions: return "Mud-InlineDeletions"
+            case .changesShowGitWaypoints:    return "Mud-ShowGitWaypoints"
+            case .changesAutoExpandGroups:    return "Mud-autoExpandChanges"
+            case .changesWordDiffThreshold:   return "Mud-WordDiffThreshold"
+            case .upModeZoomLevel:            return "Mud-UpModeZoomLevel"
+            case .upModeAllowRemoteContent:   return "Mud-AllowRemoteContent"
+            case .upModeShowCodeHeader:       return "Mud-codeHeader"
+            case .downModeZoomLevel:          return "Mud-DownModeZoomLevel"
+            case .downModeShowLineNumbers:    return "Mud-lineNumbers"
+            case .downModeWrapLines:          return "Mud-wordWrap"
+            case .sidebarEnabled:             return "Mud-SidebarVisible"
+            case .sidebarPane:                return "Mud-SidebarPane"
+            case .markdownDocCAlertMode:      return "Mud-DoccAlertMode"
+            case .uiUseHeadingAsTitle:        return "Mud-UseHeadingAsTitle"
+            case .uiFloatingControlsPosition: return "Mud-FloatingControlsPosition"
+            case .uiShowReadableColumn:       return "Mud-readableColumn"
+            case .hasLaunched:                return "Mud-HasLaunched"
+            case .windowFrame:                return "Mud-WindowFrame"
+            case .cliInstalled:               return "Mud-CLIInstalled"
+            case .cliSymlinkPath:             return "Mud-CLISymlinkPath"
             }
         }
     }
@@ -155,9 +178,9 @@ extension MudPreferences {
         nonmutating set { write(newValue, forKey: .downModeZoomLevel) }
     }
 
-    public var sidebarVisible: Bool {
-        get { read(.sidebarVisible, default: false) }
-        nonmutating set { write(newValue, forKey: .sidebarVisible) }
+    public var sidebarEnabled: Bool {
+        get { read(.sidebarEnabled, default: false) }
+        nonmutating set { write(newValue, forKey: .sidebarEnabled) }
     }
 
     public var sidebarPane: SidebarPane {
@@ -165,14 +188,14 @@ extension MudPreferences {
         nonmutating set { write(newValue, forKey: .sidebarPane) }
     }
 
-    public var trackChanges: Bool {
-        get { read(.trackChanges, default: true) }
-        nonmutating set { write(newValue, forKey: .trackChanges) }
+    public var changesEnabled: Bool {
+        get { read(.changesEnabled, default: true) }
+        nonmutating set { write(newValue, forKey: .changesEnabled) }
     }
 
-    public var inlineDeletions: Bool {
-        get { read(.inlineDeletions, default: false) }
-        nonmutating set { write(newValue, forKey: .inlineDeletions) }
+    public var changesShowInlineDeletions: Bool {
+        get { read(.changesShowInlineDeletions, default: false) }
+        nonmutating set { write(newValue, forKey: .changesShowInlineDeletions) }
     }
 
     public var quitOnClose: Bool {
@@ -180,34 +203,54 @@ extension MudPreferences {
         nonmutating set { write(newValue, forKey: .quitOnClose) }
     }
 
-    public var allowRemoteContent: Bool {
-        get { read(.allowRemoteContent, default: true) }
-        nonmutating set { write(newValue, forKey: .allowRemoteContent) }
+    public var upModeAllowRemoteContent: Bool {
+        get { read(.upModeAllowRemoteContent, default: true) }
+        nonmutating set { write(newValue, forKey: .upModeAllowRemoteContent) }
     }
 
-    public var doccAlertMode: DocCAlertMode {
-        get { read(.doccAlertMode, default: .extended) }
-        nonmutating set { write(newValue, forKey: .doccAlertMode) }
+    public var markdownDocCAlertMode: DocCAlertMode {
+        get { read(.markdownDocCAlertMode, default: .extended) }
+        nonmutating set { write(newValue, forKey: .markdownDocCAlertMode) }
     }
 
-    public var useHeadingAsTitle: Bool {
-        get { read(.useHeadingAsTitle, default: true) }
-        nonmutating set { write(newValue, forKey: .useHeadingAsTitle) }
+    public var uiUseHeadingAsTitle: Bool {
+        get { read(.uiUseHeadingAsTitle, default: true) }
+        nonmutating set { write(newValue, forKey: .uiUseHeadingAsTitle) }
     }
 
-    public var wordDiffThreshold: Double {
-        get { read(.wordDiffThreshold, default: 0.25) }
-        nonmutating set { write(newValue, forKey: .wordDiffThreshold) }
+    public var changesWordDiffThreshold: Double {
+        get { read(.changesWordDiffThreshold, default: 0.25) }
+        nonmutating set { write(newValue, forKey: .changesWordDiffThreshold) }
     }
 
-    public var floatingControlsPosition: FloatingControlsPosition {
-        get { read(.floatingControlsPosition, default: .bottomCenter) }
-        nonmutating set { write(newValue, forKey: .floatingControlsPosition) }
+    public var uiFloatingControlsPosition: FloatingControlsPosition {
+        get { read(.uiFloatingControlsPosition, default: .bottomCenter) }
+        nonmutating set { write(newValue, forKey: .uiFloatingControlsPosition) }
     }
 
-    public var showGitWaypoints: Bool {
-        get { read(.showGitWaypoints, default: false) }
-        nonmutating set { write(newValue, forKey: .showGitWaypoints) }
+    public var changesShowGitWaypoints: Bool {
+        get { read(.changesShowGitWaypoints, default: false) }
+        nonmutating set { write(newValue, forKey: .changesShowGitWaypoints) }
+    }
+
+    public var hasLaunched: Bool {
+        get { read(.hasLaunched, default: false) }
+        nonmutating set { write(newValue, forKey: .hasLaunched) }
+    }
+
+    public var windowFrame: String? {
+        get { defaults.string(forKey: Keys.windowFrame.rawValue) }
+        nonmutating set { write(newValue, forKey: .windowFrame) }
+    }
+
+    public var cliInstalled: Bool {
+        get { read(.cliInstalled, default: false) }
+        nonmutating set { write(newValue, forKey: .cliInstalled) }
+    }
+
+    public var cliSymlinkPath: String? {
+        get { defaults.string(forKey: Keys.cliSymlinkPath.rawValue) }
+        nonmutating set { write(newValue, forKey: .cliSymlinkPath) }
     }
 }
 

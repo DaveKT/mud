@@ -72,7 +72,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle(selectedPane.title)
         }
-        .frame(width: 700, height: 380)
+        .frame(width: 700, height: 408)
         .preferredColorScheme(appState.lighting.isDark() ? .dark : .light)
     }
 

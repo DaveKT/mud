@@ -1,7 +1,7 @@
 Plan: Preference Key Conventions
 ===============================================================================
 
-> Status: Planning
+> Status: Underway
 
 Normalize every `UserDefaults` key the app writes, and the Swift identifiers
 that reference them, under a small set of rules: lowercase-hyphen persistence

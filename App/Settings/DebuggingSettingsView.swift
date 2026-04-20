@@ -18,7 +18,7 @@ struct DebuggingSettingsView: View {
 
             Section("Change Tracking") {
                 Slider(
-                    value: $appState.wordDiffThreshold,
+                    value: $appState.changesWordDiffThreshold,
                     in: 0.0...1.0,
                     step: 0.05
                 ) {

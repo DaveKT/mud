@@ -14,10 +14,10 @@ public struct DownHTMLVisitor: Sendable {
     /// spans, and scrollable code-block regions.
     public func highlight(
         _ markdown: String,
-        doccAlertMode: DocCAlertMode = .extended,
+        docCAlertMode: DocCAlertMode = .extended,
         frontMatterRendered: [String] = []
     ) -> String {
-        let result = highlightLines(markdown, doccAlertMode: doccAlertMode)
+        let result = highlightLines(markdown, docCAlertMode: docCAlertMode)
         return buildLayout(
             result.rendered, codeBlocks: result.codeBlocks,
             frontMatterRendered: frontMatterRendered)
@@ -33,14 +33,14 @@ public struct DownHTMLVisitor: Sendable {
         new newMarkdown: String,
         old oldMarkdown: String,
         matches: [BlockMatch],
-        doccAlertMode: DocCAlertMode = .extended,
+        docCAlertMode: DocCAlertMode = .extended,
         wordDiffThreshold: Double = 0.25,
         frontMatterRendered: [String] = []
     ) -> String {
         let newResult = highlightLines(
-            newMarkdown, doccAlertMode: doccAlertMode)
+            newMarkdown, docCAlertMode: docCAlertMode)
         let oldResult = highlightLines(
-            oldMarkdown, doccAlertMode: doccAlertMode)
+            oldMarkdown, docCAlertMode: docCAlertMode)
         let diffMap = LineDiffMap(
             matches: matches,
             wordDiffThreshold: wordDiffThreshold)
@@ -63,7 +63,7 @@ public struct DownHTMLVisitor: Sendable {
     /// rendering) without building the final layout.
     private func highlightLines(
         _ markdown: String,
-        doccAlertMode: DocCAlertMode
+        docCAlertMode: DocCAlertMode
     ) -> HighlightResult {
         // Phase 1: Collect span events and code block info.
         let doc = MarkdownParser.parse(markdown)
@@ -72,7 +72,7 @@ public struct DownHTMLVisitor: Sendable {
         ).map { Array($0.utf8) }
 
         var alertDetector = AlertDetector()
-        alertDetector.doccAlertMode = doccAlertMode
+        alertDetector.docCAlertMode = docCAlertMode
         var collector = EventCollector(sourceLines: sourceLines)
         collector.alertDetector = alertDetector
         collector.visit(doc)

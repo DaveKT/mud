@@ -12,7 +12,7 @@ struct DownModeSettingsView: View {
                     set: { _ in appState.toggle(.lineNumbers) }
                 ))
 
-                Toggle("Word wrap", isOn: Binding(
+                Toggle("Wrap lines", isOn: Binding(
                     get: { appState.viewToggles.contains(.wordWrap) },
                     set: { _ in appState.toggle(.wordWrap) }
                 ))

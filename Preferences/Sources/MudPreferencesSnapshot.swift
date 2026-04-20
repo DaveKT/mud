@@ -11,24 +11,24 @@ public struct MudPreferencesSnapshot: Sendable {
     public let theme: Theme
     public let upModeZoomLevel: Double
     public let viewToggles: Set<ViewToggle>
-    public let allowRemoteContent: Bool
+    public let upModeAllowRemoteContent: Bool
     public let enabledExtensions: Set<String>
-    public let doccAlertMode: DocCAlertMode
+    public let markdownDocCAlertMode: DocCAlertMode
 
     public init(
         theme: Theme,
         upModeZoomLevel: Double,
         viewToggles: Set<ViewToggle>,
-        allowRemoteContent: Bool,
+        upModeAllowRemoteContent: Bool,
         enabledExtensions: Set<String>,
-        doccAlertMode: DocCAlertMode
+        markdownDocCAlertMode: DocCAlertMode
     ) {
         self.theme = theme
         self.upModeZoomLevel = upModeZoomLevel
         self.viewToggles = viewToggles
-        self.allowRemoteContent = allowRemoteContent
+        self.upModeAllowRemoteContent = upModeAllowRemoteContent
         self.enabledExtensions = enabledExtensions
-        self.doccAlertMode = doccAlertMode
+        self.markdownDocCAlertMode = markdownDocCAlertMode
     }
 
     /// CSS classes derived from the Up-mode-relevant view toggles.
@@ -51,9 +51,9 @@ extension MudPreferences {
             theme: theme,
             upModeZoomLevel: upModeZoomLevel,
             viewToggles: viewToggles,
-            allowRemoteContent: allowRemoteContent,
+            upModeAllowRemoteContent: upModeAllowRemoteContent,
             enabledExtensions: readEnabledExtensions(defaultValue: defaultEnabledExtensions),
-            doccAlertMode: doccAlertMode
+            markdownDocCAlertMode: markdownDocCAlertMode
         )
     }
 }

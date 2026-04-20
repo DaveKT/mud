@@ -7,7 +7,7 @@ struct ChangesSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $appState.inlineDeletions) {
+                Toggle(isOn: $appState.changesShowInlineDeletions) {
                     Text("Inline deletions")
                     Text("Show replaced words with strikethrough alongside new words in changed blocks.")
                 }
@@ -19,7 +19,7 @@ struct ChangesSettingsView: View {
                     Text("Expand deletion and mixed change groups by default, rather than collapsing them.")
                 }
                 #if GIT_PROVIDER
-                Toggle(isOn: $appState.showGitWaypoints) {
+                Toggle(isOn: $appState.changesShowGitWaypoints) {
                     Text("Git commits")
                     Text("Show comparisons against git history in the Changes menu.")
                 }

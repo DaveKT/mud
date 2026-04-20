@@ -31,10 +31,10 @@ struct MudPreferencesMigrationTests {
         let tc = TestPreferences()
         defer { tc.tearDown() }
 
-        tc.config.defaults.set(false, forKey: "Mud-readableColumn")
+        tc.config.defaults.set(true, forKey: "Mud-readableColumn")
         tc.config.migrateLegacyKeys()
 
-        #expect(tc.config.readViewToggle(.readableColumn) == false)
+        #expect(tc.config.readViewToggle(.readableColumn) == true)
         #expect(tc.config.defaults.object(forKey: "Mud-readableColumn") == nil)
     }
 
@@ -61,6 +61,68 @@ struct MudPreferencesMigrationTests {
             tc.config.readEnabledExtensions(defaultValue: all) == ["alpha", "beta"]
         )
         #expect(tc.config.defaults.object(forKey: "Mud-EnabledExtensions") == nil)
+    }
+
+    @Test func legacyRenameMovesGroupedKeyToGroupedString() {
+        // Spot-check that a rename in the grouped catalog lands the value
+        // under the new dot-prefixed persistence string.
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+
+        tc.config.defaults.set(false, forKey: "Mud-TrackChanges")
+        tc.config.migrateLegacyKeys()
+
+        #expect(tc.config.changesEnabled == false)
+        #expect(
+            tc.config.defaults.object(forKey: "changes.enabled") as? Bool == false
+        )
+        #expect(tc.config.defaults.object(forKey: "Mud-TrackChanges") == nil)
+    }
+
+    @Test func legacyRenameMovesHasLaunched() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+
+        tc.config.defaults.set(true, forKey: "Mud-HasLaunched")
+        tc.config.migrateLegacyKeys()
+
+        #expect(tc.config.hasLaunched == true)
+        #expect(tc.config.defaults.object(forKey: "Mud-HasLaunched") == nil)
+    }
+
+    @Test func legacyRenameMovesWindowFrame() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+
+        tc.config.defaults.set(
+            "{{0, 0}, {800, 600}}", forKey: "Mud-WindowFrame"
+        )
+        tc.config.migrateLegacyKeys()
+
+        #expect(tc.config.windowFrame == "{{0, 0}, {800, 600}}")
+        #expect(tc.config.defaults.object(forKey: "Mud-WindowFrame") == nil)
+    }
+
+    @Test func legacyRenameMovesCLIInstalled() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+
+        tc.config.defaults.set(true, forKey: "Mud-CLIInstalled")
+        tc.config.migrateLegacyKeys()
+
+        #expect(tc.config.cliInstalled == true)
+        #expect(tc.config.defaults.object(forKey: "Mud-CLIInstalled") == nil)
+    }
+
+    @Test func legacyRenameMovesCLISymlinkPath() {
+        let tc = TestPreferences()
+        defer { tc.tearDown() }
+
+        tc.config.defaults.set("/usr/local/bin/mud", forKey: "Mud-CLISymlinkPath")
+        tc.config.migrateLegacyKeys()
+
+        #expect(tc.config.cliSymlinkPath == "/usr/local/bin/mud")
+        #expect(tc.config.defaults.object(forKey: "Mud-CLISymlinkPath") == nil)
     }
 
     @Test func legacyRenameLeavesNewKeyAlone() {
@@ -115,7 +177,7 @@ struct MudPreferencesMigrationTests {
         // `defaults write` changes made while the app was not running.
         tc.config.defaults.set("blues", forKey: MudPreferences.Keys.theme.rawValue)
         tc.config.defaults.set(1.5, forKey: MudPreferences.Keys.upModeZoomLevel.rawValue)
-        tc.config.defaults.set(false, forKey: MudPreferences.Keys.trackChanges.rawValue)
+        tc.config.defaults.set(false, forKey: MudPreferences.Keys.changesEnabled.rawValue)
 
         tc.config.syncMirror()
 
@@ -128,7 +190,7 @@ struct MudPreferencesMigrationTests {
                 as? Double == 1.5
         )
         #expect(
-            mirror.object(forKey: MudPreferences.Keys.trackChanges.rawValue)
+            mirror.object(forKey: MudPreferences.Keys.changesEnabled.rawValue)
                 as? Bool == false
         )
     }

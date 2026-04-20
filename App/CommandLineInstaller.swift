@@ -1,10 +1,8 @@
 import AppKit
+import MudPreferences
 
 /// Manages installation of the `mud` command-line symlink.
 enum CommandLineInstaller {
-    static let installedKey = "Mud-CLIInstalled"
-    static let symlinkPathKey = "Mud-CLISymlinkPath"
-
     /// Standard locations offered in the picker.
     static let defaultLocations = ["/usr/local/bin", "~/.local/bin", "~/bin"]
 
@@ -12,12 +10,12 @@ enum CommandLineInstaller {
 
     /// Whether the CLI symlink has been installed (per UserDefaults).
     static var isInstalled: Bool {
-        UserDefaults.standard.bool(forKey: installedKey)
+        MudPreferences.shared.cliInstalled
     }
 
     /// The abbreviated path to the current symlink, if recorded.
     static var installedPath: String? {
-        guard let path = UserDefaults.standard.string(forKey: symlinkPathKey)
+        guard let path = MudPreferences.shared.cliSymlinkPath
         else { return nil }
         return abbreviate(path)
     }
@@ -127,8 +125,8 @@ enum CommandLineInstaller {
     }
 
     private static func recordInstall(_ symlinkPath: String) {
-        UserDefaults.standard.set(true, forKey: installedKey)
-        UserDefaults.standard.set(symlinkPath, forKey: symlinkPathKey)
+        MudPreferences.shared.cliInstalled = true
+        MudPreferences.shared.cliSymlinkPath = symlinkPath
     }
 
     // MARK: - Elevated permissions

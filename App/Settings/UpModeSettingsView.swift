@@ -8,7 +8,7 @@ struct UpModeSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $appState.allowRemoteContent) {
+                Toggle(isOn: $appState.upModeAllowRemoteContent) {
                     Text("Allow remote content")
                     Text("Load remote images and other external resources referenced in Markdown documents.")
                 }

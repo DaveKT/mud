@@ -14,7 +14,7 @@ public struct RenderOptions: Sendable, Equatable {
     public var extensions: Set<String> = []
 
     // Markdown processing
-    public var doccAlertMode: DocCAlertMode = .extended
+    public var docCAlertMode: DocCAlertMode = .extended
 
     // Display state (baked into initial HTML for first-paint correctness;
     // also applied at runtime via JS for live updates without reload)
@@ -35,6 +35,6 @@ public struct RenderOptions: Sendable, Equatable {
         let waypointHash = waypoint.map {
             String($0.markdown.hashValue)
         } ?? ""
-        return "\(theme)\(blockRemoteContent)\(doccAlertMode.rawValue)\(extensions.sorted())\(waypointHash)\(showInlineDeletions)\(wordDiffThreshold)"
+        return "\(theme)\(blockRemoteContent)\(docCAlertMode.rawValue)\(extensions.sorted())\(waypointHash)\(showInlineDeletions)\(wordDiffThreshold)"
     }
 }

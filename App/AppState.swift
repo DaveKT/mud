@@ -21,38 +21,38 @@ class AppState: ObservableObject {
     @Published var downModeZoomLevel: Double {
         didSet { MudPreferences.shared.downModeZoomLevel = downModeZoomLevel }
     }
-    @Published var sidebarVisible: Bool {
-        didSet { MudPreferences.shared.sidebarVisible = sidebarVisible }
+    @Published var sidebarEnabled: Bool {
+        didSet { MudPreferences.shared.sidebarEnabled = sidebarEnabled }
     }
     @Published var sidebarPane: SidebarPane {
         didSet { MudPreferences.shared.sidebarPane = sidebarPane }
     }
-    @Published var trackChanges: Bool {
-        didSet { MudPreferences.shared.trackChanges = trackChanges }
+    @Published var changesEnabled: Bool {
+        didSet { MudPreferences.shared.changesEnabled = changesEnabled }
     }
-    @Published var inlineDeletions: Bool {
-        didSet { MudPreferences.shared.inlineDeletions = inlineDeletions }
+    @Published var changesShowInlineDeletions: Bool {
+        didSet { MudPreferences.shared.changesShowInlineDeletions = changesShowInlineDeletions }
     }
     @Published var quitOnClose: Bool {
         didSet { MudPreferences.shared.quitOnClose = quitOnClose }
     }
-    @Published var allowRemoteContent: Bool {
-        didSet { MudPreferences.shared.allowRemoteContent = allowRemoteContent }
+    @Published var upModeAllowRemoteContent: Bool {
+        didSet { MudPreferences.shared.upModeAllowRemoteContent = upModeAllowRemoteContent }
     }
-    @Published var doccAlertMode: DocCAlertMode {
-        didSet { MudPreferences.shared.doccAlertMode = doccAlertMode }
+    @Published var markdownDocCAlertMode: DocCAlertMode {
+        didSet { MudPreferences.shared.markdownDocCAlertMode = markdownDocCAlertMode }
     }
-    @Published var useHeadingAsTitle: Bool {
-        didSet { MudPreferences.shared.useHeadingAsTitle = useHeadingAsTitle }
+    @Published var uiUseHeadingAsTitle: Bool {
+        didSet { MudPreferences.shared.uiUseHeadingAsTitle = uiUseHeadingAsTitle }
     }
-    @Published var wordDiffThreshold: Double {
-        didSet { MudPreferences.shared.wordDiffThreshold = wordDiffThreshold }
+    @Published var changesWordDiffThreshold: Double {
+        didSet { MudPreferences.shared.changesWordDiffThreshold = changesWordDiffThreshold }
     }
-    @Published var floatingControlsPosition: FloatingControlsPosition {
-        didSet { MudPreferences.shared.floatingControlsPosition = floatingControlsPosition }
+    @Published var uiFloatingControlsPosition: FloatingControlsPosition {
+        didSet { MudPreferences.shared.uiFloatingControlsPosition = uiFloatingControlsPosition }
     }
-    @Published var showGitWaypoints: Bool {
-        didSet { MudPreferences.shared.showGitWaypoints = showGitWaypoints }
+    @Published var changesShowGitWaypoints: Bool {
+        didSet { MudPreferences.shared.changesShowGitWaypoints = changesShowGitWaypoints }
     }
     @Published var enabledExtensions: Set<String> {
         didSet { MudPreferences.shared.writeEnabledExtensions(enabledExtensions) }
@@ -70,17 +70,17 @@ class AppState: ObservableObject {
         self.viewToggles = config.viewToggles
         self.upModeZoomLevel = config.upModeZoomLevel
         self.downModeZoomLevel = config.downModeZoomLevel
-        self.sidebarVisible = config.sidebarVisible
+        self.sidebarEnabled = config.sidebarEnabled
         self.sidebarPane = config.sidebarPane
-        self.trackChanges = config.trackChanges
-        self.inlineDeletions = config.inlineDeletions
+        self.changesEnabled = config.changesEnabled
+        self.changesShowInlineDeletions = config.changesShowInlineDeletions
         self.quitOnClose = config.quitOnClose
-        self.allowRemoteContent = config.allowRemoteContent
-        self.doccAlertMode = config.doccAlertMode
-        self.useHeadingAsTitle = config.useHeadingAsTitle
-        self.wordDiffThreshold = config.wordDiffThreshold
-        self.floatingControlsPosition = config.floatingControlsPosition
-        self.showGitWaypoints = config.showGitWaypoints
+        self.upModeAllowRemoteContent = config.upModeAllowRemoteContent
+        self.markdownDocCAlertMode = config.markdownDocCAlertMode
+        self.uiUseHeadingAsTitle = config.uiUseHeadingAsTitle
+        self.changesWordDiffThreshold = config.changesWordDiffThreshold
+        self.uiFloatingControlsPosition = config.uiFloatingControlsPosition
+        self.changesShowGitWaypoints = config.changesShowGitWaypoints
         self.enabledExtensions = config.readEnabledExtensions(
             defaultValue: Set(RenderExtension.registry.keys)
         )

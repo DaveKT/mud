@@ -242,11 +242,11 @@ struct FloatingBarsOverlay: ViewModifier {
     var onSelectChange: ([String]) -> Void
 
     private var changesBarVisible: Bool {
-        appState.trackChanges
+        appState.changesEnabled
     }
 
     private var overlayAlignment: Alignment {
-        switch appState.floatingControlsPosition {
+        switch appState.uiFloatingControlsPosition {
         case .topRight: return .topTrailing
         case .bottomRight: return .bottomTrailing
         case .bottomCenter: return .bottom
@@ -254,11 +254,11 @@ struct FloatingBarsOverlay: ViewModifier {
     }
 
     private var isTop: Bool {
-        appState.floatingControlsPosition == .topRight
+        appState.uiFloatingControlsPosition == .topRight
     }
 
     private var isRight: Bool {
-        appState.floatingControlsPosition != .bottomCenter
+        appState.uiFloatingControlsPosition != .bottomCenter
     }
 
     func body(content: Content) -> some View {
@@ -269,7 +269,7 @@ struct FloatingBarsOverlay: ViewModifier {
             }
             .animation(.easeOut(duration: 0.15), value: findState.isVisible)
             .animation(.easeOut(duration: 0.15), value: changesBarVisible)
-            .animation(.easeOut(duration: 0.15), value: appState.floatingControlsPosition)
+            .animation(.easeOut(duration: 0.15), value: appState.uiFloatingControlsPosition)
             .onChange(of: findState.isVisible) { _, isVisible in
                 if isVisible { isFindFocused = true }
             }

@@ -13,8 +13,8 @@ struct MudPreferencesSnapshotTests {
 
         #expect(snap.theme == .earthy)
         #expect(snap.upModeZoomLevel == 1.0)
-        #expect(snap.allowRemoteContent == true)
-        #expect(snap.doccAlertMode == .extended)
+        #expect(snap.upModeAllowRemoteContent == true)
+        #expect(snap.markdownDocCAlertMode == .extended)
         // lineNumbers, wordWrap, codeHeader default true;
         // readableColumn and autoExpandChanges default false.
         #expect(snap.viewToggles == [
@@ -29,8 +29,8 @@ struct MudPreferencesSnapshotTests {
 
         tc.config.theme = .blues
         tc.config.upModeZoomLevel = 1.25
-        tc.config.allowRemoteContent = false
-        tc.config.doccAlertMode = .common
+        tc.config.upModeAllowRemoteContent = false
+        tc.config.markdownDocCAlertMode = .common
         tc.config.writeViewToggle(.readableColumn, enabled: false)
         tc.config.writeViewToggle(.lineNumbers, enabled: true)
         tc.config.writeViewToggle(.wordWrap, enabled: false)
@@ -42,8 +42,8 @@ struct MudPreferencesSnapshotTests {
 
         #expect(snap.theme == .blues)
         #expect(snap.upModeZoomLevel == 1.25)
-        #expect(snap.allowRemoteContent == false)
-        #expect(snap.doccAlertMode == .common)
+        #expect(snap.upModeAllowRemoteContent == false)
+        #expect(snap.markdownDocCAlertMode == .common)
         #expect(snap.viewToggles == [.lineNumbers])
         #expect(snap.enabledExtensions == ["alpha"])
     }
@@ -56,8 +56,8 @@ struct MudPreferencesSnapshotTests {
 
         tc.config.theme = .blues
         tc.config.upModeZoomLevel = 1.25
-        tc.config.allowRemoteContent = false
-        tc.config.doccAlertMode = .common
+        tc.config.upModeAllowRemoteContent = false
+        tc.config.markdownDocCAlertMode = .common
         tc.config.writeViewToggle(.readableColumn, enabled: true)
         tc.config.writeViewToggle(.wordWrap, enabled: false)
         tc.config.writeEnabledExtensions(["alpha"])
@@ -69,8 +69,8 @@ struct MudPreferencesSnapshotTests {
 
         #expect(mirrorSnap.theme == defaultsSnap.theme)
         #expect(mirrorSnap.upModeZoomLevel == defaultsSnap.upModeZoomLevel)
-        #expect(mirrorSnap.allowRemoteContent == defaultsSnap.allowRemoteContent)
-        #expect(mirrorSnap.doccAlertMode == defaultsSnap.doccAlertMode)
+        #expect(mirrorSnap.upModeAllowRemoteContent == defaultsSnap.upModeAllowRemoteContent)
+        #expect(mirrorSnap.markdownDocCAlertMode == defaultsSnap.markdownDocCAlertMode)
         #expect(mirrorSnap.viewToggles == defaultsSnap.viewToggles)
         #expect(mirrorSnap.enabledExtensions == defaultsSnap.enabledExtensions)
     }
@@ -81,8 +81,8 @@ struct MudPreferencesSnapshotTests {
         let snap = MudPreferencesSnapshot(
             theme: .earthy, upModeZoomLevel: 1.0,
             viewToggles: [.readableColumn, .wordWrap, .lineNumbers],
-            allowRemoteContent: true, enabledExtensions: [],
-            doccAlertMode: .extended
+            upModeAllowRemoteContent: true, enabledExtensions: [],
+            markdownDocCAlertMode: .extended
         )
         #expect(snap.upModeHTMLClasses == [
             "is-readable-column", "has-word-wrap", "has-line-numbers",
@@ -93,8 +93,8 @@ struct MudPreferencesSnapshotTests {
         let snap = MudPreferencesSnapshot(
             theme: .earthy, upModeZoomLevel: 1.0,
             viewToggles: [.readableColumn, .codeHeader, .autoExpandChanges],
-            allowRemoteContent: true, enabledExtensions: [],
-            doccAlertMode: .extended
+            upModeAllowRemoteContent: true, enabledExtensions: [],
+            markdownDocCAlertMode: .extended
         )
         #expect(snap.upModeHTMLClasses == ["is-readable-column"])
     }
@@ -103,8 +103,8 @@ struct MudPreferencesSnapshotTests {
         let snap = MudPreferencesSnapshot(
             theme: .earthy, upModeZoomLevel: 1.0,
             viewToggles: [.codeHeader, .autoExpandChanges],
-            allowRemoteContent: true, enabledExtensions: [],
-            doccAlertMode: .extended
+            upModeAllowRemoteContent: true, enabledExtensions: [],
+            markdownDocCAlertMode: .extended
         )
         #expect(snap.upModeHTMLClasses.isEmpty)
     }

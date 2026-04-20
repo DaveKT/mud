@@ -24,7 +24,7 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Picker("Floating controls", selection: $appState.floatingControlsPosition) {
+                Picker("Floating controls", selection: $appState.uiFloatingControlsPosition) {
                     ForEach(FloatingControlsPosition.allCases, id: \.self) { position in
                         Text(position.label).tag(position)
                     }
@@ -41,6 +41,13 @@ struct GeneralSettingsView: View {
                 )) {
                     Text("Readable column")
                     Text("Constrain content to a comfortable reading width — no more than about 80 characters per line.")
+                }
+            }
+
+            Section {
+                Toggle(isOn: $appState.uiUseHeadingAsTitle) {
+                    Text("First heading as window title")
+                    Text("Use the first heading in the document as the window title. When off, the filename is used.")
                 }
             }
 

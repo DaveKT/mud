@@ -37,14 +37,14 @@ struct DocumentContentView: View {
         var opts = RenderOptions()
         opts.baseURL = fileURL
         opts.theme = appState.theme.rawValue
-        opts.blockRemoteContent = !appState.allowRemoteContent
-        opts.doccAlertMode = appState.doccAlertMode
+        opts.blockRemoteContent = !appState.upModeAllowRemoteContent
+        opts.docCAlertMode = appState.markdownDocCAlertMode
         opts.extensions = appState.enabledExtensions
         opts.htmlClasses = Set(appState.viewToggles.map(\.className))
         opts.zoomLevel = modeZoomLevel
-        opts.showInlineDeletions = appState.inlineDeletions
-        opts.wordDiffThreshold = appState.wordDiffThreshold
-        if appState.trackChanges && !changeTracker.changes.isEmpty {
+        opts.showInlineDeletions = appState.changesShowInlineDeletions
+        opts.wordDiffThreshold = appState.changesWordDiffThreshold
+        if appState.changesEnabled && !changeTracker.changes.isEmpty {
             opts.waypoint = changeTracker.activeWaypoint
         }
         return opts
@@ -167,7 +167,7 @@ struct DocumentContentView: View {
             if id != nil { openInBrowser() }
         }
         #if GIT_PROVIDER
-        .onChange(of: appState.showGitWaypoints) { _, enabled in
+        .onChange(of: appState.changesShowGitWaypoints) { _, enabled in
             if enabled {
                 if case .parsed(let parsed) = content {
                     refreshGitWaypoints(for: parsed.markdown)
@@ -213,7 +213,7 @@ struct DocumentContentView: View {
 
     #if GIT_PROVIDER
     private func refreshGitWaypoints(for text: String) {
-        guard appState.showGitWaypoints,
+        guard appState.changesShowGitWaypoints,
               !fileURL.isBundleResource else {
             changeTracker.setExternalWaypoints([])
             return

@@ -19,7 +19,7 @@ public enum MudCore {
         var upVisitor = UpHTMLVisitor()
         upVisitor.baseURL = options.baseURL
         upVisitor.resolveImageSource = resolveImageSource
-        upVisitor.alertDetector.doccAlertMode = options.doccAlertMode
+        upVisitor.alertDetector.docCAlertMode = options.docCAlertMode
         upVisitor.showInlineDeletions = options.showInlineDeletions
         if let waypoint = options.waypoint {
             upVisitor.diffContext = DiffContext(
@@ -65,12 +65,12 @@ public enum MudCore {
             return downVisitor.highlightWithChanges(
                 new: parsed.body, old: waypoint.body,
                 matches: matches,
-                doccAlertMode: options.doccAlertMode,
+                docCAlertMode: options.docCAlertMode,
                 wordDiffThreshold: options.wordDiffThreshold,
                 frontMatterRendered: fmRendered)
         }
         return downVisitor.highlight(
-            parsed.body, doccAlertMode: options.doccAlertMode,
+            parsed.body, docCAlertMode: options.docCAlertMode,
             frontMatterRendered: fmRendered)
     }
 

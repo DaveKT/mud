@@ -217,25 +217,25 @@ struct DownHTMLVisitorTests {
     }
 
     @Test func extendedAliasRendersAlertWhenModeExtended() {
-        let html = visitor.highlight("> Remark: An observation\n", doccAlertMode: .extended)
+        let html = visitor.highlight("> Remark: An observation\n", docCAlertMode: .extended)
         #expect(html.contains("md-alert-note"))
     }
 
     @Test func extendedAliasPlainWhenModeCommon() {
-        let html = visitor.highlight("> Remark: An observation\n", doccAlertMode: .common)
+        let html = visitor.highlight("> Remark: An observation\n", docCAlertMode: .common)
         #expect(html.contains("md-blockquote"))
         #expect(!html.contains("md-alert-"))
     }
 
     @Test func coreAliasRendersAlertWhenModeCommon() {
         // Core DocC kinds always render as alerts in .common mode.
-        let html = visitor.highlight("> Note: Content\n", doccAlertMode: .common)
+        let html = visitor.highlight("> Note: Content\n", docCAlertMode: .common)
         #expect(html.contains("md-alert-note"))
     }
 
     @Test func coreAliasPlainWhenModeOff() {
         // No DocC asides are processed in .off mode.
-        let html = visitor.highlight("> Note: Content\n", doccAlertMode: .off)
+        let html = visitor.highlight("> Note: Content\n", docCAlertMode: .off)
         #expect(html.contains("md-blockquote"))
         #expect(!html.contains("md-alert-"))
     }

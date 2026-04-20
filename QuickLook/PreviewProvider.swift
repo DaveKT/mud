@@ -59,8 +59,8 @@ final class MudPreviewProvider: NSViewController, QLPreviewingController,
         options.extensions = snapshot.enabledExtensions
         options.htmlClasses = snapshot.upModeHTMLClasses
         options.zoomLevel = snapshot.upModeZoomLevel
-        options.blockRemoteContent = !snapshot.allowRemoteContent
-        options.doccAlertMode = snapshot.doccAlertMode
+        options.blockRemoteContent = !snapshot.upModeAllowRemoteContent
+        options.docCAlertMode = snapshot.markdownDocCAlertMode
 
         let html = MudCore.renderUpModeDocument(
             source,

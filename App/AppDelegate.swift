@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import MudPreferences
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var hasOpenedDocument = false
@@ -99,12 +100,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private static let hasLaunchedKey = "Mud-HasLaunched"
-
     private static func isFirstLaunch() -> Bool {
-        let defaults = UserDefaults.standard
-        if defaults.bool(forKey: hasLaunchedKey) { return false }
-        defaults.set(true, forKey: hasLaunchedKey)
+        if MudPreferences.shared.hasLaunched { return false }
+        MudPreferences.shared.hasLaunched = true
         return true
     }
 
