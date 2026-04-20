@@ -168,8 +168,8 @@ MVP plan.
 
 - `MudPreferences.swift` — Struct with `.shared`. Reads and writes
   `UserDefaults.standard` (source of truth, so
-  `defaults write org.josephpearson.mud …` stays easy); every write is also
-  mirrored into the app-group suite `XVL2AFNXH5.org.josephpearson.mud` so the
+  `defaults write org.josephpearson.Mud …` stays easy); every write is also
+  mirrored into the app-group suite `XVL2AFNXH5.org.josephpearson.Mud` so the
   Quick Look extension can read a snapshot. The suite name is Team-ID-prefixed
   so macOS Sequoia+ grants silent access without a TCC prompt. Holds the `Keys`
   enum, per-key read/write methods, and `reset()`. `@unchecked Sendable`

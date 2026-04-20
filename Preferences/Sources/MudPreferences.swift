@@ -6,7 +6,7 @@ import MudCore
 ///
 /// Production code uses `MudPreferences.shared`. `defaults` is the source of
 /// truth — `UserDefaults.standard` for the app so that `defaults write
-/// org.josephpearson.mud …` from the command line Just Works — and `mirror` is
+/// org.josephpearson.Mud …` from the command line Just Works — and `mirror` is
 /// the app-group suite, which receives a fan-out copy of every write so the
 /// Quick Look extension can read a stable snapshot. Tests construct their own
 /// instance with hermetic per-test suites.
@@ -29,7 +29,7 @@ public struct MudPreferences: @unchecked Sendable {
             let groups = value as? [String],
             let first = groups.first
         else {
-            return "XVL2AFNXH5.org.josephpearson.mud"
+            return "XVL2AFNXH5.org.josephpearson.Mud"
         }
         return first
     }()

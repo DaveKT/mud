@@ -253,7 +253,7 @@ struct MudPreferencesMigrationTests {
     }
 
     @Test func migratePicksUpExternalDefaultsWrite() {
-        // Simulates: user ran `defaults write org.josephpearson.mud theme
+        // Simulates: user ran `defaults write org.josephpearson.Mud theme
         // riot` while the app was not running. The value sits on the new
         // key in `defaults` already (no rename needed); `migrate()` just
         // needs to fan it out to the mirror so the QL extension sees it.

@@ -12,7 +12,7 @@ Look extension (see
 runtime state. MudPreferences owns key strings, default values, the typed enums
 backing user-facing preferences, and the read/write helpers that touch
 `UserDefaults`. Preferences remain in `UserDefaults.standard` — the domain the
-user's own `defaults write org.josephpearson.mud …` commands target — and
+user's own `defaults write org.josephpearson.Mud …` commands target — and
 MudPreferences mirrors every write into an app-group suite so the Quick Look
 extension can read a stable snapshot.
 
@@ -37,10 +37,10 @@ migration in place has been in the field long enough for installs to upgrade.
   scattered key strings and inline default literals. — **done**
 - Keep `UserDefaults.standard` as the source of truth. Mud is a developer tool
   and users should be able to set preferences via
-  `defaults write org.josephpearson.mud …` without wrestling with the long,
+  `defaults write org.josephpearson.Mud …` without wrestling with the long,
   space-laden path of the app group's Group Containers plist. — **done**
 - Every write mirrors into the app-group suite
-  (`$(TeamIdentifierPrefix)org.josephpearson.mud`) so the Quick Look extension
+  (`$(TeamIdentifierPrefix)org.josephpearson.Mud`) so the Quick Look extension
   has a separate, shared, readable copy. — **done**
 - Provide a one-shot `Snapshot` value the extension can read without owning any
   reactive state. — **done**
@@ -65,7 +65,7 @@ migration in place has been in the field long enough for installs to upgrade.
   AppState's existing `@Published` properties already drive the UI.
 - Supporting multiple writer targets. The mirror direction (standard as source
   of truth, app-group suite as read-only copy for the extension) is chosen
-  because `defaults write org.josephpearson.mud …` is a concrete day-one
+  because `defaults write org.josephpearson.Mud …` is a concrete day-one
   developer affordance. A hypothetical second writer — a sibling app, menu bar
   agent, preferences daemon — that wrote directly to the app-group suite would
   have its writes silently overwritten on the main app's next write, because
@@ -179,7 +179,7 @@ master-switch Bools, Swift identifier alignment per layer — is documented in
 
 Rationale for the lowercase-hyphen base:
 
-- The bundle domain (`org.josephpearson.mud`) already namespaces every key — an
+- The bundle domain (`org.josephpearson.Mud`) already namespaces every key — an
   app-level prefix like `Mud-` is structurally redundant. Apple's own
   first-party apps don't prefix keys within their own domains.
 - macOS first-party precedent for the lowercase-with-hyphens style: the Dock
@@ -191,7 +191,7 @@ Rationale for the lowercase-hyphen base:
 
 ## Key catalog
 
-25 keys. Every key lives under `org.josephpearson.mud` in
+25 keys. Every key lives under `org.josephpearson.Mud` in
 `UserDefaults.standard` (source of truth) and is mirrored into the Team-ID-
 prefixed app-group suite for the extension. "Legacy key" is the name the value
 was persisted under in `UserDefaults.standard` before this module shipped; used
