@@ -52,6 +52,13 @@ MVP plan.
 - **QuickLook** (QuickLook/) -- `.appex` Quick Look preview extension, bundled
   in `Mud.app/Contents/PlugIns/`. Renders `.md` previews via MudCore and reads
   preferences from the app-group mirror via MudPreferences.
+- **Thumbnail** (Thumbnail/) -- `.appex` Quick Look thumbnail extension,
+  bundled in `Mud.app/Contents/PlugIns/`. Fills a 3:4 portrait canvas with a
+  flat grey card fill, draws the file's first heading (via MudCore's
+  `extractHeadings`), then composites `thumbnail-dynamic.png` (muddy drip) on
+  top. Finder wraps the reply in its own paper-sheet chrome at the same
+  portrait aspect. Sandboxed; no app-group entitlement (no MudPreferences
+  access).
 
 
 ## File quick reference
@@ -268,6 +275,32 @@ MVP plan.
   config via `CODE_SIGN_ENTITLEMENTS` in `Mud.xcodeproj/project.pbxproj`,
   following the same pattern as `App/Mud.entitlements` /
   `App/MudDirect.entitlements`.
+
+**Thumbnail/ key files:**
+
+- `ThumbnailProvider.swift` — `MudThumbnailProvider`, a `QLThumbnailProvider`
+  subclass. Returns the largest 3:4-portrait size that fits inside
+  `QLFileThumbnailRequest.maximumSize`, fills it flat with the card grey, draws
+  the file's first heading (via `MudCore.extractHeadings`, falling back to the
+  filename), then composites the bundled `thumbnail-dynamic.png` drip on top.
+  No explicit clipping: the drip overlay visually swallows headings that wrap
+  into its territory. Finder wraps the reply in its own paper chrome at the
+  reply's aspect. The `@objc(MudThumbnailProvider)` annotation stabilizes the
+  Obj-C class name for `NSExtensionPrincipalClass`.
+- `Info.plist` — `NSExtensionPointIdentifier = com.apple.quicklook.thumbnail`,
+  `NSExtensionPrincipalClass = MudThumbnailProvider`,
+  `QLSupportedContentTypes = [net.daringfireball.markdown]`,
+  `QLThumbnailMinimumDimension = 64` (smaller requests fall through to the
+  static `.icns`).
+- `Thumbnail.entitlements` / `ThumbnailDirect.entitlements` — sandbox only. No
+  network, no app-group, no temporary exceptions: the extension reads the file
+  URL the system hands it and its own bundled overlay image.
+- `Resources/thumbnail-dynamic.png` — 768×1024 drip overlay: muddy drip with a
+  transparent top and sides, exported directly from the design tool. Drawn on
+  top of the heading so any wrapped text flowing into the drip's region gets
+  visually absorbed.
+- `Resources/thumbnail-static.svg` — source for the static `.icns` document
+  icon; rasterized by `.claude/tmp/build-document-icon`.
 
 **Resources:**
 
