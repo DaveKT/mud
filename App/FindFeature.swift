@@ -164,7 +164,8 @@ struct FindBar: View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "text.page.badge.magnifyingglass")
-                    .foregroundStyle(.secondary)
+                    .padding(.leading, 5)
+                    .padding(.trailing, 2)
 
                 TextField("Find…", text: $state.searchText)
                     .textFieldStyle(.plain)

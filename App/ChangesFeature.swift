@@ -42,14 +42,15 @@ struct ChangesBar: View {
             let hasChanges = !groups.isEmpty
 
             Button { showMenu.toggle() } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     ChangesBadge(count: groups.count, color: badgeColor)
                     Text(statusText)
                     Spacer(minLength: 0)
 
                     if !hasChanges {
                         Image(systemName: "document.badge.clock")
-                            .foregroundStyle(.secondary)
+                            .padding(.leading, 2)
+                            .padding(.trailing, 5)
                     }
                 }
                 .padding(6)
