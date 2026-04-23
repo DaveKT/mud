@@ -27,11 +27,23 @@ provided, ask for the version number before proceeding.
 If any check fails, stop and explain.
 
 
-### 2. Bump the version
+### 2. Bump the versions
 
-Update **every** `MARKETING_VERSION = ...;` line in
-`Mud.xcodeproj/project.pbxproj` to the new version. There are multiple
-occurrences (one per build configuration) — update them all.
+Run `.github/scripts/prep-release-version X.Y.Z` from the project root. The
+script updates `MARKETING_VERSION` across every build configuration in the
+pbxproj and increments `CURRENT_PROJECT_VERSION` by one across every build
+configuration. App Store and Direct distribution share a single monotonic
+`CFBundleVersion` stream — Sparkle compares the new value against the installed
+app's `CFBundleVersion` to decide whether to offer an update — so the build bump
+runs unconditionally regardless of channel.
+
+The script validates state before writing (version format, pbxproj presence,
+consistent current values, new marketing version strictly higher than the
+old). If any precondition fails, it exits non-zero with a message; surface the
+failure and stop.
+
+After a successful run, verify the diff touches only the pbxproj and only the
+`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` lines.
 
 
 ### 3. Draft release notes
@@ -57,11 +69,50 @@ Then draft a new section for `Doc/RELEASES.md`. Follow the existing style:
 Present the draft to the user for review. Incorporate any feedback.
 
 
-### 4. Hand off
+### 4. Finalize
 
-Tell the user what remains for them to do:
+Use `AskUserQuestion` to block while the user reviews the notes and renders the
+HTML:
+
+- Question: "Review `Doc/RELEASES.md`, then run
+  `.github/scripts/build-release-notes` to render the HTML. Continue when
+  ready."
+- Header: "Finalize"
+- Options:
+
+  - `Done` (description: "Notes reviewed and HTML rendered — commit, merge, and
+    tag.")
+  - `Cancel` (description: "I'll finish the remaining steps by hand.")
+
+**On `Done`**, run these commands in sequence. Stop and surface any error
+instead of continuing past it:
+
+```
+git add Mud.xcodeproj/project.pbxproj Doc/RELEASES.md Site/releases/
+git commit -m "VERSION: X.Y.Z."
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "main" ]; then
+  git checkout main
+  git merge --ff-only "$BRANCH"
+fi
+git tag vX.Y.Z
+```
+
+Then tell the user (in chat) that everything local is ready, and to push with:
+
+```
+git push origin main vX.Y.Z
+```
+
+Do **not** run the push yourself — pushing the tag triggers the release
+workflow, which is a shared-state action the user authorizes explicitly.
+
+**On `Cancel`**, instead print the list of remaining steps for the user to
+perform:
 
 1. Review and edit `Doc/RELEASES.md` if needed.
 2. Run `.github/scripts/build-release-notes` to render the HTML.
-3. Commit with message: `VERSION: X.Y.Z.`
-4. Merge to `main`, tag as `vX.Y.Z`, and push to trigger the release workflow.
+3. Commit the bump, notes, and rendered HTML with message `VERSION: X.Y.Z.`.
+4. If on a feature branch, merge to `main` (`--ff-only` preferred).
+5. Tag as `vX.Y.Z`.
+6. Push with `git push origin main vX.Y.Z` to trigger the release workflow.

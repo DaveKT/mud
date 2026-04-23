@@ -46,8 +46,10 @@ jobs:
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           VERSION=${TAG#v}
+          BUILD=$(xcrun agvtool what-version -terse)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
 
       - name: Download Sparkle
         run: .github/scripts/update-sparkle
@@ -61,7 +63,6 @@ jobs:
       - name: Archive
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           xcodebuild archive \
             -project Mud.xcodeproj \
@@ -71,8 +72,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             "CODE_SIGN_IDENTITY=Developer ID Application" \
             DEVELOPMENT_TEAM=XVL2AFNXH5 \
-            MARKETING_VERSION="$VERSION" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
+            MARKETING_VERSION="$VERSION"
 
       - name: Export
         run: |
@@ -132,7 +132,7 @@ jobs:
           WEBSITE_SSH_USER: ${{ secrets.WEBSITE_SSH_USER }}
           WEBSITE_SSH_HOST: ${{ secrets.WEBSITE_SSH_HOST }}
           VERSION: ${{ steps.version.outputs.version }}
-          BUILD_NUMBER: ${{ github.run_number }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           DMG="Mud-${TAG}.dmg"

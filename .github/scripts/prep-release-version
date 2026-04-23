@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+#
+# Bump the marketing version and build number in Mud.xcodeproj/project.pbxproj.
+#
+# Usage: .github/scripts/bump-version X.Y.Z
+#
+# Sets MARKETING_VERSION to X.Y.Z across every build configuration, and
+# increments CURRENT_PROJECT_VERSION by one across every build configuration.
+# The App Store and Direct distribution channels share a single monotonic
+# CFBundleVersion stream (see Doc/AGENTS.md), so the build bump runs
+# unconditionally regardless of which channel is shipping next.
+#
+# The pbxproj is the single source of truth for both values. Each Info.plist
+# either omits the version keys (Xcode auto-fills them from build settings) or
+# references them via $(MARKETING_VERSION) / $(CURRENT_PROJECT_VERSION).
+# agvtool is intentionally not used here: it rewrites those variable
+# references in the Info.plists to literals and never updates
+# MARKETING_VERSION in the pbxproj.
+
+set -euo pipefail
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <marketing-version>" >&2
+    exit 1
+fi
+
+NEW_MARKETING=$1
+
+if ! [[ $NEW_MARKETING =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: marketing version must look like X.Y.Z (got '$NEW_MARKETING')." >&2
+    exit 1
+fi
+
+PBXPROJ=Mud.xcodeproj/project.pbxproj
+if [ ! -f "$PBXPROJ" ]; then
+    echo "Error: $PBXPROJ not found. Run from the Mud project root." >&2
+    exit 1
+fi
+
+# Print a build setting's single distinct value, or fail if the setting is
+# missing or has drifted between configurations.
+single_value() {
+    local key values count
+    key=$1
+    values=$(grep -oE "$key = [A-Za-z0-9.]+;" "$PBXPROJ" \
+        | sed -E "s/$key = ([A-Za-z0-9.]+);/\\1/" \
+        | sort -u || true)
+    count=$(printf '%s' "$values" | grep -c . || true)
+    if [ "$count" = 0 ]; then
+        echo "Error: no $key entries found in $PBXPROJ." >&2
+        return 1
+    fi
+    if [ "$count" -gt 1 ]; then
+        echo "Error: $key values in $PBXPROJ are inconsistent:" >&2
+        printf '%s\n' "$values" | sed 's/^/  /' >&2
+        return 1
+    fi
+    printf '%s' "$values"
+}
+
+OLD_MARKETING=$(single_value MARKETING_VERSION) || exit 1
+OLD_BUILD=$(single_value CURRENT_PROJECT_VERSION) || exit 1
+NEW_BUILD=$((OLD_BUILD + 1))
+
+if [ "$NEW_MARKETING" = "$OLD_MARKETING" ]; then
+    echo "Error: MARKETING_VERSION is already $NEW_MARKETING." >&2
+    exit 1
+fi
+
+higher=$(printf '%s\n%s\n' "$OLD_MARKETING" "$NEW_MARKETING" | sort -V | tail -n 1)
+if [ "$higher" != "$NEW_MARKETING" ]; then
+    echo "Error: $NEW_MARKETING is not higher than the current MARKETING_VERSION ($OLD_MARKETING)." >&2
+    exit 1
+fi
+
+# Rewrite via a temp file — portable between BSD sed (macOS) and GNU sed
+# (Linux) without needing in-place-edit flag variants.
+tmp=$(mktemp)
+sed -E \
+    -e "s/MARKETING_VERSION = [0-9.]+;/MARKETING_VERSION = $NEW_MARKETING;/g" \
+    -e "s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = $NEW_BUILD;/g" \
+    "$PBXPROJ" > "$tmp"
+mv "$tmp" "$PBXPROJ"
+
+echo "Bumped $PBXPROJ:"
+echo "  MARKETING_VERSION:       $OLD_MARKETING -> $NEW_MARKETING"
+echo "  CURRENT_PROJECT_VERSION: $OLD_BUILD -> $NEW_BUILD"

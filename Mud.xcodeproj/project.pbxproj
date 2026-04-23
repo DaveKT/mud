@@ -458,7 +458,6 @@
 				7C6532BA2F585DC100B71730 /* Make mud.sh executable */,
 				7CC6E6BE2F658ABE00FE7D66 /* CopyFiles */,
 				7CC6E6C12F658B1C00FE7D66 /* Strip Sparkle (App Store) */,
-				7CA45B002F6E8A0000B71730 /* Increment Build Number (App Store) */,
 				7C8FC04F2F932DFD003B14D4 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -595,25 +594,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"${ENABLE_APP_SANDBOX}\" = \"YES\" ]; then\n  rm -rf \"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Helpers\"\n  rm -f  \"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Resources/mud.sh\"\nfi\n";
-		};
-		7CA45B002F6E8A0000B71730 /* Increment Build Number (App Store) */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Increment Build Number (App Store)";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Only increment for App Store archives\n[ \"$ACTION\" != \"install\" ] && exit 0\n[[ \"$CONFIGURATION\" != *AppStore* ]] && exit 0\n\nBUILD_NUMBER_FILE=\"$SRCROOT/Mud.xcodeproj/xcuserdata/BUILD_NUMBER\"\nBUILD=$(cat \"$BUILD_NUMBER_FILE\" 2>/dev/null || echo \"0\")\nBUILD=$((BUILD + 1))\necho \"$BUILD\" > \"$BUILD_NUMBER_FILE\"\n\nPLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD\" \"$PLIST\"\necho \"App Store build number: $BUILD\"\n";
 		};
 		7CA45B012F6E8A0100B71730 /* Strip local docs */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -781,7 +761,7 @@
 				CODE_SIGN_ENTITLEMENTS = Thumbnail/Thumbnail.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -871,7 +851,7 @@
 				CODE_SIGN_ENTITLEMENTS = Thumbnail/ThumbnailDirect.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -962,7 +942,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -1045,7 +1025,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -1157,7 +1137,7 @@
 				CODE_SIGN_ENTITLEMENTS = QuickLook/QuickLook.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -1245,7 +1225,7 @@
 				CODE_SIGN_ENTITLEMENTS = QuickLook/QuickLookDirect.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -1334,7 +1314,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -1415,7 +1395,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
@@ -1522,6 +1502,7 @@
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug-Direct";
 		};
@@ -1534,7 +1515,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1641,6 +1622,7 @@
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_COMPILATION_MODE = wholemodule;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Release-Direct";
 		};
@@ -1653,7 +1635,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1713,7 +1695,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1753,7 +1735,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = XVL2AFNXH5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1845,6 +1827,7 @@
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Debug-AppStore";
 		};
@@ -1901,6 +1884,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Release-AppStore";
 		};
