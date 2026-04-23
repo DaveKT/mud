@@ -53,12 +53,9 @@ MVP plan.
   in `Mud.app/Contents/PlugIns/`. Renders `.md` previews via MudCore and reads
   preferences from the app-group mirror via MudPreferences.
 - **Thumbnail** (Thumbnail/) -- `.appex` Quick Look thumbnail extension,
-  bundled in `Mud.app/Contents/PlugIns/`. Fills a 3:4 portrait canvas with a
-  flat grey card fill, draws the file's first heading (via MudCore's
-  `extractHeadings`), then composites `thumbnail-dynamic.png` (muddy drip) on
-  top. Finder wraps the reply in its own paper-sheet chrome at the same
-  portrait aspect. Sandboxed; no app-group entitlement (no MudPreferences
-  access).
+  bundled in `Mud.app/Contents/PlugIns/`. Renders a portrait thumbnail from the
+  file's first heading. Sandboxed; no app-group entitlement (so no
+  MudPreferences access).
 
 
 ## File quick reference
@@ -173,20 +170,17 @@ MVP plan.
 
 **Preferences/ key files:**
 
-- `MudPreferences.swift` — Struct with `.shared`. Reads and writes
-  `UserDefaults.standard` (source of truth, so
-  `defaults write org.josephpearson.Mud …` stays easy); every write is also
-  mirrored into the app-group suite `XVL2AFNXH5.org.josephpearson.Mud` so the
-  Quick Look extension can read a snapshot. The suite name is Team-ID-prefixed
-  so macOS Sequoia+ grants silent access without a TCC prompt. Holds the `Keys`
-  enum, per-key read/write methods, and `reset()`. `@unchecked Sendable`
-  because `UserDefaults` isn't formally Sendable.
+- `MudPreferences.swift` — Struct with `.shared`. Source of truth is
+  `UserDefaults.standard`; every write is mirrored into the Team-ID-prefixed
+  app-group suite `XVL2AFNXH5.org.josephpearson.Mud` so the Quick Look
+  extension can read a snapshot. Holds the `Keys` enum, per-key read/write
+  methods, and `reset()`.
 
 - `MudPreferencesMigration.swift` — `migrateLegacyKeys()` renames legacy
   `Mud-*` keys in `UserDefaults.standard` to the lowercase-hyphen names;
   `syncMirror()` fans every current `defaults` value into the mirror (so
   `defaults write` changes made while the app was not running get picked up).
-  `migrate()` runs both and is called once at launch. Idempotent.
+  `migrate()` runs both and is called once at launch.
 
 - `MudPreferencesSnapshot.swift` — Value-type snapshot of the prefs that flow
   into `RenderOptions`, plus derived `upModeHTMLClasses`. Consumed by the Quick
@@ -258,23 +252,16 @@ MVP plan.
   Hosts a `WKWebView`. Reads the shared configuration snapshot from the
   app-group `UserDefaults` suite and renders the preview as self-contained HTML
   via `MudCore.renderUpModeDocument`. Inlines local images as data URIs via
-  `ImageDataURI.encode`. The `@objc(MudPreviewProvider)` annotation registers a
-  stable Obj-C class name so `NSExtensionPrincipalClass` resolves without
-  relying on Swift module-name mangling.
+  `ImageDataURI.encode`.
 - `Info.plist` — `NSExtensionPointIdentifier = com.apple.quicklook.preview`,
-  `NSExtensionPrincipalClass = MudPreviewProvider` (bare Obj-C name, paired
-  with the `@objc(...)` annotation on the Swift class),
+  `NSExtensionPrincipalClass = MudPreviewProvider`,
   `QLSupportedContentTypes = [net.daringfireball.markdown]`.
 - `QuickLook.entitlements` / `QuickLookDirect.entitlements` — sandboxed
-  extension. MAS variant (`QuickLook.entitlements`) carries the app-sandbox,
-  network.client, and Team-ID-prefixed app-group entitlements. Direct variant
-  (`QuickLookDirect.entitlements`) additionally carries a read-only
-  absolute-path temporary exception so the extension can inline sibling images
-  into previews — omitted from the MAS variant because App Review is
-  historically cool on `temporary-exception` entries. Selection per build
-  config via `CODE_SIGN_ENTITLEMENTS` in `Mud.xcodeproj/project.pbxproj`,
-  following the same pattern as `App/Mud.entitlements` /
-  `App/MudDirect.entitlements`.
+  extension. MAS variant carries app-sandbox, network.client, and the app-group
+  entitlement. Direct variant adds a read-only absolute-path temporary
+  exception so the extension can inline sibling images into previews. Selected
+  per build config via `CODE_SIGN_ENTITLEMENTS`, same pattern as
+  `App/Mud.entitlements` / `App/MudDirect.entitlements`.
 
 **Thumbnail/ key files:**
 
@@ -285,8 +272,7 @@ MVP plan.
   filename), then composites the bundled `thumbnail-dynamic.png` drip on top.
   No explicit clipping: the drip overlay visually swallows headings that wrap
   into its territory. Finder wraps the reply in its own paper chrome at the
-  reply's aspect. The `@objc(MudThumbnailProvider)` annotation stabilizes the
-  Obj-C class name for `NSExtensionPrincipalClass`.
+  reply's aspect.
 - `Info.plist` — `NSExtensionPointIdentifier = com.apple.quicklook.thumbnail`,
   `NSExtensionPrincipalClass = MudThumbnailProvider`,
   `QLSupportedContentTypes = [net.daringfireball.markdown]`,
@@ -425,6 +411,9 @@ multi-window conflicts). Toolbar actions use the responder chain reaching
   `AppState.theme` and applied as a CSS class.
 - **ViewToggle.** Persisted boolean preferences (readable column, line numbers,
   word wrap) mapped to CSS classes on the body element via `bodyClasses`.
+- **Extension principal classes.** Quick Look and Thumbnail providers use
+  `@objc(ClassName)` so `NSExtensionPrincipalClass` in each `Info.plist`
+  resolves without Swift module-name mangling.
 
 
 ### Sandbox-aware features
@@ -435,11 +424,9 @@ features are hidden or adapted:
 
 - **CLI installer** — The Command Line settings pane shows manual `ln -s`
   instructions instead of the automatic Install button.
-- **Open in Browser** — Hidden entirely. The app writes a temp HTML file and
-  hands it to the default browser. In the sandbox, temp files live inside the
-  app's container directory, which other apps (Safari, Chrome) cannot read. The
-  system `/tmp` is readable by other apps but not writable by sandboxed apps.
-  No workaround exists, so the feature is hidden.
+- **Open in Browser** — Hidden entirely. The feature writes a temp HTML file
+  for the default browser to open, but sandboxed temp locations aren't readable
+  by other apps, so the handoff can't work.
 
 These features use `if !isSandboxed` guards in menus, context menus, and
 settings views. No build-time flags are needed — a single binary supports both
