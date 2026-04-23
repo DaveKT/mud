@@ -111,7 +111,6 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           cp "$RUNNER_TEMP/Mud.dmg" "Mud-${TAG}.dmg"
-          shasum -a 256 "Mud-${TAG}.dmg" > "Mud-${TAG}.dmg.sha256"
 
       - name: Create GitHub release
         env:
@@ -121,7 +120,6 @@ jobs:
         run: |
           gh release create "$TAG" \
             "Mud-${TAG}.dmg" \
-            "Mud-${TAG}.dmg.sha256" \
             --title "Mud ${VERSION}" \
             --generate-notes
 
