@@ -1,6 +1,28 @@
 RELEASES
 ===============================================================================
 
+## v2.1.0
+
+- **Quick Look previews** — press Space on a Markdown file in the Finder to see
+  it rendered with Mud's syntax highlighting, alerts, and themes. Also renders
+  live in the column-view preview pane.
+- **Document thumbnails** — Markdown files in the Finder show a portrait
+  thumbnail featuring the file's first heading, so you can scan a directory at
+  a glance.
+- **Markdown document icon** — `.md` files carry a dedicated Mud icon when Mud
+  is the default handler.
+- **Background tab badge** — when a document reloads in a tab that isn't
+  focused, a small brown dot marks the tab as having fresh content. The dot
+  clears when you focus the tab.
+- Preferences set by `defaults write …` now take effect without restarting the
+  app. You can find a thorough guide to "setting preferences from the command
+  line" in Help > HUMANS, including some hidden preferences.
+- Word-level diff markers inside indented code blocks line up more
+  accurately with the code they annotate.
+
+> Tip: Did you know you can enable Git commits as change waypoints in Settings?
+
+
 ## v2.0.1
 
 [The v2.0.0 release](https://apps.josephpearson.org/mud/releases/v2.0.0.html)
