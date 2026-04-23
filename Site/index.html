@@ -228,6 +228,65 @@ header img {
   color: var(--bg-color);
 }
 
+/* Download cards */
+.download-options {
+  display: flex;
+  gap: 1em;
+  margin: 1.25em 0 2em;
+  flex-wrap: wrap;
+}
+
+.download-card {
+  flex: 1 1 calc(50% - 0.5em);
+  min-width: 240px;
+  padding: 1.1em 1.3em 1.2em;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5em;
+  background: var(--bg-color);
+  color: var(--text-color);
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.download-card:hover {
+  border-color: var(--heading-color);
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.download-card-primary {
+  border-color: var(--heading-color);
+  box-shadow: inset 0 0 0 1px var(--heading-color);
+}
+
+.download-card-primary:hover {
+  box-shadow: inset 0 0 0 1px var(--heading-color),
+              0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.download-card h3 {
+  margin: 0 0 0.1em;
+  color: var(--heading-color);
+  border-bottom: none;
+  padding-bottom: 0;
+  font-size: 1.15em;
+}
+
+.download-card .download-tag {
+  margin: 0 0 0.65em;
+  font-size: 0.7em;
+  color: var(--blockquote-color);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.download-card p:last-child {
+  margin-bottom: 0;
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
     margin-top: 1.5em;
@@ -447,22 +506,26 @@ footer {
       It’s free and it’s open source.</p>
       <p>It does one thing — it marks up Markdown! — and it does it really well.</p>
 
-      <h2 id="documents">Gimme</h2>
+      <h2 id="gimme">Gimme</h2>
       <p>
-        Download Mud.app:
+        Mud ships in two flavors.
       </p>
-      <ul>
-        <li>
-          <a
-            href="https://apps.apple.com/us/app/mud-mark-up-or-down/id6759427937?mt=12"
-          ><strong>macOS App Store</strong></a>
-        </li>
-        <li>
-          <a
-            href="https://github.com/joseph/mud/releases"
-          ><strong>GitHub</strong></a>
-        </li>
-      </ul>
+      <div class="download-options">
+        <a class="download-card download-card-primary"
+           href="https://github.com/joseph/mud/releases">
+          <h3>Direct from GitHub</h3>
+          <p class="download-tag">Recommended · free</p>
+          <p>Git change waypoints, CLI, Open in
+            Browser, and in-app auto-updates.</p>
+        </a>
+        <a class="download-card"
+           href="https://apps.apple.com/us/app/mud-mark-up-or-down/id6759427937?mt=12">
+          <h3>Mac App Store</h3>
+          <p class="download-tag">Free</p>
+          <p>Installs and updates through the App Store.
+            Sandboxed for complete safety.</p>
+        </a>
+      </div>
       <h2 id="highlights">Highlights</h2>
 
       <ul>

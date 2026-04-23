@@ -4,6 +4,18 @@ Mud: A Perfect Markdown Viewer
 > Status: Active development
 
 
+## Gimme
+
+Download **Mud.app** from either:
+
+- **[GitHub Releases](https://github.com/joseph/mud/releases)** — includes
+  Git change waypoints, CLI, Open in Browser, and Sparkle auto-updates.
+- **[Mac App Store](https://apps.apple.com/us/app/mud-mark-up-or-down/id6759427937?mt=12)**
+  — sandboxed for complete safety, updates through the App Store.
+
+Requires macOS Sonoma (14.0+).
+
+
 ## Why?
 
 Markdown is suddenly everywhere.
